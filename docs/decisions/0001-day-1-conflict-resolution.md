@@ -21,4 +21,4 @@ Keep the existing planning documents intact and add the Day 1 implementation as 
 
 - Day 1 implementation files are retained rather than replaced by the planning-only branch.
 - Planning documents remain the authoritative contract for later milestones.
-- `pnpm check:conflicts` can be run even before package installation because it only uses Node built-ins and Git.
+- `node scripts/check-conflicts.mjs` can be run even before package installation because it only uses Node built-ins and Git.

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
   .split('\n')
@@ -10,6 +10,7 @@ const markers = ['<<<<<<<', '=======', '>>>>>>>'];
 const hits = [];
 
 for (const file of files) {
+  if (!existsSync(file)) continue;
   const content = readFileSync(file, 'utf8');
   const lines = content.split('\n');
   lines.forEach((line, index) => {

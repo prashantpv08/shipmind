@@ -1,1 +1,1 @@
-console.log('Demo reset uses browser-local state. Reload the app or press Reset demo.');
+console.log('NotifyFlow demo reset: in-memory fixture state is reset by reloading the app.');
