@@ -22,6 +22,12 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.locator('.review-document-grid article').filter({ hasText: 'Proposed High-Level Design' }).getByRole('button', { name: /Review & modify/ }).click();
   await expect(page.getByRole('dialog', { name: 'Proposed High-Level Design' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Architecture diagrams' })).toBeVisible();
+  await page.getByRole('button', { name: 'System context diagram', exact: true }).click();
+  const renderedMermaid = page.getByTestId('mermaid-diagram');
+  await expect(renderedMermaid).toBeVisible();
+  await expect(renderedMermaid.locator('svg')).toBeVisible({ timeout: 15_000 });
+  await expect(renderedMermaid.getByText('View Mermaid source')).toBeVisible();
+  await expect(renderedMermaid.getByText('flowchart LR')).not.toBeVisible();
   await page.getByRole('button', { name: 'Close document review' }).click();
   for (let index = 0; index < 2; index += 1) {
     await page.locator('.decision-questions details').first().locator('.question-answer-area > div button').first().click();
