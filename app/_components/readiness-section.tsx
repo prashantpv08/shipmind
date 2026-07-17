@@ -11,7 +11,7 @@ export function ReadinessSection({ before, score, gaps }: {
   return (
     <section className="card">
       <h2 className="text-xl font-black">Readiness: {before} → {score.total}</h2>
-      <div className="my-3 grid grid-cols-7 gap-2">
+      <div className="score-grid my-3">
         {score.categories.map((category) => (
           <div key={category.label} className="rounded bg-slate-100 p-2">
             <b className="text-sm">{category.label}</b>

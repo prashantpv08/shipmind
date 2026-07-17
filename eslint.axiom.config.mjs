@@ -3,7 +3,7 @@ import nextTypescript from 'eslint-config-next/typescript';
 
 const sourceFiles = ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}', 'tests/**/*.ts', 'e2e/**/*.ts'];
 
-export default [
+const axiomConfig = [
   ...nextVitals,
   ...nextTypescript,
   {
@@ -57,3 +57,5 @@ export default [
     },
   },
 ];
+
+export default axiomConfig;

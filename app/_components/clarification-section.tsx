@@ -8,7 +8,7 @@ export function ClarificationSection({ questions, onSubmit }: {
   return (
     <section className="card">
       <h2 className="text-xl font-black">Clarify highest-impact unknowns</h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="responsive-grid">
         {questions.map((question) => (
           <ClarificationCard key={question.id} question={question} onSubmit={onSubmit} />
         ))}
@@ -35,6 +35,7 @@ function ClarificationCard({ question, onSubmit }: {
       </p>
       {question.options.map((option) => (
         <button
+          type="button"
           key={option.id}
           onClick={() => onSubmit(question.id, option.value, option.id)}
           className="my-2 block w-full rounded bg-slate-100 p-2 text-left"
@@ -46,10 +47,11 @@ function ClarificationCard({ question, onSubmit }: {
         onSubmit={(event: { preventDefault: () => void; currentTarget: HTMLFormElement }) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          onSubmit(question.id, String(form.get('custom') || 'Custom answer'));
+          const value = String(form.get('custom') || '').trim();
+          if (value) onSubmit(question.id, value);
         }}
       >
-        <input name="custom" className="w-full rounded border p-2" placeholder="Custom answer supported" />
+        <input name="custom" required className="w-full rounded border p-2" placeholder="Custom answer supported" />
         <button className="btn mt-2">Submit / edit answer</button>
       </form>
       {question.answer ? (
