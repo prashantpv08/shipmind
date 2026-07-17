@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 export const TruthStatus=z.enum(['SOURCE_GROUNDED','AI_SUGGESTED','UNKNOWN','USER_PROVIDED','HUMAN_APPROVED','ESTIMATE']);
 export const Gap=z.object({id:z.string(),title:z.string(),severity:z.enum(['BLOCKER','HIGH','MEDIUM','LOW']),affectedEntityIds:z.array(z.string()),resolved:z.boolean().default(false),security:z.boolean().default(false),rationale:z.string(),sourceSpanIds:z.array(z.string())});
