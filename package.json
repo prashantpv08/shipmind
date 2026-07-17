@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "next dev",
-    "lint": "eslint . -c eslint.axiom.config.mjs",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
