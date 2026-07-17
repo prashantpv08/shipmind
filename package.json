@@ -1,1 +1,36 @@
-{ "scripts": { "dev": "next dev", "lint": "eslint .", "typecheck": "tsc --noEmit", "test": "vitest run", "test:e2e": "playwright test", "build": "next build", "demo:reset": "node scripts/demo-reset.mjs", "sandbox:build": "echo sandbox build not implemented for Day 2", "sandbox:test": "echo sandbox test not implemented for Day 2", "sandbox:coverage": "echo sandbox coverage not implemented for Day 2" }, "dependencies": { "@vitejs/plugin-react": "latest", "next": "latest", "react": "latest", "react-dom": "latest", "zod": "latest", "openai": "latest" }, "devDependencies": { "@playwright/test": "latest", "@types/node": "latest", "@types/react": "latest", "@types/react-dom": "latest", "autoprefixer": "latest", "eslint": "latest", "eslint-config-next": "latest", "postcss": "latest", "tailwindcss": "latest", "typescript": "latest", "vitest": "latest", "jsdom": "latest" } }
+{
+  "scripts": {
+    "dev": "next dev",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "next build",
+    "demo:reset": "node scripts/demo-reset.mjs",
+    "sandbox:build": "echo sandbox build not implemented for Day 2",
+    "sandbox:test": "echo sandbox test not implemented for Day 2",
+    "sandbox:coverage": "echo sandbox coverage not implemented for Day 2"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest",
+    "openai": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "vitest": "latest",
+    "jsdom": "latest"
+  }
+}
