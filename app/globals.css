@@ -1,0 +1,2 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+body{background:#f8fafc;color:#0f172a}.badge{border:1px solid #cbd5e1;border-radius:999px;padding:.15rem .5rem;font-size:.75rem;font-weight:700}.card{background:white;border:1px solid #e2e8f0;border-radius:1rem;padding:1rem;box-shadow:0 1px 2px #0001}.btn{background:#0f172a;color:white;border-radius:.75rem;padding:.6rem .9rem;font-weight:700}.btn:disabled{background:#94a3b8}.muted{color:#64748b}.mark{background:#fde68a}
