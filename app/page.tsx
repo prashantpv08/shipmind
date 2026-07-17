@@ -1,4 +1,60 @@
 'use client';
-import { useMemo,useState } from 'react';
-import { answerQuestion, approve, brief, dimensions, initialGaps, options, readiness, requirements, resolvedGaps, spans, weighted, makeQuestions } from '../src/domain/day2';
-export default function Page(){const [loaded,setLoaded]=useState(false);const [highlight,setHighlight]=useState('');const [qs,setQs]=useState(makeQuestions());const [selected,setSelected]=useState('ARCH-SERVERLESS');const [adr,setAdr]=useState<ReturnType<typeof approve>|null>(null);const gaps=resolvedGaps(qs,initialGaps);const score=readiness(gaps);const before=readiness(initialGaps);const unlocked=score.blockers.length===0;function load(){setLoaded(true);setAdr(null);setQs(makeQuestions())}function submit(qid:string,val:string,opt?:string){setQs(q=>answerQuestion(q,qid,val,opt)); if(adr)setAdr({...adr,stale:true})}return <main className="mx-auto max-w-[1400px] p-6 space-y-5"><header className="flex justify-between items-start"><div><h1 className="text-3xl font-black">Axiom — Clarification and Architecture Decision Lab</h1><p className="muted">NotifyFlow Day 2: grounded analysis → clarify blockers → decide → ADR.</p></div><span className="badge">{process.env.NEXT_PUBLIC_AXIOM_AI_MODE==='live'?'Live AI':'Demo fixture'}</span></header><nav className="grid grid-cols-3 gap-3">{['1. Analyze','2. Clarify','3. Decide'].map((s,i)=><div key={s} className="card"><b>{s}</b><p className="text-sm muted">{i===0?loaded?'Complete':'Ready':i===1?`${qs.filter(q=>q.answerStatus==='ANSWERED').length}/${qs.length} answered`:unlocked?'Unlocked':'Locked by blockers'}</p></div>)}</nav><section className="card"><div className="flex gap-3"><button className="btn" onClick={load}>{loaded?'Reset / Load NotifyFlow':'Load NotifyFlow + Analyze'}</button><span className="badge">Fixture mode works without API key</span></div>{loaded&&<div className="mt-4 grid grid-cols-2 gap-4"><div><h2 className="font-bold">Product brief</h2><p className="leading-7">{brief}</p><h3 className="font-bold mt-3">Source spans</h3>{spans.map(s=><button key={s.id} onClick={()=>setHighlight(s.id)} className={`block text-left my-1 p-2 rounded ${highlight===s.id?'mark':'bg-slate-100'}`}>{s.id}: {s.text}</button>)}</div><div><h2 className="font-bold">Grounded findings</h2>{requirements.map(r=><button key={r.id} onClick={()=>setHighlight(r.span)} className="block w-full text-left border rounded p-2 my-1"><b>{r.id}</b> <span className="badge">{r.truth}</span><br/>{r.text}</button>)}<h3 className="font-bold mt-3">Unknowns and inferred items</h3>{initialGaps.map(g=><div key={g.id} className="border rounded p-2 my-1"><b>{g.id}</b> <span className="badge">UNKNOWN</span> <span className="badge">{g.severity}</span><br/>{g.title}</div>)}</div></div>}</section>{loaded&&<><section className="card"><h2 className="text-xl font-black">Readiness: {before.total} → {score.total}</h2><div className="grid grid-cols-7 gap-2 my-3">{score.categories.map(c=><div key={c.label} className="bg-slate-100 rounded p-2"><b className="text-sm">{c.label}</b><p>{c.score}/{c.weight}</p><small>{c.items[0]}</small></div>)}</div><p><b>Resolved gaps:</b> {gaps.filter(g=>g.resolved).map(g=>g.id).join(', ')||'None yet'}</p><p><b>Remaining unknowns:</b> {score.unknowns.map(g=>g.id).join(', ')||'None blocking'}</p></section><section className="card"><h2 className="text-xl font-black">Clarify highest-impact unknowns</h2><div className="grid grid-cols-2 gap-3">{qs.map(q=><div key={q.id} className="border rounded-xl p-3"><div className="flex gap-2"><b>{q.id}</b><span className="badge">{q.severity}</span><span className="badge">{q.answerStatus}</span></div><h3 className="font-bold mt-2">{q.text}</h3><p className="muted">Why: {q.whyItMatters}</p><p className="text-sm">Affects: {q.affectedEntityIds.join(', ')} | Gaps: {q.relatedGapIds.join(', ')}</p>{q.options.map(o=><button key={o.id} onClick={()=>submit(q.id,o.value,o.id)} className="block w-full text-left bg-slate-100 rounded p-2 my-2">{o.label}</button>)}<form onSubmit={e=>{e.preventDefault();const fd=new FormData(e.currentTarget);submit(q.id,String(fd.get('custom')||'Custom answer'));}}><input name="custom" className="border rounded p-2 w-full" placeholder="Custom answer supported"/><button className="btn mt-2">Submit / edit answer</button></form>{q.answer&&<p className="mt-2"><span className="badge">USER_PROVIDED</span> {q.answer.value}</p>}</div>)}</div></section><section className="card"><h2 className="text-xl font-black">Architecture Decision Lab</h2>{!unlocked?<div className="bg-amber-50 border border-amber-200 rounded p-3"><b>Locked.</b> Resolve blockers first: {score.blockers.map(b=>b.id).join(', ')}</div>:<><p><span className="badge">AI_SUGGESTED recommendation</span> Serverless event-driven</p><div className="grid grid-cols-3 gap-3">{options.map(o=><article key={o.id} className={`border rounded-xl p-3 ${selected===o.id?'ring-2 ring-slate-900':''}`}><h3 className="font-black">{o.name}</h3><p>{o.summary}</p><p><b>Score:</b> {weighted(o.id).toFixed(0)}/100</p><p><span className="badge">Cost {o.monthlyCostRange.truthStatus}</span> ${o.monthlyCostRange.min}-${o.monthlyCostRange.max}/mo</p><h4 className="font-bold mt-2">Why</h4><ul className="list-disc pl-5">{o.why.map(x=><li key={x}>{x}</li>)}</ul><h4 className="font-bold mt-2">Why Not</h4><ul className="list-disc pl-5">{o.whyNot.map(x=><li key={x}>{x}</li>)}</ul><h4 className="font-bold mt-2">Failure modes</h4>{o.failureModes.map(f=><p key={f.mode} className="text-sm"><b>{f.mode}:</b> {f.mitigation}</p>)}<h4 className="font-bold mt-2">Reconsider</h4><ul className="list-disc pl-5">{o.reconsiderationTriggers.map(t=><li key={t}>{t}</li>)}</ul><button className="btn mt-3" onClick={()=>setSelected(o.id)}>Choose</button></article>)}</div><h3 className="font-bold mt-4">Transparent weighted comparison</h3><table className="w-full text-sm border"><thead><tr><th>Dimension</th><th>Weight</th>{options.map(o=><th key={o.id}>{o.name}</th>)}</tr></thead><tbody>{dimensions.map(d=><tr key={d.id} className="border-t"><td>{d.label} <span className="badge">{d.truthStatus}</span></td><td>{d.weight}</td>{options.map(o=><td key={o.id}>{d.ratings[o.id]}/5 = {((d.ratings[o.id]/5)*d.weight).toFixed(1)}</td>)}</tr>)}</tbody></table><button className="btn mt-4" onClick={()=>setAdr(approve(selected))}>Explicitly approve selected option</button>{adr&&<section className="mt-4 border rounded-xl p-3 bg-green-50"><h3 className="font-black">Versioned ADR {adr.id} v{adr.version} {adr.stale&&<span className="badge">Potentially stale — re-evaluate</span>}</h3><p><span className="badge">{adr.truthStatus}</span> Approved {adr.approvedAt}</p><p><b>Decision:</b> {options.find(o=>o.id===adr.selectedOptionId)?.name}</p><p><b>Rationale:</b> {adr.rationale.join('; ')}</p><p><b>Rejected alternatives:</b> {adr.rejectedAlternatives.map(r=>r.optionId).join(', ')}</p><p><b>Risks:</b> {adr.risks.join('; ')}</p><p><b>Triggers:</b> {adr.reconsiderationTriggers.join('; ')}</p></section>}</>}</section></>}</main>}
+
+import { useState } from 'react';
+import { AnalyzeSection } from './_components/analyze-section';
+import { ClarificationSection } from './_components/clarification-section';
+import { DecisionSection } from './_components/decision-section';
+import { Header, StageNav } from './_components/header';
+import { ReadinessSection } from './_components/readiness-section';
+import { answerQuestion, approve, initialGaps, makeQuestions, readiness, resolvedGaps } from '../src/domain/day2';
+import type { ArchitectureDecision } from '../src/domain/schemas';
+
+export default function Page() {
+  const [loaded, setLoaded] = useState(false);
+  const [highlight, setHighlight] = useState('');
+  const [questions, setQuestions] = useState(makeQuestions());
+  const [selected, setSelected] = useState('ARCH-SERVERLESS');
+  const [adr, setAdr] = useState<ArchitectureDecision | null>(null);
+  const gaps = resolvedGaps(questions, initialGaps);
+  const score = readiness(gaps);
+  const before = readiness(initialGaps).total;
+  const unlocked = score.blockers.length === 0;
+
+  function load() {
+    setLoaded(true);
+    setAdr(null);
+    setQuestions(makeQuestions());
+  }
+
+  function submit(questionId: string, value: string, optionId?: string) {
+    setQuestions((currentQuestions) => answerQuestion(currentQuestions, questionId, value, optionId));
+    if (adr) setAdr({ ...adr, stale: true });
+  }
+
+  return (
+    <main className="mx-auto max-w-[1400px] space-y-5 p-6">
+      <Header />
+      <StageNav
+        loaded={loaded}
+        answeredCount={questions.filter((question) => question.answerStatus === 'ANSWERED').length}
+        questionCount={questions.length}
+        unlocked={unlocked}
+      />
+      <AnalyzeSection loaded={loaded} highlight={highlight} onLoad={load} onHighlight={setHighlight} />
+      {loaded ? (
+        <>
+          <ReadinessSection before={before} score={score} gaps={gaps} />
+          <ClarificationSection questions={questions} onSubmit={submit} />
+          <DecisionSection
+            unlocked={unlocked}
+            score={score}
+            selected={selected}
+            adr={adr}
+            onSelect={setSelected}
+            onApprove={() => setAdr(approve(selected))}
+          />
+        </>
+      ) : null}
+    </main>
+  );
+}
