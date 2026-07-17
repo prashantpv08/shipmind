@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve, sep } from 'node:path';
 import {
   ArbDecision,
+  DocumentApproval,
   NotionPublication,
   Project,
   ProjectDatabase,
@@ -17,6 +18,7 @@ import {
   type ProjectKnowledge as ProjectKnowledgeType,
   type ProjectSource as ProjectSourceType,
   type ArbDecision as ArbDecisionType,
+  type DocumentApproval as DocumentApprovalType,
   type WireframeRevision as WireframeRevisionType,
 } from './schemas';
 
@@ -38,6 +40,7 @@ function emptyDatabase(): ProjectDatabaseType {
     knowledge: [],
     arbDecisions: [],
     documents: [],
+    documentApprovals: [],
     notionPublications: [],
     wireframeRevisions: [],
   });
@@ -114,6 +117,7 @@ export async function getProject(projectId: string) {
     knowledge: database.knowledge.find((item) => item.projectId === projectId) ?? null,
     arbDecision: database.arbDecisions.filter((item) => item.projectId === projectId).sort((a, b) => b.version - a.version)[0] ?? null,
     documents: database.documents.filter((item) => item.projectId === projectId),
+    documentApproval: database.documentApprovals.filter((item) => item.projectId === projectId).sort((a, b) => b.approvedAt.localeCompare(a.approvedAt))[0] ?? null,
     notionPublication: database.notionPublications.find((item) => item.projectId === projectId) ?? null,
     wireframeRevisions: database.wireframeRevisions.filter((item) => item.projectId === projectId),
   };
@@ -153,12 +157,49 @@ export async function saveDocuments(projectId: string, documents: ProjectDocumen
     if (!project) throw new Error('Project not found');
     const parsed = documents.map((document) => ProjectDocument.parse(document));
     database.documents.push(...parsed);
-    project.status = parsed.some((document) => document.type === 'hld')
+    if (parsed.some((document) => document.revisionInstruction)) {
+      database.documentApprovals = database.documentApprovals.filter((item) => item.projectId !== projectId);
+    }
+    project.status = parsed.some((document) => document.type === 'hld' && document.truthStatus === 'HUMAN_APPROVED')
       ? 'HLD_READY'
       : project.status === 'NEEDS_CLARIFICATION' ? 'NEEDS_CLARIFICATION' : 'DOCUMENTED';
     project.updatedAt = new Date().toISOString();
     return parsed;
   });
+}
+
+export async function saveDocumentApproval(approval: DocumentApprovalType) {
+  return mutate((database) => {
+    const project = database.projects.find((item) => item.id === approval.projectId);
+    if (!project) throw new Error('Project not found');
+    const parsed = DocumentApproval.parse(approval);
+    if (parsed.graphVersion !== project.graphVersion) throw new Error('Document approval must reference the current project graph');
+    database.documentApprovals = database.documentApprovals.filter((item) => item.projectId !== approval.projectId);
+    database.documentApprovals.push(parsed);
+    project.status = 'DOCUMENTS_APPROVED';
+    project.updatedAt = new Date().toISOString();
+    return parsed;
+  });
+}
+
+export async function deleteProject(projectId: string) {
+  const database = await readDatabase();
+  const project = database.projects.find((item) => item.id === projectId);
+  if (!project) return false;
+  const sourcePaths = database.sources.filter((item) => item.projectId === projectId).map((item) => resolve(item.rawPath));
+  await mutate((nextDatabase) => {
+    nextDatabase.projects = nextDatabase.projects.filter((item) => item.id !== projectId);
+    nextDatabase.sources = nextDatabase.sources.filter((item) => item.projectId !== projectId);
+    nextDatabase.knowledge = nextDatabase.knowledge.filter((item) => item.projectId !== projectId);
+    nextDatabase.arbDecisions = nextDatabase.arbDecisions.filter((item) => item.projectId !== projectId);
+    nextDatabase.documents = nextDatabase.documents.filter((item) => item.projectId !== projectId);
+    nextDatabase.documentApprovals = nextDatabase.documentApprovals.filter((item) => item.projectId !== projectId);
+    nextDatabase.notionPublications = nextDatabase.notionPublications.filter((item) => item.projectId !== projectId);
+    nextDatabase.wireframeRevisions = nextDatabase.wireframeRevisions.filter((item) => item.projectId !== projectId);
+  });
+  const root = resolve(dataRoot);
+  await Promise.all(sourcePaths.filter((path) => path.startsWith(`${root}${sep}`)).map((path) => unlink(path).catch(() => undefined)));
+  return true;
 }
 
 export async function saveArbDecision(decision: ArbDecisionType) {
@@ -199,4 +240,4 @@ export async function saveWireframeRevision(revision: WireframeRevisionType) {
   });
 }
 
-export const validators = { Workspace, Project, ProjectSource, ProjectKnowledge, ProjectDocument, ArbDecision, NotionPublication, WireframeRevision };
+export const validators = { Workspace, Project, ProjectSource, ProjectKnowledge, ProjectDocument, DocumentApproval, ArbDecision, NotionPublication, WireframeRevision };

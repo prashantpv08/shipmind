@@ -67,13 +67,16 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
     ? candidateSegments(firstSource.extractedText).slice(0, 3).map((item) => item.text).join(' ').slice(0, 1_200)
     : 'No source text was successfully extracted. Resolve source failures before architecture review.';
 
+  const sourceText = sources.filter((source) => source.status === 'EXTRACTED').map((source) => source.extractedText).join('\n');
+  const eventDrivenFit = /\b(notification|queue|retry|webhook|asynchronous|background job|burst)\b/i.test(sourceText);
+
   const architectureOptions = [
     {
       id: `ARCH-MODULAR-${projectId}`,
       projectId,
       name: 'Modular monolith',
       summary: 'A single deployable system with explicit domain modules and replaceable external adapters.',
-      recommended: true,
+      recommended: !eventDrivenFit,
       deploymentModel: 'One containerized application on a managed runtime with a managed relational database and optional worker process.',
       components: [
         { name: 'Product experience', responsibility: 'Presents role-aware workflows and validates user input.' },
@@ -108,7 +111,7 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
       projectId,
       name: 'Managed event-driven services',
       summary: 'Managed APIs, functions, queues, and event handlers for asynchronous and variable workloads.',
-      recommended: false,
+      recommended: eventDrivenFit,
       deploymentModel: 'Managed request handlers, durable queues, event consumers, managed relational storage, and object storage.',
       components: [
         { name: 'API boundary', responsibility: 'Authorizes and validates synchronous requests.' },
@@ -175,7 +178,6 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
     },
   ];
 
-  const sourceText = sources.filter((source) => source.status === 'EXTRACTED').map((source) => source.extractedText).join('\n');
   const intelligence = buildProjectIntelligence({ projectId, projectName, entities, sourceText, calculatedAt: analyzedAt });
 
   return ProjectKnowledge.parse({

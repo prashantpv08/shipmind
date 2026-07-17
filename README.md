@@ -1,15 +1,15 @@
 # Axiom — AI Engineering Operating System
 
-Axiom turns scattered project knowledge into grounded requirements, approved architecture, governed engineering artifacts, product wireframes, controlled implementation, and verification evidence. The visible intake journey is **Sources → Structured knowledge → ARB → HLD → Wireframes**, followed by build and verification. NotifyFlow remains one preloaded sample project used to demonstrate the existing engineering pipeline; it is not the product identity.
+Axiom turns scattered project knowledge into grounded requirements, governed engineering artifacts, product wireflows, approved architecture, controlled implementation, and verification evidence. The visible journey is **Landing → Sources → Document review → Optional wireflow → Architecture decision → Approved HLD and ADR**, followed by build and verification. NotifyFlow remains one preloaded sample project used to demonstrate the existing engineering pipeline; it is not the product identity.
 
 ## Current scope
 
 - A workspace-first project pipeline persists multiple projects and accepts bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-transcript sources.
 - Source text is extracted server-side and deterministically separated into exact source-grounded requirements, NFRs, decisions, constraints, risks, and open questions. The v2 project-intelligence pass also creates at least five ranked gaps, three to five contextual clarification questions, a deterministic readiness breakdown, and seven reviewable technology-layer recommendations.
 - Suggested or custom clarification answers are stored as `HUMAN_CONFIRMED` graph mutations with question provenance. Each answer increments the graph version, recalculates readiness, regenerates the current requirements/SRS/NFR views, and invalidates a stale architecture approval.
-- Requirements, SRS, and NFR documents are detailed versioned compiled views. Three architecture directions include components, data flows, deployment model, technologies, assumptions, failure modes, cost estimate, score breakdown, and reconsideration triggers. ARB approval is blocked while a P0 gap remains and creates a `HUMAN_APPROVED` ADR plus the HLD.
+- Requirements, SRS, NFR, and a proposed HLD are detailed versioned compiled views. The HLD includes system-context, component, deployment, and sequence diagrams. Users can revise one section through a validated fixture/live provider; each revision records its instruction, parent version, provider, graph version, and hash. Document approval records exact current hashes. Three architecture directions include components, data flows, deployment model, technologies, assumptions, failure modes, cost estimate, score breakdown, and reconsideration triggers. ARB approval is blocked while a P0 gap remains and creates the final `HUMAN_APPROVED` ADR plus HLD.
 - The internal Notion adapter maintains one project knowledge hub under a configured parent page. It publishes a source catalogue, native Notion tables, detailed graph-versioned artifact pages, architecture comparison, readiness, blockers, technology direction, and a linked project index. It is idempotent for an unchanged graph/document set and never returns its access token to the client.
-- After HLD, Axiom offers six curated product templates and compiles four source-linked, gap-aware wireframe scenes in the embedded Excalidraw canvas. Users can edit, pan, zoom, preview the proposed screen flow, inspect requirement coverage and required UI states, persist bounded Draft/In Review/Approved revisions, download `.excalidraw`, or export SVG without leaving the product.
+- After document approval, Axiom offers twelve visual product templates and compiles four source-linked, gap-aware wireframe scenes in the embedded Excalidraw canvas. The selected pattern changes screen definitions, navigation, accent, and canvas content. Users can edit, pan, zoom, preview the proposed screen flow, inspect requirement coverage and required UI states, persist bounded Draft/In Review/Approved revisions, download `.excalidraw`, or export SVG without leaving the product. The wireflow remains optional.
 - Editable business-intent brief, preloaded with the NotifyFlow sample.
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
@@ -64,14 +64,15 @@ For the hackathon Notion connection, create an internal Notion integration, set 
 1. Run `pnpm dev`.
 2. Create a project by naming it and adding files, a folder, or a meeting transcript.
 3. The server persists and extracts the sources, builds the grounded graph, and generates Requirements, SRS, and NFR documents.
-4. Review ranked gaps and the deterministic readiness breakdown. Answer blocker questions using a suggested option or precise custom text; each answer updates the canonical graph and current Notion publication.
-5. Compare the enriched architecture and technology recommendations. Select and explicitly approve an option only after blockers are resolved; Axiom then generates the ADR and HLD and republishes the complete document set to Notion when configured.
-6. Choose a curated product template, generate the editable scenes, inspect requirement coverage and mapped design gaps, preview the proposed flow, save a review revision, and export SVG or `.excalidraw` JSON.
-7. Open the sample project, then edit the brief if desired and choose **Analyze intent**.
-8. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
-9. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
-10. Generate and inspect the governed artifact pack.
-11. Generate the controlled implementation, inspect its diff, and approve it for verification.
+4. Review ranked gaps and the deterministic readiness breakdown. Answer blocker questions using a suggested option or precise custom text; each answer updates the canonical graph and regenerates affected documents.
+5. Open any document in the review studio, inspect HLD diagrams, request a section-level AI revision, and jump to the current project hub in Notion.
+6. Approve the document baseline, then optionally choose one of twelve curated product patterns, inspect its generated flow, edit scenes, save a review revision, and export SVG or `.excalidraw` JSON.
+7. Compare the contextual architecture and technology recommendations, ask grounded questions, and explicitly approve an option only after blockers are resolved. Axiom then generates the final ADR and HLD and republishes the complete document set to Notion when configured.
+8. Open the sample project, then edit the brief if desired and choose **Analyze intent**.
+9. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
+10. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
+11. Generate and inspect the governed artifact pack.
+12. Generate the controlled implementation, inspect its diff, and approve it for verification.
 
 ## Implementation notes
 

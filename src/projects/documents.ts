@@ -98,6 +98,56 @@ function inferNfr(entity: KnowledgeEntity) {
   return { category: 'Unclassified', metric: 'UNKNOWN', target: 'UNKNOWN', unit: 'UNKNOWN', verification: 'UNKNOWN — clarification required' };
 }
 
+function mermaidId(value: string, index: number) {
+  const normalized = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+  return normalized || `Component${index + 1}`;
+}
+
+function architectureDiagrams(project: Project, option: ArchitectureOption) {
+  const components = option.components.map((component, index) => ({ ...component, id: mermaidId(component.name, index) }));
+  const chain = components.map((component) => component.id).join(' --> ');
+  const componentNodes = components.map((component) => `    ${component.id}["${clean(component.name)}"]`).join('\n');
+  const deploymentNodes = components.map((component, index) => `    ${component.id}["${clean(component.name)}\\n${clean(option.technologies[index % option.technologies.length] ?? 'Technology pending review')}"]`).join('\n');
+  const sequenceParticipants = components.slice(0, 4).map((component) => `    participant ${component.id} as ${clean(component.name)}`).join('\n');
+  const sequenceMessages = components.slice(0, 4).flatMap((component, index, values) => index < values.length - 1
+    ? [`    ${component.id}->>+${values[index + 1].id}: ${clean(option.dataFlows[index] ?? 'Validated request')}`, `    ${values[index + 1].id}-->>-${component.id}: Outcome / status`]
+    : []).join('\n');
+  return `### System context diagram
+\`\`\`mermaid
+flowchart LR
+    User["Product user"] --> AxiomSystem["${clean(project.name)}"]
+    AxiomSystem --> External["Approved external services"]
+    AxiomSystem --> Evidence["Audit and observability evidence"]
+\`\`\`
+
+### Component diagram
+\`\`\`mermaid
+flowchart LR
+${componentNodes}
+    ${chain}
+\`\`\`
+
+### Deployment diagram
+\`\`\`mermaid
+flowchart TB
+    subgraph Runtime["${clean(option.deploymentModel)}"]
+${deploymentNodes}
+    end
+    Edge["Client / edge"] --> ${components[0]?.id ?? 'Runtime'}
+    ${components.at(-1)?.id ?? components[0]?.id ?? 'Runtime'} --> Observability["Logs, metrics, traces"]
+\`\`\`
+
+### Primary sequence diagram
+\`\`\`mermaid
+sequenceDiagram
+    actor User
+${sequenceParticipants}
+    User->>+${components[0]?.id ?? 'Application'}: Submit validated request
+${sequenceMessages}
+    ${components[0]?.id ?? 'Application'}-->>-User: Confirmed outcome or recoverable error
+\`\`\``;
+}
+
 function compileRequirements(project: Project, knowledge: ProjectKnowledge, sources: ProjectSource[], version: number, generatedAt: string) {
   return `# Requirements Catalogue — ${project.name}
 
@@ -252,6 +302,65 @@ ${knowledge.gaps.filter((gap) => ['NFR', 'SECURITY_PRIVACY', 'FAILURE_HANDLING',
 `;
 }
 
+function compileProposedHld(project: Project, knowledge: ProjectKnowledge, _sources: ProjectSource[], version: number, generatedAt: string) {
+  const option = knowledge.architectureOptions.find((candidate) => candidate.recommended) ?? knowledge.architectureOptions[0];
+  if (!option) throw new Error('A proposed HLD requires at least one architecture option');
+  return `# Proposed High-Level Design — ${project.name}
+
+## Document control
+${documentControl(project, knowledge, version, generatedAt, 'AI_SUGGESTED design proposal; final approval requires ARB')}
+
+## 1. Design intent
+${knowledge.summary}
+
+This proposed HLD makes the design visible early enough for product and design review. It does not represent an approved architecture decision. The final HLD is regenerated after ARB approval.
+
+## 2. Proposed architecture direction
+- Direction: ${option.name}
+- Deployment model: ${option.deploymentModel}
+- Why proposed: ${option.why.join('; ')}
+- Why it may not fit: ${option.whyNot.join('; ')}
+
+## 3. Architecture diagrams
+${architectureDiagrams(project, option)}
+
+## 4. Component responsibilities
+| Component | Responsibility |
+|---|---|
+${option.components.map((component) => `| ${clean(component.name)} | ${clean(component.responsibility)} |`).join('\n')}
+
+## 5. Data flow
+${option.dataFlows.map((flow, index) => `${index + 1}. ${flow}`).join('\n')}
+
+## 6. Integration boundaries
+${answeredByCategory(knowledge, 'INTEGRATION')}
+
+## 7. Data and lifecycle
+${answeredByCategory(knowledge, 'DATA')}
+
+## 8. Security and privacy
+${answeredByCategory(knowledge, 'SECURITY_PRIVACY')}
+
+## 9. Failure and recovery
+| Failure mode | Proposed mitigation |
+|---|---|
+${option.failureModes.map((failure) => `| ${clean(failure.failure)} | ${clean(failure.mitigation)} |`).join('\n')}
+
+## 10. Technology direction
+| Layer | Recommendation | Rationale | Alternatives | Status |
+|---|---|---|---|---|
+${knowledge.techStack.map((item) => `| ${item.layer} | ${clean(item.recommendation)} | ${clean(item.rationale)} | ${clean(item.alternatives.join('; '))} | ${item.truthStatus} |`).join('\n') || '| UNKNOWN | UNKNOWN | Awaiting analysis | UNKNOWN | UNKNOWN |'}
+
+## 11. Open design decisions
+${knowledge.gaps.filter((gap) => gap.status === 'OPEN').map((gap) => `- **${gap.id}** (${gap.severity}) ${gap.title}`).join('\n') || '- No open design decisions.'}
+
+## 12. Review boundary
+- Product approval confirms the document baseline and may unlock an optional wireflow.
+- ARB approval remains a later explicit decision and produces the final HUMAN_APPROVED ADR and HLD.
+- Diagrams, technologies, costs, and unverified quality claims remain AI_SUGGESTED or UNKNOWN until approved or measured.
+`;
+}
+
 function versionFor(type: ProjectDocumentType['type'], previous: ProjectDocumentType[] = []) {
   return Math.max(0, ...previous.filter((item) => item.type === type).map((item) => item.version)) + 1;
 }
@@ -293,6 +402,7 @@ export function compileProjectDocuments(input: {
     { type: 'requirements' as const, title: 'Requirements Catalogue', compile: compileRequirements },
     { type: 'srs' as const, title: 'Software Requirements Specification', compile: compileSrs },
     { type: 'nfr' as const, title: 'Non-Functional Requirements Specification', compile: (project: Project, knowledge: ProjectKnowledge, _sources: ProjectSource[], version: number, at: string) => compileNfr(project, knowledge, version, at) },
+    { type: 'hld' as const, title: 'Proposed High-Level Design', compile: compileProposedHld },
   ];
   return definitions.map((definition) => {
     const version = versionFor(definition.type, input.previousDocuments);
@@ -328,7 +438,7 @@ export function compileHldDocument(input: {
   const content = `# High-Level Design — ${input.project.name}
 
 ## Document control
-${documentControl(input.project, input.knowledge, version, generatedAt)}
+${documentControl(input.project, input.knowledge, version, generatedAt, 'HUMAN_APPROVED architecture compiled from the ARB-approved canonical graph')}
 
 - ARB decision: ${input.decision.id} v${input.decision.version} [${input.decision.truthStatus}]
 
@@ -336,6 +446,9 @@ ${documentControl(input.project, input.knowledge, version, generatedAt)}
 ${input.knowledge.summary}
 
 The design consumes the canonical graph at version ${input.knowledge.graphVersion}. Open non-blocking gaps remain visible and are not silently treated as approved behavior.
+
+### Architecture diagrams
+${architectureDiagrams(input.project, option)}
 
 ## 2. Selected architecture
 - Selected option: ${input.decision.optionName}
@@ -417,7 +530,7 @@ ${input.knowledge.techStack.map((item) => `| ${item.layer} | ${clean(item.recomm
 ## 18. Wireframe handoff
 Axiom Wireframe Studio may compile source-linked design hypotheses from this current HLD. Screens, interactions, roles, and example records remain AI_SUGGESTED until design review and approval.
 `;
-  return createDocument({ project: input.project, knowledge: input.knowledge, type: 'hld', title: 'High-Level Design', content, version, generatedAt });
+  return createDocument({ project: input.project, knowledge: input.knowledge, type: 'hld', title: 'Approved High-Level Design', content, version, generatedAt, truthStatus: 'HUMAN_APPROVED' });
 }
 
 export function compileAdrDocument(input: {

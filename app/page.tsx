@@ -9,6 +9,7 @@ import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
 import { WorkspaceHome } from './_components/workspace-home';
+import { LandingExperience } from './_components/landing-experience';
 import { answerQuestion, approve, brief as sampleBrief, readiness, resolvedGaps } from '../src/domain/day2';
 import {
   CodeApproval,
@@ -26,7 +27,7 @@ import {
 } from '../src/domain/schemas';
 
 export default function Page() {
-  const [screen, setScreen] = useState<'workspace' | 'sample'>('workspace');
+  const [screen, setScreen] = useState<'landing' | 'workspace' | 'sample'>('landing');
   const [brief, setBrief] = useState(sampleBrief);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [lastValid, setLastValid] = useState<AnalysisResult | null>(null);
@@ -198,8 +199,17 @@ export default function Page() {
     setHighlight('');
   }
 
+  function openScreen(nextScreen: typeof screen) {
+    setScreen(nextScreen);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }));
+  }
+
+  if (screen === 'landing') {
+    return <LandingExperience onEnter={() => openScreen('workspace')} onOpenSample={() => openScreen('sample')} />;
+  }
+
   if (screen === 'workspace') {
-    return <WorkspaceHome onOpenSample={() => setScreen('sample')} />;
+    return <WorkspaceHome onOpenSample={() => openScreen('sample')} onBackHome={() => openScreen('landing')} />;
   }
 
   return (

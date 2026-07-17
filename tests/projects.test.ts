@@ -50,10 +50,11 @@ describe('arbitrary project knowledge pipeline', () => {
 
     const documents = compileProjectDocuments({ project: { ...project, graphVersion: 1, status: 'ANALYZED' }, knowledge, sources: [source], generatedAt: '2026-07-17T12:01:00.000Z' });
     await store.saveDocuments(project.id, documents);
-    expect(documents.map((document) => document.type)).toEqual(['requirements', 'srs', 'nfr']);
+    expect(documents.map((document) => document.type)).toEqual(['requirements', 'srs', 'nfr', 'hld']);
     expect(documents.every((document) => document.version === 1 && document.sourceGraphVersion === 1)).toBe(true);
     expect(documents.find((document) => document.type === 'srs')?.content).toContain(source.id);
-    expect((await store.getProject(project.id))?.documents).toHaveLength(3);
+    expect(documents.find((document) => document.type === 'hld')?.content).toContain('sequenceDiagram');
+    expect((await store.getProject(project.id))?.documents).toHaveLength(4);
 
     const selected = knowledge.architectureOptions[0];
     const decision = ArbDecision.parse({
@@ -202,5 +203,54 @@ describe('project intelligence and governed design', () => {
     const { markdownBlocks } = await import('../src/integrations/notion');
     const blocks = markdownBlocks('# Summary\n\n| Field | Value |\n|---|---|\n| Readiness | 62/100 |');
     expect(blocks).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'table' })]));
+  });
+
+  it('creates a validated AI-assisted section revision without losing document provenance', async () => {
+    const { reviseDocument, documentSections } = await import('../src/projects/revise-document');
+    const { ProjectDocument } = await import('../src/projects/schemas');
+    const content = '# SRS\n\n## 1. Scope\nOriginal grounded scope.\n\n## 2. Acceptance\nOriginal acceptance criteria.';
+    const document = ProjectDocument.parse({
+      id: 'DOC-SRS-TEST', projectId: 'PROJ-REVISION', type: 'srs', version: 1, sourceGraphVersion: 1, title: 'Software Requirements Specification', content,
+      sha256: 'd'.repeat(64), truthStatus: 'AI_SUGGESTED', generatedAt: '2026-07-18T10:00:00.000Z',
+    });
+    const revision = await reviseDocument({ document, section: '2. Acceptance', instruction: 'Add explicit failure acceptance criteria.', entities: [], generatedAt: '2026-07-18T10:01:00.000Z' });
+    expect(documentSections(content).map((section) => section.heading)).toEqual(['1. Scope', '2. Acceptance']);
+    expect(revision.document.version).toBe(2);
+    expect(revision.document.parentVersion).toBe(1);
+    expect(revision.document.revisionProvider).toBe('axiom-fixture');
+    expect(revision.document.content).toContain('Add explicit failure acceptance criteria.');
+    expect(revision.document.content).toContain('Original grounded scope.');
+  });
+
+  it('supports document-approved wireframes, contextual answers, twelve templates, and project deletion', async () => {
+    process.env.AXIOM_DATA_DIR = await mkdtemp(join(tmpdir(), 'axiom-project-controls-'));
+    vi.resetModules();
+    const store = await import('../src/projects/store');
+    const { analyzeProjectSources } = await import('../src/projects/analyze');
+    const { answerArchitectureQuestion } = await import('../src/projects/architecture-answer');
+    const { compileProjectDocuments } = await import('../src/projects/documents');
+    const { compileWireframeHandoff } = await import('../src/projects/wireframes');
+    const { WIREFRAME_TEMPLATES } = await import('../src/projects/wireframe-templates');
+    const { DocumentApproval, ProjectSource } = await import('../src/projects/schemas');
+    const project = await store.createProject('AI operations console');
+    const source = ProjectSource.parse({ id: 'SRC-APPROVAL', workspaceId: project.workspaceId, projectId: project.id, name: 'brief.md', kind: 'FILE', mimeType: 'text/markdown', size: 60, sha256: 'e'.repeat(64), rawPath: join(process.env.AXIOM_DATA_DIR!, 'missing-source.md'), status: 'EXTRACTED', createdAt: '2026-07-18T10:00:00.000Z', extractedText: 'Operators must review AI workflow failures and retry background jobs.' });
+    await store.addSources(project.id, [source]);
+    const knowledge = analyzeProjectSources(project.id, 1, [source], '2026-07-18T10:01:00.000Z', project.name);
+    await store.saveKnowledge(knowledge);
+    const currentProject = { ...project, graphVersion: 1, status: 'ANALYZED' as const };
+    const documents = compileProjectDocuments({ project: currentProject, knowledge, sources: [source], generatedAt: '2026-07-18T10:02:00.000Z' });
+    await store.saveDocuments(project.id, documents);
+    const approval = DocumentApproval.parse({ id: 'DOCAPP-TEST', projectId: project.id, graphVersion: 1, documentHashes: Object.fromEntries(documents.map((document) => [document.type, document.sha256])), truthStatus: 'HUMAN_APPROVED', approvedAt: '2026-07-18T10:03:00.000Z' });
+    await store.saveDocumentApproval(approval);
+    const hld = documents.find((document) => document.type === 'hld')!;
+    const handoff = compileWireframeHandoff({ project: currentProject, knowledge, documentApproval: approval, hld, templateId: 'ai-copilot' });
+    const answer = answerArchitectureQuestion({ knowledge, question: 'What fails and how do we recover?' });
+    expect(WIREFRAME_TEMPLATES).toHaveLength(12);
+    expect(handoff.documentApprovalId).toBe(approval.id);
+    expect(handoff.templateName).toBe('AI copilot');
+    expect(answer.answer).toContain('Mitigation:');
+    expect(await store.deleteProject(project.id)).toBe(true);
+    expect(await store.getProject(project.id)).toBeNull();
+    delete process.env.AXIOM_DATA_DIR;
   });
 });

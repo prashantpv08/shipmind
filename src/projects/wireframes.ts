@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { WireframeHandoff, type ArbDecision, type Project, type ProjectDocument, type ProjectKnowledge, type WireframeNode, type WireframeTemplateId } from './schemas';
+import { WireframeHandoff, type ArbDecision, type DocumentApproval, type Project, type ProjectDocument, type ProjectKnowledge, type WireframeNode, type WireframeTemplateId } from './schemas';
 import { getWireframeTemplate } from './wireframe-templates';
 
 function stableId(projectId: string, graphVersion: number, key: string) {
@@ -10,11 +10,13 @@ function node(id: string, value: Omit<WireframeNode, 'id'>): WireframeNode {
   return WireframeHandoff.shape.screens.element.shape.nodes.element.parse({ id, ...value });
 }
 
-function chrome(prefix: string, title: string, sourceEntityIds: string[]): WireframeNode[] {
+function chrome(prefix: string, title: string, sourceEntityIds: string[], accent: string, navigation: string[], layout: string): WireframeNode[] {
+  const sidebarColor = layout === 'command' ? '#071a18' : layout === 'commerce' ? '#24160d' : '#101828';
   return [
-    node(`${prefix}-sidebar`, { kind: 'rectangle', x: 40, y: 58, width: 188, height: 718, backgroundColor: '#101828', strokeColor: '#101828', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
-    node(`${prefix}-brand`, { kind: 'text', x: 68, y: 86, text: 'Axiom', fontSize: 26, strokeColor: '#ffffff', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
-    node(`${prefix}-nav`, { kind: 'text', x: 68, y: 170, text: 'Overview\nWork queue\nRecords\nEvidence\nSettings', fontSize: 16, strokeColor: '#d0d5dd', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
+    node(`${prefix}-sidebar`, { kind: 'rectangle', x: 40, y: 58, width: 188, height: 718, backgroundColor: sidebarColor, strokeColor: sidebarColor, truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
+    node(`${prefix}-brand-accent`, { kind: 'rectangle', x: 68, y: 84, width: 34, height: 34, backgroundColor: accent, strokeColor: accent, truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
+    node(`${prefix}-brand`, { kind: 'text', x: 112, y: 88, text: layout === 'mobile' ? 'Mobile' : layout === 'command' ? 'Command' : 'Product', fontSize: 20, strokeColor: '#ffffff', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
+    node(`${prefix}-nav`, { kind: 'text', x: 68, y: 170, text: navigation.join('\n\n'), fontSize: 16, strokeColor: '#d0d5dd', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
     node(`${prefix}-header`, { kind: 'rectangle', x: 228, y: 58, width: 1080, height: 72, backgroundColor: '#ffffff', strokeColor: '#d9dee7', truthStatus: 'AI_SUGGESTED', sourceEntityIds }),
     node(`${prefix}-title`, { kind: 'text', x: 266, y: 80, text: title, fontSize: 24, strokeColor: '#172033', truthStatus: 'AI_SUGGESTED', sourceEntityIds }),
   ];
@@ -30,6 +32,9 @@ function screenNodes(input: {
   sourceEntityIds: string[];
   sourceStatements: string[];
   gapTitles: string[];
+  accent: string;
+  navigation: string[];
+  layout: string;
 }) {
   const prefix = stableId(input.projectId, input.graphVersion, `${input.slug}-node`);
   const cards = input.sections.slice(0, 3).flatMap((section, index) => {
@@ -42,9 +47,9 @@ function screenNodes(input: {
     ];
   });
   return [
-    ...chrome(prefix, input.title, input.sourceEntityIds),
+    ...chrome(prefix, input.title, input.sourceEntityIds, input.accent, input.navigation, input.layout),
     node(`${prefix}-context`, { kind: 'text', x: 266, y: 154, text: 'Source-linked product hypothesis · review before approval', fontSize: 14, strokeColor: '#667085', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
-    node(`${prefix}-action`, { kind: 'rectangle', x: 1100, y: 146, width: 170, height: 44, backgroundColor: '#2636d9', strokeColor: '#2636d9', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
+    node(`${prefix}-action`, { kind: 'rectangle', x: 1100, y: 146, width: 170, height: 44, backgroundColor: input.accent, strokeColor: input.accent, truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
     node(`${prefix}-action-text`, { kind: 'text', x: 1120, y: 159, text: input.primaryAction, fontSize: 15, strokeColor: '#ffffff', truthStatus: 'AI_SUGGESTED', sourceEntityIds: [] }),
     ...cards,
     node(`${prefix}-workspace`, { kind: 'rectangle', x: 266, y: 420, width: 944, height: 250, backgroundColor: '#ffffff', strokeColor: '#d9dee7', truthStatus: 'AI_SUGGESTED', sourceEntityIds: input.sourceEntityIds }),
@@ -58,13 +63,15 @@ function screenNodes(input: {
 export function compileWireframeHandoff(input: {
   project: Project;
   knowledge: ProjectKnowledge;
-  decision: ArbDecision;
+  decision?: ArbDecision;
+  documentApproval?: DocumentApproval;
   hld: ProjectDocument;
   templateId?: WireframeTemplateId;
   generatedAt?: string;
 }) {
-  if (input.decision.truthStatus !== 'HUMAN_APPROVED') throw new Error('A human-approved ARB decision is required before wireframe generation');
-  if (input.decision.graphVersion !== input.knowledge.graphVersion) throw new Error('Approved ARB decision is stale for the current graph');
+  if (!input.decision && !input.documentApproval) throw new Error('Approve the document baseline or architecture before wireframe generation');
+  if (input.decision && input.decision.graphVersion !== input.knowledge.graphVersion) throw new Error('Approved ARB decision is stale for the current graph');
+  if (input.documentApproval && input.documentApproval.graphVersion !== input.knowledge.graphVersion) throw new Error('Approved document baseline is stale for the current graph');
   if (input.hld.type !== 'hld' || input.hld.sourceGraphVersion !== input.knowledge.graphVersion) throw new Error('A current HLD is required before wireframe generation');
 
   const template = getWireframeTemplate(input.templateId ?? 'regulated-workflow');
@@ -96,6 +103,9 @@ export function compileWireframeHandoff(input: {
         sourceEntityIds,
         sourceStatements: assignedStatements.map((statement) => statement.text),
         gapTitles: assignedGaps.map((gap) => gap.title),
+        accent: template.accent,
+        navigation: template.navigation,
+        layout: template.previewLayout,
       }),
     };
   });
@@ -118,7 +128,8 @@ export function compileWireframeHandoff(input: {
     templateId: template.id,
     templateName: template.name,
     sourceGraphVersion: input.knowledge.graphVersion,
-    arbDecisionId: input.decision.id,
+    arbDecisionId: input.decision?.id,
+    documentApprovalId: input.documentApproval?.id,
     hldDocumentId: input.hld.id,
     truthStatus: 'AI_SUGGESTED',
     reviewStatus: 'DRAFT',

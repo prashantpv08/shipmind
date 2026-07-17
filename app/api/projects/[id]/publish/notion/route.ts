@@ -10,10 +10,14 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   if (!bundle) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   if (!bundle.knowledge || !bundle.documents.length) return NextResponse.json({ error: 'Generate project knowledge and documents before publishing to Notion' }, { status: 409 });
   try {
+    const currentDocuments = bundle.documents
+      .filter((document) => document.sourceGraphVersion === bundle.project.graphVersion)
+      .sort((a, b) => b.version - a.version)
+      .filter((document, index, all) => all.findIndex((candidate) => candidate.type === document.type) === index);
     const publication = await publishProjectToNotion({
       project: bundle.project,
       sources: bundle.sources,
-      documents: bundle.documents.filter((document) => document.sourceGraphVersion === bundle.project.graphVersion),
+      documents: currentDocuments,
       knowledge: bundle.knowledge,
       arbDecision: bundle.arbDecision?.graphVersion === bundle.project.graphVersion ? bundle.arbDecision : null,
       previousPublication: bundle.notionPublication,

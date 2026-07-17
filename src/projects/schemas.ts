@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED']);
+export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'DOCUMENTS_APPROVED', 'DESIGN_READY', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED']);
 export const SourceKind = z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']);
 export const SourceStatus = z.enum(['EXTRACTED', 'FAILED']);
 export const KnowledgeCategory = z.enum(['REQUIREMENT', 'NFR', 'DECISION', 'CONSTRAINT', 'RISK', 'OPEN_QUESTION']);
@@ -8,7 +8,20 @@ export const ProjectDocumentType = z.enum(['requirements', 'srs', 'nfr', 'hld', 
 export const GapSeverity = z.enum(['BLOCKER', 'HIGH', 'MEDIUM', 'LOW']);
 export const GapStatus = z.enum(['OPEN', 'ANSWERED', 'ACCEPTED_RISK', 'DEFERRED']);
 export const GapCategory = z.enum(['FUNCTIONAL_SCOPE', 'NFR', 'DATA', 'INTEGRATION', 'FAILURE_HANDLING', 'SECURITY_PRIVACY', 'TESTABILITY', 'DELIVERY']);
-export const WireframeTemplateId = z.enum(['regulated-workflow', 'saas-admin', 'operations-console', 'mobile-onboarding', 'marketplace', 'developer-portal']);
+export const WireframeTemplateId = z.enum([
+  'regulated-workflow',
+  'saas-admin',
+  'operations-console',
+  'mobile-onboarding',
+  'marketplace',
+  'developer-portal',
+  'ai-copilot',
+  'analytics-dashboard',
+  'healthcare-portal',
+  'fintech-banking',
+  'crm-sales',
+  'collaboration-workspace',
+]);
 
 export const Workspace = z.object({
   id: z.string().min(1),
@@ -201,6 +214,19 @@ export const ProjectDocument = z.object({
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   truthStatus: z.enum(['AI_SUGGESTED', 'HUMAN_APPROVED']),
   generatedAt: z.iso.datetime(),
+  parentVersion: z.number().int().positive().optional(),
+  revisedSection: z.string().min(1).max(180).optional(),
+  revisionInstruction: z.string().min(1).max(2_000).optional(),
+  revisionProvider: z.enum(['axiom-fixture', 'openai-responses']).optional(),
+}).strict();
+
+export const DocumentApproval = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  graphVersion: z.number().int().positive(),
+  documentHashes: z.record(z.string(), z.string()),
+  truthStatus: z.literal('HUMAN_APPROVED'),
+  approvedAt: z.iso.datetime(),
 }).strict();
 
 export const NotionPublication = z.object({
@@ -250,7 +276,8 @@ export const WireframeHandoff = z.object({
   templateId: WireframeTemplateId.default('regulated-workflow'),
   templateName: z.string().min(1).default('Regulated workflow'),
   sourceGraphVersion: z.number().int().positive(),
-  arbDecisionId: z.string().min(1),
+  arbDecisionId: z.string().min(1).optional(),
+  documentApprovalId: z.string().min(1).optional(),
   hldDocumentId: z.string().min(1),
   truthStatus: z.literal('AI_SUGGESTED'),
   reviewStatus: z.enum(['DRAFT', 'IN_REVIEW', 'APPROVED', 'SUPERSEDED']).default('DRAFT'),
@@ -278,7 +305,9 @@ export const WireframeHandoff = z.object({
   gaps: z.array(ProjectGap).default([]),
   generatedAt: z.iso.datetime(),
   generator: z.enum(['axiom-deterministic-wireframe-v1', 'axiom-deterministic-wireframe-v2']),
-}).strict();
+}).strict().refine((value) => Boolean(value.arbDecisionId || value.documentApprovalId), {
+  message: 'Wireframe handoff requires an approved architecture or approved document baseline',
+});
 
 export const WireframeRevision = z.object({
   id: z.string().min(1),
@@ -300,6 +329,7 @@ export const ProjectDatabase = z.object({
   knowledge: z.array(ProjectKnowledge),
   arbDecisions: z.array(ArbDecision),
   documents: z.array(ProjectDocument),
+  documentApprovals: z.array(DocumentApproval).default([]),
   notionPublications: z.array(NotionPublication),
   wireframeRevisions: z.array(WireframeRevision).default([]),
 }).strict();
@@ -307,6 +337,11 @@ export const ProjectDatabase = z.object({
 export const CreateProjectRequest = z.object({
   workspaceId: z.string().min(1).optional(),
   name: z.string().trim().min(2).max(160),
+}).strict();
+
+export const ReviseDocumentRequest = z.object({
+  section: z.string().trim().min(1).max(180),
+  instruction: z.string().trim().min(3).max(2_000),
 }).strict();
 
 export type Workspace = z.infer<typeof Workspace>;
@@ -321,6 +356,7 @@ export type ArchitectureOption = z.infer<typeof ArchitectureOption>;
 export type ProjectKnowledge = z.infer<typeof ProjectKnowledge>;
 export type ArbDecision = z.infer<typeof ArbDecision>;
 export type ProjectDocument = z.infer<typeof ProjectDocument>;
+export type DocumentApproval = z.infer<typeof DocumentApproval>;
 export type NotionPublication = z.infer<typeof NotionPublication>;
 export type WireframeScreen = z.infer<typeof WireframeScreen>;
 export type WireframeNode = z.infer<typeof WireframeNode>;
