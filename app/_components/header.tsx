@@ -1,6 +1,6 @@
 import type { RunMeta } from '../../src/domain/schemas';
 
-export function Header({ run }: { run?: RunMeta }) {
+export function Header({ run, onBack }: { run?: RunMeta; onBack?: () => void }) {
   const runtimeLabel = run?.mode === 'fixture'
     ? `${run.label} · ${run.providerName}`
     : run
@@ -11,6 +11,7 @@ export function Header({ run }: { run?: RunMeta }) {
   return (
     <header className="product-header">
       <div>
+        {onBack ? <button type="button" className="workspace-back" onClick={onBack}>← All projects</button> : null}
         <p className="eyebrow">AI Engineering Operating System</p>
         <h1 className="product-title">Axiom</h1>
         <p className="product-subtitle">
@@ -18,8 +19,9 @@ export function Header({ run }: { run?: RunMeta }) {
           controlled implementation, and verifiable proof.
         </p>
         <div className="project-context" aria-label="current project">
-          <span><b>Current workspace:</b> NotifyFlow</span>
-          <span className="badge">Preloaded sample project</span>
+          <span><b>Workspace:</b> Product Engineering</span>
+          <span><b>Project:</b> NotifyFlow</span>
+          <span className="badge">Preloaded sample</span>
         </div>
       </div>
       <span className="badge run-badge" aria-label="analysis mode">

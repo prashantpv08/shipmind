@@ -1,9 +1,12 @@
 # Axiom — AI Engineering Operating System
 
-Axiom turns ambiguous business intent into grounded requirements, approved architecture, governed engineering artifacts, controlled implementation, and verification evidence. The visible product journey is **Intent → Requirements → Architecture → Artifacts → Build → Verify → Traceability → Why**. NotifyFlow is the preloaded sample project used to demonstrate that journey; it is not the product identity.
+Axiom turns scattered project knowledge into grounded requirements, approved architecture, governed engineering artifacts, product wireframes, controlled implementation, and verification evidence. The visible intake journey is **Sources → Structured knowledge → ARB → HLD → Wireframes**, followed by build and verification. NotifyFlow remains one preloaded sample project used to demonstrate the existing engineering pipeline; it is not the product identity.
 
 ## Current scope
 
+- A workspace-first project intake UI supports multiple projects, local file/folder selection, pasted meeting transcripts, source review, and an explicit project-draft state.
+- The interface separates future extracted knowledge into requirements, decisions, constraints, risks, open questions, and source traceability.
+- Notion is the proposed knowledge system of record and Figma is the proposed wireframe handoff. Their connection states are explicit; the application does not claim that OAuth, publishing, or wireframe creation already ran.
 - Editable business-intent brief, preloaded with the NotifyFlow sample.
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
@@ -51,15 +54,14 @@ Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If li
 ## Demo flow
 
 1. Run `pnpm dev`.
-2. Edit the brief if desired and choose **Analyze intent**.
-3. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
-4. Answer the blocker clarification questions.
-5. Compare Serverless, Containerized, and Kafka options.
-6. Approve the selected option to generate ADR-001.
-7. Generate and inspect the nine-artifact pack, including the OpenAPI contract and engineering constitution.
-8. Regenerate to produce new artifact versions with stable IDs.
-9. Generate the controlled implementation for the selected sample slice, inspect its file tree and unified diff, then explicitly approve its manifest for verification.
-10. Edit a clarification after approval to invalidate the downstream pack and code generation and see the ADR marked stale.
+2. Create a project draft by naming the project and adding files, a folder, or a meeting transcript.
+3. Review the planned segregation into requirements, decisions, constraints, risks, open questions, and source trace.
+4. Review the Notion → ARB → HLD → Figma delivery path and explicit integration states.
+5. Open the sample project, then edit the brief if desired and choose **Analyze intent**.
+6. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
+7. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
+8. Generate and inspect the governed artifact pack.
+9. Generate the controlled implementation, inspect its diff, and approve it for verification.
 
 ## Implementation notes
 

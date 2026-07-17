@@ -5,6 +5,16 @@ const now = new Date().toISOString();
 
 test('Axiom product flow uses the sample through controlled build approval', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Start with the source of truth.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create project draft' })).toBeDisabled();
+  await page.getByLabel('Project name').fill('Digital lending modernization');
+  await page.getByRole('button', { name: /Meeting transcript/ }).click();
+  await page.getByLabel('Paste meeting transcript').fill('The team agreed to review lending policy constraints before architecture approval.');
+  await page.getByRole('button', { name: 'Add transcript' }).click();
+  await expect(page.getByLabel('Added sources')).toContainText('Meeting transcript 1');
+  await page.getByRole('button', { name: 'Create project draft' }).click();
+  await expect(page.getByRole('status')).toContainText('Project draft created locally');
+  await page.getByRole('button', { name: 'Open sample project' }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem')).toHaveCount(8);
   await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
@@ -67,6 +77,7 @@ test('renders server-returned live mode metadata from a mocked API response', as
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
   });
   await page.goto('/');
+  await page.getByRole('button', { name: 'Open sample project' }).click();
   await page.getByRole('button', { name: 'Analyze intent' }).click();
 
   await expect(page.getByLabel('analysis mode')).toContainText('Live AI · openai-responses · mock-live-model · SUCCEEDED');
@@ -75,6 +86,7 @@ test('renders server-returned live mode metadata from a mocked API response', as
 
 test('preserves the last valid analysis and displays failed live-run metadata', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Open sample project' }).click();
   await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
   await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
 

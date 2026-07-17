@@ -1,3 +1,10 @@
 import './globals.css';
-export const metadata={title:'Axiom Day 2'};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}
+
+export const metadata = {
+  title: 'Axiom — Engineering OS',
+  description: 'Turn project knowledge into approved architecture, engineering designs, and evidence.',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="en"><body>{children}</body></html>;
+}

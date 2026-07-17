@@ -8,6 +8,7 @@ import { CodeSection, type CodeStatus } from './_components/code-section';
 import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
+import { WorkspaceHome } from './_components/workspace-home';
 import { answerQuestion, approve, brief as sampleBrief, readiness, resolvedGaps } from '../src/domain/day2';
 import {
   CodeApproval,
@@ -25,6 +26,7 @@ import {
 } from '../src/domain/schemas';
 
 export default function Page() {
+  const [screen, setScreen] = useState<'workspace' | 'sample'>('workspace');
   const [brief, setBrief] = useState(sampleBrief);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [lastValid, setLastValid] = useState<AnalysisResult | null>(null);
@@ -196,9 +198,13 @@ export default function Page() {
     setHighlight('');
   }
 
+  if (screen === 'workspace') {
+    return <WorkspaceHome onOpenSample={() => setScreen('sample')} />;
+  }
+
   return (
     <main className="mx-auto max-w-[1400px] space-y-5 p-6">
-      <Header run={displayedRun ?? analysis?.run} />
+      <Header run={displayedRun ?? analysis?.run} onBack={() => setScreen('workspace')} />
       <StageNav
         loaded={Boolean(analysis)}
         loading={loading}
