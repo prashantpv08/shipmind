@@ -146,3 +146,6 @@ vite.config.ts.timestamp-*
 /sandbox/notification-service/workspace/
 /sandbox/notification-service/.axiom-stage-*/
 /sandbox/notification-service/workspace.backup-*/
+
+# Local Axiom workspace/project data and uploaded sources
+/.axiom-data/

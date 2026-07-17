@@ -12,12 +12,15 @@
     "sandbox:coverage": "echo sandbox coverage is implemented in Milestone 6 after code approval"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
     "@vitejs/plugin-react": "6.0.3",
+    "mammoth": "1.12.0",
     "next": "16.2.10",
+    "openai": "6.47.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "zod": "4.4.3",
-    "openai": "6.47.0"
+    "unpdf": "1.6.2",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",
@@ -27,12 +30,12 @@
     "autoprefixer": "10.5.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
     "postcss": "8.5.19",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vitest": "4.1.10",
-    "jsdom": "29.1.1",
-    "typescript-eslint": "8.64.0"
+    "typescript-eslint": "8.64.0",
+    "vitest": "4.1.10"
   },
   "packageManager": "pnpm@10.28.1",
   "engines": {

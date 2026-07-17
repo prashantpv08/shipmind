@@ -4,9 +4,12 @@ Axiom turns scattered project knowledge into grounded requirements, approved arc
 
 ## Current scope
 
-- A workspace-first project intake UI supports multiple projects, local file/folder selection, pasted meeting transcripts, source review, and an explicit project-draft state.
-- The interface separates future extracted knowledge into requirements, decisions, constraints, risks, open questions, and source traceability.
-- Notion is the proposed knowledge system of record and Figma is the proposed wireframe handoff. Their connection states are explicit; the application does not claim that OAuth, publishing, or wireframe creation already ran.
+- A workspace-first project pipeline persists multiple projects and accepts bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-transcript sources.
+- Source text is extracted server-side and deterministically separated into exact source-grounded requirements, NFRs, decisions, constraints, risks, and open questions. The v2 project-intelligence pass also creates at least five ranked gaps, three to five contextual clarification questions, a deterministic readiness breakdown, and seven reviewable technology-layer recommendations.
+- Suggested or custom clarification answers are stored as `HUMAN_CONFIRMED` graph mutations with question provenance. Each answer increments the graph version, recalculates readiness, regenerates the current requirements/SRS/NFR views, and invalidates a stale architecture approval.
+- Requirements, SRS, and NFR documents are detailed versioned compiled views. Three architecture directions include components, data flows, deployment model, technologies, assumptions, failure modes, cost estimate, score breakdown, and reconsideration triggers. ARB approval is blocked while a P0 gap remains and creates a `HUMAN_APPROVED` ADR plus the HLD.
+- The internal Notion adapter maintains one project knowledge hub under a configured parent page. It publishes a source catalogue, native Notion tables, detailed graph-versioned artifact pages, architecture comparison, readiness, blockers, technology direction, and a linked project index. It is idempotent for an unchanged graph/document set and never returns its access token to the client.
+- After HLD, Axiom offers six curated product templates and compiles four source-linked, gap-aware wireframe scenes in the embedded Excalidraw canvas. Users can edit, pan, zoom, preview the proposed screen flow, inspect requirement coverage and required UI states, persist bounded Draft/In Review/Approved revisions, download `.excalidraw`, or export SVG without leaving the product.
 - Editable business-intent brief, preloaded with the NotifyFlow sample.
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
@@ -47,21 +50,28 @@ pnpm sandbox:coverage
 AXIOM_AI_MODE=fixture
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-sol
+AXIOM_DATA_DIR=
+NOTION_ACCESS_TOKEN=
+NOTION_PARENT_PAGE_ID=
 ```
 
 Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
 
+For the hackathon Notion connection, create an internal Notion integration, set `NOTION_ACCESS_TOKEN` in `.env.local`, share one parent page with that integration, and set its page ID as `NOTION_PARENT_PAGE_ID`. Tokens remain server-side. Multi-workspace OAuth is a post-hackathon hardening step; the current adapter intentionally supports one configured Notion workspace.
+
 ## Demo flow
 
 1. Run `pnpm dev`.
-2. Create a project draft by naming the project and adding files, a folder, or a meeting transcript.
-3. Review the planned segregation into requirements, decisions, constraints, risks, open questions, and source trace.
-4. Review the Notion → ARB → HLD → Figma delivery path and explicit integration states.
-5. Open the sample project, then edit the brief if desired and choose **Analyze intent**.
-6. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
-7. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
-8. Generate and inspect the governed artifact pack.
-9. Generate the controlled implementation, inspect its diff, and approve it for verification.
+2. Create a project by naming it and adding files, a folder, or a meeting transcript.
+3. The server persists and extracts the sources, builds the grounded graph, and generates Requirements, SRS, and NFR documents.
+4. Review ranked gaps and the deterministic readiness breakdown. Answer blocker questions using a suggested option or precise custom text; each answer updates the canonical graph and current Notion publication.
+5. Compare the enriched architecture and technology recommendations. Select and explicitly approve an option only after blockers are resolved; Axiom then generates the ADR and HLD and republishes the complete document set to Notion when configured.
+6. Choose a curated product template, generate the editable scenes, inspect requirement coverage and mapped design gaps, preview the proposed flow, save a review revision, and export SVG or `.excalidraw` JSON.
+7. Open the sample project, then edit the brief if desired and choose **Analyze intent**.
+8. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
+9. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
+10. Generate and inspect the governed artifact pack.
+11. Generate the controlled implementation, inspect its diff, and approve it for verification.
 
 ## Implementation notes
 
@@ -70,4 +80,7 @@ Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If li
 - Generated readiness percentages are not accepted from the model.
 - Artifact compilation lives under `src/artifacts`, validates every output before returning it, and never mutates the canonical graph.
 - Controlled generation lives under `src/codegen`; the committed sandbox template fixes dependencies and build/test commands while the runtime workspace remains generated data.
+- Project-intelligence mutation and readiness logic lives under `src/projects/intelligence.ts`; route handlers and React components do not calculate truth transitions or scores.
+- Wireframe compilation lives under `src/projects/wireframes.ts`, with its fixed registry in `src/projects/wireframe-templates.ts`. It consumes only the current graph, human-approved ARB decision, and current HLD; the embedded Excalidraw editor and bounded revision store are replaceable adapters, not sources of product truth.
+- The hackathon deployable is a modular monolith in the pnpm workspace. Module interfaces are explicit so model execution, collaborative scene storage, or a future Rust/WASM renderer can be extracted only when scale or isolation requires it.
 - The app does not fabricate verification evidence; real runner evidence is deferred to the verification milestone.
