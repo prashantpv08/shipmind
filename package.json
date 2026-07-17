@@ -12,26 +12,30 @@
     "sandbox:coverage": "echo sandbox coverage not implemented for Day 2"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "zod": "latest",
-    "openai": "latest"
+    "@vitejs/plugin-react": "6.0.3",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "4.4.3",
+    "openai": "6.47.0"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "autoprefixer": "latest",
-    "eslint": "latest",
-    "eslint-config-next": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest",
-    "typescript": "latest",
-    "vitest": "latest",
-    "jsdom": "latest",
-    "typescript-eslint": "latest"
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "autoprefixer": "10.5.4",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.2.10",
+    "postcss": "8.5.19",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "jsdom": "29.1.1",
+    "typescript-eslint": "8.64.0"
+  },
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=22.0.0"
   }
 }
