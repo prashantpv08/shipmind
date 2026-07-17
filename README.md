@@ -1,16 +1,17 @@
 # Axiom NotifyFlow MVP
 
-Axiom is an AI Engineering Operating System hackathon MVP. This repository currently implements the NotifyFlow P0 vertical journey through Day 2: fixture-backed requirement analysis, clarification of blocking gaps, architecture comparison, and human-approved ADR generation.
+Axiom is an AI Engineering Operating System hackathon MVP. The current Day 2.5 journey runs the visible NotifyFlow flow through the real `/api/analyze` boundary: editable brief → grounded analysis → clarification → deterministic readiness update → architecture comparison → explicit human approval → versioned ADR.
 
 ## Current scope
 
-- Built-in NotifyFlow product brief from `DEMO_SCENARIO.md`.
-- Source-grounded Day 1 findings for functional requirements, NFRs, and gaps.
-- Deterministic readiness scoring that caps unresolved blocker and security gaps.
-- Clarification questions with suggested options and custom answers recorded as `USER_PROVIDED`.
-- Architecture Decision Lab with three options, weighted comparison, explicit Why / Why Not, assumptions, risks, failure modes, and reconsideration triggers.
-- ADR creation only after blocker gaps are resolved and a human approves the selected option.
-- Fixture mode by default so the demo runs without an external model key; live OpenAI mode is isolated behind the model provider interface.
+- Editable NotifyFlow product brief.
+- `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
+- Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
+- Fixture mode is explicit, works without an API key, and is labelled `Demo fixture` / `notifyflow-day2-fixture`.
+- Live mode uses the server-side OpenAI Responses provider, structured outputs, Zod validation, and no silent fixture substitution on failure.
+- Source-grounded live findings must include exact quotes; the server verifies quotes verbatim and derives offsets itself.
+- Deterministic readiness scoring stays in application code and recalculates after clarification answers.
+- Architecture approval is explicit; the ADR is `HUMAN_APPROVED` and becomes stale if clarifications change.
 
 ## Commands
 
@@ -28,11 +29,9 @@ pnpm sandbox:test
 pnpm sandbox:coverage
 ```
 
-> Note: sandbox commands are intentionally stubbed until the controlled code-generation and verification milestones are implemented.
+> E2E remains a local/release command. CI runs install, lint, typecheck, unit tests, and production build only.
 
 ## Environment
-
-Copy `.env.example` if you want local environment overrides. The default demo path uses fixture mode.
 
 ```bash
 AXIOM_AI_MODE=fixture
@@ -40,20 +39,21 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-sol
 ```
 
-Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` only when exercising the live provider path.
+Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
 
 ## Demo flow
 
 1. Run `pnpm dev`.
-2. Open the app and choose **Load NotifyFlow + Analyze**.
-3. Review grounded findings, source spans, unknowns, and the readiness cap.
+2. Edit the brief if desired and choose **Analyze Brief**.
+3. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
 4. Answer the blocker clarification questions.
 5. Compare Serverless, Containerized, and Kafka options.
 6. Approve the selected option to generate ADR-001.
+7. Edit a clarification after approval to see the ADR marked stale.
 
 ## Implementation notes
 
-- Domain logic lives under `src/domain` and does not depend on React components.
-- Model-provider code lives under `src/ai/provider.ts` and validates structured outputs with Zod before use.
-- Truth/provenance states are represented in the canonical schemas and visible in the UI.
+- Domain logic lives under `src/domain` and does not depend on React components or route handlers.
+- Model-provider code lives under `src/ai/provider.ts` and validates structured outputs with Zod before returning results.
+- Generated readiness percentages are not accepted from the model.
 - The app does not fabricate verification evidence; real runner evidence is deferred to the verification milestone.

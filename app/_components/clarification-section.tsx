@@ -43,7 +43,7 @@ function ClarificationCard({ question, onSubmit }: {
         </button>
       ))}
       <form
-        onSubmit={(event) => {
+        onSubmit={(event: { preventDefault: () => void; currentTarget: HTMLFormElement }) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
           onSubmit(question.id, String(form.get('custom') || 'Custom answer'));
