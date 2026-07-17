@@ -9,19 +9,27 @@ export function Header({ run }: { run?: RunMeta }) {
   const label = run ? `${runtimeLabel} · ${run.outcome}` : runtimeLabel;
 
   return (
-    <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <header className="product-header">
       <div>
-        <h1 className="text-3xl font-black">Axiom — Clarification, Architecture, and Artifact Lab</h1>
-        <p className="muted">NotifyFlow P0: grounded analysis → clarify blockers → decide → compile artifacts.</p>
+        <p className="eyebrow">AI Engineering Operating System</p>
+        <h1 className="product-title">Axiom</h1>
+        <p className="product-subtitle">
+          Turn ambiguous business intent into approved decisions, governed artifacts,
+          controlled implementation, and verifiable proof.
+        </p>
+        <div className="project-context" aria-label="current project">
+          <span><b>Current workspace:</b> NotifyFlow</span>
+          <span className="badge">Preloaded sample project</span>
+        </div>
       </div>
-      <span className="badge" aria-label="analysis mode">
+      <span className="badge run-badge" aria-label="analysis mode">
         {label}{run?.completedAt ? ` · ${new Date(run.completedAt).toLocaleString()}` : ''}
       </span>
     </header>
   );
 }
 
-export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus }: {
+export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved }: {
   loaded: boolean;
   loading: boolean;
   answeredCount: number;
@@ -29,33 +37,43 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
   unlocked: boolean;
   approved: boolean;
   artifactStatus: 'idle' | 'loading' | 'success' | 'error';
+  codeStatus: 'idle' | 'loading' | 'success' | 'error';
+  codeApproved: boolean;
 }) {
   const stages = [
-    { label: '1. Analyze', status: loading ? 'Loading' : loaded ? 'Complete' : 'Ready' },
-    { label: '2. Clarify', status: loaded ? `${answeredCount}/${questionCount} answered` : 'Empty' },
-    { label: '3. Decide', status: unlocked ? 'Unlocked' : 'Locked by blockers' },
+    { label: 'Intent', href: '#intent', status: loading ? 'Analyzing' : loaded ? 'Captured' : 'Ready', state: loading ? 'active' : loaded ? 'complete' : 'ready' },
+    { label: 'Requirements', href: '#requirements', status: loaded ? `${answeredCount}/${questionCount} clarified` : 'Awaiting intent', state: loaded ? 'active' : 'locked' },
+    { label: 'Architecture', href: '#architecture', status: approved ? 'Approved' : unlocked ? 'Ready for decision' : 'Locked by blockers', state: approved ? 'complete' : unlocked ? 'active' : 'locked' },
     {
-      label: '4. Compile',
-      status: artifactStatus === 'loading'
-        ? 'Compiling'
-        : artifactStatus === 'success'
-          ? 'Pack ready'
-          : artifactStatus === 'error'
-            ? 'Failed'
-            : approved
-              ? 'Ready'
-              : 'Locked by ADR',
+      label: 'Artifacts',
+      href: '#artifacts',
+      status: artifactStatus === 'loading' ? 'Compiling' : artifactStatus === 'success' ? 'Pack ready' : artifactStatus === 'error' ? 'Failed' : approved ? 'Ready' : 'Locked by ADR',
+      state: artifactStatus === 'success' ? 'complete' : approved ? 'active' : 'locked',
     },
+    {
+      label: 'Build',
+      href: '#build',
+      status: codeStatus === 'loading' ? 'Generating' : codeStatus === 'error' ? 'Failed' : codeApproved ? 'Approved' : codeStatus === 'success' ? 'Awaiting approval' : artifactStatus === 'success' ? 'Ready' : 'Locked by artifacts',
+      state: codeApproved ? 'complete' : artifactStatus === 'success' ? 'active' : 'locked',
+    },
+    { label: 'Verify', status: codeApproved ? 'Ready for verification' : 'Locked by build approval', state: codeApproved ? 'ready' : 'locked' },
+    { label: 'Traceability', status: 'Awaiting evidence', state: 'locked' },
+    { label: 'Why', status: 'Awaiting evidence', state: 'locked' },
   ];
 
   return (
-    <nav aria-label="Axiom lifecycle" className="responsive-grid">
-      {stages.map((stage) => (
-        <div key={stage.label} className="card">
-          <b>{stage.label}</b>
-          <p className="muted text-sm">{stage.status}</p>
-        </div>
-      ))}
+    <nav aria-label="Axiom product lifecycle" className="stage-nav">
+      <ol>
+        {stages.map((stage, index) => (
+          <li key={stage.label} className={`stage-card stage-${stage.state}`}>
+            <span className="stage-number" aria-hidden="true">{index + 1}</span>
+            <div>
+              {stage.href ? <a href={stage.href}><b>{stage.label}</b></a> : <b>{stage.label}</b>}
+              <p className="muted text-sm">{stage.status}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </nav>
   );
 }

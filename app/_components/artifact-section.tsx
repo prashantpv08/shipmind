@@ -54,10 +54,11 @@ export function ArtifactSection({ decision, pack, status, error, onGenerate }: {
   }
 
   return (
-    <section className="card" aria-labelledby="artifact-pack-heading">
+    <section className="card" id="artifacts" aria-labelledby="artifact-pack-heading">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 id="artifact-pack-heading" className="text-xl font-black">Engineering Constitution and Artifact Pack</h2>
+          <p className="eyebrow">Stage 4 · Artifacts</p>
+          <h2 id="artifact-pack-heading" className="text-xl font-black">Engineering constitution and artifact pack</h2>
           <p className="muted">Deterministic compiled views from the canonical graph and approved ADR. Direct edits here are not authoritative.</p>
         </div>
         <button type="button" className="btn" disabled={blocked || status === 'loading'} onClick={onGenerate}>
@@ -96,7 +97,7 @@ export function ArtifactSection({ decision, pack, status, error, onGenerate }: {
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="font-black">{labels[selected.type]} · {selected.id}</h3>
-                  <p className="muted text-sm">Graph v{selected.sourceGraphVersion} · artifact v{selected.version} · {selected.hash}</p>
+                  <p className="break-anywhere muted text-sm">Graph v{selected.sourceGraphVersion} · artifact v{selected.version} · {selected.hash}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn" disabled={copyState === 'copying'} onClick={copyArtifact}>

@@ -1,10 +1,10 @@
-# Axiom NotifyFlow MVP
+# Axiom — AI Engineering Operating System
 
-Axiom is an AI Engineering Operating System hackathon MVP. The current journey runs the visible NotifyFlow flow through real API boundaries: editable brief → grounded analysis → clarification → deterministic readiness update → architecture comparison → explicit human approval → versioned ADR → governed artifact pack.
+Axiom turns ambiguous business intent into grounded requirements, approved architecture, governed engineering artifacts, controlled implementation, and verification evidence. The visible product journey is **Intent → Requirements → Architecture → Artifacts → Build → Verify → Traceability → Why**. NotifyFlow is the preloaded sample project used to demonstrate that journey; it is not the product identity.
 
 ## Current scope
 
-- Editable NotifyFlow product brief.
+- Editable business-intent brief, preloaded with the NotifyFlow sample.
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
 - Fixture mode is explicit, works without an API key, and is labelled `Demo fixture` / `notifyflow-day2-fixture`.
@@ -15,6 +15,10 @@ Axiom is an AI Engineering Operating System hackathon MVP. The current journey r
 - `POST /api/artifacts` deterministically compiles the canonical graph and current ADR into a versioned engineering constitution and nine validated artifacts.
 - The artifact pack includes SRS, NFR catalogue, HLD, ADR, OpenAPI 3.1, test strategy, implementation backlog, Codex task packet, and constitution views with stable IDs and SHA-256 content hashes.
 - Artifact previews and downloads are compiled views. The canonical graph remains authoritative, and stale ADRs cannot generate artifacts.
+- `POST /api/code/generate` uses the approved graph, ADR, OpenAPI, backlog, task packet, and constitution as recorded provenance for a fixed NotifyFlow code fixture.
+- Generated files are limited to five allowlisted paths under `sandbox/notification-service/workspace`; traversal, unknown paths, symlinks, duplicate paths, malformed output, and bounded-size violations are rejected before an atomic workspace swap.
+- The generated slice implements create/get notification handling, trusted tenant isolation, idempotency, audit events, a mocked provider, retry policy, unit tests, and API tests.
+- Code files, hashes, trace links, and exact create-file diffs are visible before explicit approval for verification. Approval authorizes later verification but does not claim that checks ran.
 
 ## Commands
 
@@ -47,14 +51,15 @@ Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If li
 ## Demo flow
 
 1. Run `pnpm dev`.
-2. Edit the brief if desired and choose **Analyze Brief**.
+2. Edit the brief if desired and choose **Analyze intent**.
 3. Review provider metadata, grounded findings, exact evidence offsets, inferred items, and unknowns.
 4. Answer the blocker clarification questions.
 5. Compare Serverless, Containerized, and Kafka options.
 6. Approve the selected option to generate ADR-001.
 7. Generate and inspect the nine-artifact pack, including the OpenAPI contract and engineering constitution.
 8. Regenerate to produce new artifact versions with stable IDs.
-9. Edit a clarification after approval to invalidate the pack and see the ADR marked stale.
+9. Generate the controlled implementation for the selected sample slice, inspect its file tree and unified diff, then explicitly approve its manifest for verification.
+10. Edit a clarification after approval to invalidate the downstream pack and code generation and see the ADR marked stale.
 
 ## Implementation notes
 
@@ -62,4 +67,5 @@ Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If li
 - Model-provider code lives under `src/ai/provider.ts` and validates structured outputs with Zod before returning results.
 - Generated readiness percentages are not accepted from the model.
 - Artifact compilation lives under `src/artifacts`, validates every output before returning it, and never mutates the canonical graph.
+- Controlled generation lives under `src/codegen`; the committed sandbox template fixes dependencies and build/test commands while the runtime workspace remains generated data.
 - The app does not fabricate verification evidence; real runner evidence is deferred to the verification milestone.

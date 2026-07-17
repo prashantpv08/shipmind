@@ -7,9 +7,9 @@
     "test:e2e": "playwright test",
     "build": "next build",
     "demo:reset": "node scripts/demo-reset.mjs",
-    "sandbox:build": "echo sandbox build not implemented for Day 2",
-    "sandbox:test": "echo sandbox test not implemented for Day 2",
-    "sandbox:coverage": "echo sandbox coverage not implemented for Day 2"
+    "sandbox:build": "tsc -p sandbox/notification-service/workspace/tsconfig.json --noEmit",
+    "sandbox:test": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests",
+    "sandbox:coverage": "echo sandbox coverage is implemented in Milestone 6 after code approval"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.0.3",

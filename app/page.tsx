@@ -4,10 +4,17 @@ import { useState } from 'react';
 import { AnalyzeSection } from './_components/analyze-section';
 import { ArtifactSection, type ArtifactStatus } from './_components/artifact-section';
 import { ClarificationSection } from './_components/clarification-section';
+import { CodeSection, type CodeStatus } from './_components/code-section';
 import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
 import { answerQuestion, approve, brief as sampleBrief, readiness, resolvedGaps } from '../src/domain/day2';
+import {
+  CodeApproval,
+  CodeGenerationOutput,
+  type CodeApproval as CodeApprovalType,
+  type CodeGenerationOutput as CodeGenerationOutputType,
+} from '../src/codegen/schemas';
 import {
   AnalyzeErrorResponse,
   AnalysisResult,
@@ -30,6 +37,10 @@ export default function Page() {
   const [artifactPack, setArtifactPack] = useState<ArtifactPackType | null>(null);
   const [artifactStatus, setArtifactStatus] = useState<ArtifactStatus>('idle');
   const [artifactError, setArtifactError] = useState('');
+  const [codeOutput, setCodeOutput] = useState<CodeGenerationOutputType | null>(null);
+  const [codeStatus, setCodeStatus] = useState<CodeStatus>('idle');
+  const [codeError, setCodeError] = useState('');
+  const [codeApproval, setCodeApproval] = useState<CodeApprovalType | null>(null);
 
   const questions = analysis?.clarificationQuestions ?? [];
   const gaps = analysis ? resolvedGaps(questions, analysis.gaps) : [];
@@ -69,6 +80,7 @@ export default function Page() {
       setArtifactPack(null);
       setArtifactStatus('idle');
       setArtifactError('');
+      resetCode();
       setSelected(parsed.architectureOptions[0]?.id ?? '');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -88,6 +100,14 @@ export default function Page() {
     setArtifactPack(null);
     setArtifactStatus('idle');
     setArtifactError('');
+    resetCode();
+  }
+
+  function resetCode() {
+    setCodeOutput(null);
+    setCodeStatus('idle');
+    setCodeError('');
+    setCodeApproval(null);
   }
 
   function approveSelected() {
@@ -96,6 +116,7 @@ export default function Page() {
     setArtifactPack(null);
     setArtifactStatus('idle');
     setArtifactError('');
+    resetCode();
   }
 
   async function generateArtifacts() {
@@ -115,10 +136,50 @@ export default function Page() {
       }
       setArtifactPack(ArtifactPack.parse(body));
       setArtifactStatus('success');
+      resetCode();
     } catch (cause) {
       setArtifactStatus('error');
       setArtifactError(cause instanceof Error ? cause.message : String(cause));
     }
+  }
+
+  async function generateCode() {
+    if (!analysis || !adr || !artifactPack || adr.stale) return;
+    setCodeStatus('loading');
+    setCodeError('');
+    try {
+      const response = await fetch('/api/code/generate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          analysis,
+          decision: adr,
+          artifactPack,
+          selectedSliceId: 'SLICE-NOTIFICATION-API-001',
+        }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const message = body && typeof body === 'object' && 'error' in body ? String(body.error) : 'Code generation failed';
+        throw new Error(message);
+      }
+      setCodeOutput(CodeGenerationOutput.parse(body));
+      setCodeApproval(null);
+      setCodeStatus('success');
+    } catch (cause) {
+      setCodeStatus('error');
+      setCodeError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
+  function approveCode() {
+    if (!codeOutput) return;
+    setCodeApproval(CodeApproval.parse({
+      generationId: codeOutput.generationId,
+      manifestHash: codeOutput.manifestHash,
+      truthStatus: 'HUMAN_APPROVED',
+      approvedAt: new Date().toISOString(),
+    }));
   }
 
   function reset() {
@@ -131,6 +192,7 @@ export default function Page() {
     setArtifactPack(null);
     setArtifactStatus('idle');
     setArtifactError('');
+    resetCode();
     setHighlight('');
   }
 
@@ -145,6 +207,8 @@ export default function Page() {
         unlocked={unlocked}
         approved={Boolean(adr && !adr.stale)}
         artifactStatus={artifactStatus}
+        codeStatus={codeStatus}
+        codeApproved={Boolean(codeApproval)}
       />
       <AnalyzeSection
         brief={brief}
@@ -178,6 +242,15 @@ export default function Page() {
             status={artifactStatus}
             error={artifactError}
             onGenerate={generateArtifacts}
+          />
+          <CodeSection
+            pack={artifactPack}
+            output={codeOutput}
+            status={codeStatus}
+            error={codeError}
+            approval={codeApproval}
+            onGenerate={generateCode}
+            onApprove={approveCode}
           />
         </>
       ) : null}
