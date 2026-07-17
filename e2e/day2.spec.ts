@@ -22,8 +22,17 @@ test('NotifyFlow Day 2 fixture happy path through API', async ({ page }) => {
   await page.getByRole('button', { name: 'Explicitly approve selected option' }).click();
   await expect(page.getByText(/Versioned ADR ADR-001/)).toBeVisible();
 
+  await page.getByRole('button', { name: 'Generate artifact pack' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Artifact pack ready' })).toContainText('9 validated artifacts');
+  await expect(page.getByRole('tab')).toHaveCount(9);
+  await page.getByRole('tab', { name: /OpenAPI 3.1/ }).click();
+  await expect(page.getByRole('tabpanel')).toContainText('"openapi": "3.1.0"');
+  await expect(page.getByRole('tabpanel')).toContainText('sha256:');
+
   await page.getByRole('button', { name: /100 requests\/sec/ }).first().click();
   await expect(page.getByText(/Potentially stale/)).toBeVisible();
+  await expect(page.getByText(/The ADR is stale/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate artifact pack' })).toBeDisabled();
 });
 
 test('renders server-returned live mode metadata from a mocked API response', async ({ page }) => {

@@ -1,6 +1,6 @@
 # Axiom NotifyFlow MVP
 
-Axiom is an AI Engineering Operating System hackathon MVP. The current Day 2.5 journey runs the visible NotifyFlow flow through the real `/api/analyze` boundary: editable brief → grounded analysis → clarification → deterministic readiness update → architecture comparison → explicit human approval → versioned ADR.
+Axiom is an AI Engineering Operating System hackathon MVP. The current journey runs the visible NotifyFlow flow through real API boundaries: editable brief → grounded analysis → clarification → deterministic readiness update → architecture comparison → explicit human approval → versioned ADR → governed artifact pack.
 
 ## Current scope
 
@@ -12,6 +12,9 @@ Axiom is an AI Engineering Operating System hackathon MVP. The current Day 2.5 j
 - Source-grounded live findings must include exact quotes; the server verifies quotes verbatim and derives offsets itself.
 - Deterministic readiness scoring stays in application code and recalculates after clarification answers.
 - Architecture approval is explicit; the ADR is `HUMAN_APPROVED` and becomes stale if clarifications change.
+- `POST /api/artifacts` deterministically compiles the canonical graph and current ADR into a versioned engineering constitution and nine validated artifacts.
+- The artifact pack includes SRS, NFR catalogue, HLD, ADR, OpenAPI 3.1, test strategy, implementation backlog, Codex task packet, and constitution views with stable IDs and SHA-256 content hashes.
+- Artifact previews and downloads are compiled views. The canonical graph remains authoritative, and stale ADRs cannot generate artifacts.
 
 ## Commands
 
@@ -49,11 +52,14 @@ Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If li
 4. Answer the blocker clarification questions.
 5. Compare Serverless, Containerized, and Kafka options.
 6. Approve the selected option to generate ADR-001.
-7. Edit a clarification after approval to see the ADR marked stale.
+7. Generate and inspect the nine-artifact pack, including the OpenAPI contract and engineering constitution.
+8. Regenerate to produce new artifact versions with stable IDs.
+9. Edit a clarification after approval to invalidate the pack and see the ADR marked stale.
 
 ## Implementation notes
 
 - Domain logic lives under `src/domain` and does not depend on React components or route handlers.
 - Model-provider code lives under `src/ai/provider.ts` and validates structured outputs with Zod before returning results.
 - Generated readiness percentages are not accepted from the model.
+- Artifact compilation lives under `src/artifacts`, validates every output before returning it, and never mutates the canonical graph.
 - The app does not fabricate verification evidence; real runner evidence is deferred to the verification milestone.
