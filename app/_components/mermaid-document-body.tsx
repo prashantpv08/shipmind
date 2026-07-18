@@ -1,4 +1,5 @@
 import { MermaidDiagram } from './mermaid-diagram';
+import { MarkdownDocumentText } from './markdown-document-text';
 
 export type MermaidDocumentBlock = {
   type: 'text' | 'mermaid';
@@ -29,6 +30,6 @@ export function MermaidDocumentBody({ body, label }: { body: string; label: stri
   return <div className="markdown-section-body">
     {blocks.map((block, index) => block.type === 'mermaid'
       ? <MermaidDiagram key={`${index}-${block.value}`} source={block.value} title={label} />
-      : <pre key={`${index}-${block.value}`}>{block.value || 'No content is available in this section.'}</pre>)}
+      : <MarkdownDocumentText key={`${index}-${block.value}`} markdown={block.value} />)}
   </div>;
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { DemoResetResult, type DemoResetResult as DemoResetResultType } from '../../src/export/schemas';
 import type { TraceabilityContext, WhyAnswer } from '../../src/traceability/schemas';
+import { ActionLabel } from './action-label';
 
 type ActionStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -18,12 +19,14 @@ export function ReleaseSection({ context, whyAnswer, onResetComplete }: {
 }) {
   const [exportStatus, setExportStatus] = useState<ActionStatus>('idle');
   const [exportMessage, setExportMessage] = useState('');
+  const [exportFormat, setExportFormat] = useState<'json' | 'markdown' | null>(null);
   const [resetStatus, setResetStatus] = useState<ActionStatus>('idle');
   const [resetError, setResetError] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
 
   async function download(format: 'json' | 'markdown') {
     if (!context) return;
+    setExportFormat(format);
     setExportStatus('loading');
     setExportMessage('');
     try {
@@ -94,8 +97,8 @@ export function ReleaseSection({ context, whyAnswer, onResetComplete }: {
               <li><b>Version matched</b><span>Graph v{context.analysis.graphVersion} · {context.generation.generationId} · {context.verification.id}</span></li>
             </ul>
             <div className="release-actions">
-              <button type="button" disabled={exportStatus === 'loading'} onClick={() => download('json')}>{exportStatus === 'loading' ? 'Compiling export…' : 'Download JSON pack'}</button>
-              <button type="button" disabled={exportStatus === 'loading'} onClick={() => download('markdown')}>Download Markdown handoff</button>
+              <button type="button" aria-busy={exportStatus === 'loading' && exportFormat === 'json'} disabled={exportStatus === 'loading'} onClick={() => download('json')}><ActionLabel loading={exportStatus === 'loading' && exportFormat === 'json'} loadingText="Compiling JSON…">Download JSON pack</ActionLabel></button>
+              <button type="button" aria-busy={exportStatus === 'loading' && exportFormat === 'markdown'} disabled={exportStatus === 'loading'} onClick={() => download('markdown')}><ActionLabel loading={exportStatus === 'loading' && exportFormat === 'markdown'} loadingText="Compiling handoff…">Download Markdown handoff</ActionLabel></button>
             </div>
             {exportStatus === 'success' ? <p className="release-success" role="status">✓ {exportMessage}</p> : null}
             {exportStatus === 'error' ? <p className="release-error" role="alert"><b>Export failed.</b> {exportMessage}</p> : null}
@@ -110,7 +113,7 @@ export function ReleaseSection({ context, whyAnswer, onResetComplete }: {
             {!confirmReset ? <button type="button" className="reset-demo-button" onClick={() => setConfirmReset(true)}>Reset NotifyFlow demo</button> : (
               <div className="reset-confirmation" role="group" aria-label="Confirm NotifyFlow reset">
                 <p><b>Reset the sample now?</b> Export first if you want to keep this run’s evidence.</p>
-                <div><button type="button" disabled={resetStatus === 'loading'} onClick={() => setConfirmReset(false)}>Cancel</button><button type="button" disabled={resetStatus === 'loading'} onClick={resetDemo}>{resetStatus === 'loading' ? 'Resetting…' : 'Confirm reset'}</button></div>
+                <div><button type="button" disabled={resetStatus === 'loading'} onClick={() => setConfirmReset(false)}>Cancel</button><button type="button" aria-busy={resetStatus === 'loading'} disabled={resetStatus === 'loading'} onClick={resetDemo}><ActionLabel loading={resetStatus === 'loading'} loadingText="Resetting demo…">Confirm reset</ActionLabel></button></div>
               </div>
             )}
             {resetStatus === 'error' ? <p className="release-error" role="alert"><b>Reset failed.</b> {resetError}</p> : null}

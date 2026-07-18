@@ -1,4 +1,8 @@
+'use client';
+
+import { useState } from 'react';
 import type { AnalysisResult } from '../../src/domain/schemas';
+import { ActionLabel } from './action-label';
 
 export function AnalyzeSection({ brief, setBrief, analysis, highlight, loading, error, onAnalyze, onFixture, onHighlight, onReset }: {
   brief: string;
@@ -7,14 +11,21 @@ export function AnalyzeSection({ brief, setBrief, analysis, highlight, loading, 
   highlight: string;
   loading: boolean;
   error: string;
-  onAnalyze: () => void;
-  onFixture: () => void;
+  onAnalyze: () => void | Promise<void>;
+  onFixture: () => void | Promise<void>;
   onHighlight: (spanId: string) => void;
   onReset: () => void;
 }) {
+  const [pendingAction, setPendingAction] = useState<'analysis' | 'fixture' | null>(null);
   const allRequirements = analysis
     ? [...analysis.functionalRequirements, ...analysis.nonFunctionalRequirements]
     : [];
+
+  async function run(action: 'analysis' | 'fixture') {
+    setPendingAction(action);
+    try { await (action === 'analysis' ? onAnalyze() : onFixture()); }
+    finally { setPendingAction(null); }
+  }
 
   return (
     <section className="card" id="intent" aria-labelledby="intent-heading">
@@ -35,8 +46,8 @@ export function AnalyzeSection({ brief, setBrief, analysis, highlight, loading, 
       <p className="muted text-sm">{brief.length}/15,000 characters · model credentials remain server-side</p>
 
       <div className="mt-3 flex flex-wrap gap-3">
-        <button className="btn" type="button" disabled={loading} onClick={onAnalyze}>{loading ? 'Analyzing intent…' : 'Analyze intent'}</button>
-        <button className="btn btn-secondary" type="button" disabled={loading} onClick={onFixture}>Run demo fixture instead</button>
+        <button className="btn" type="button" aria-busy={loading && pendingAction === 'analysis'} disabled={loading} onClick={() => run('analysis')}><ActionLabel loading={loading && pendingAction === 'analysis'} loadingText="Analyzing intent…">Analyze intent</ActionLabel></button>
+        <button className="btn btn-secondary" data-testid="run-demo-fixture" type="button" aria-busy={loading && pendingAction === 'fixture'} disabled={loading} onClick={() => run('fixture')}><ActionLabel loading={loading && pendingAction === 'fixture'} loadingText="Loading demo fixture…">Run demo fixture instead</ActionLabel></button>
         <button className="btn btn-secondary" type="button" disabled={loading} onClick={onReset}>Reset workspace</button>
       </div>
 

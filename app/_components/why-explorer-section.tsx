@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import type { TraceabilityContext, TraceabilityGraph, WhyAnswer } from '../../src/traceability/schemas';
 import { suggestedWhyQuestions } from '../../src/traceability/why';
+import { ActionLabel } from './action-label';
 
 export type WhyStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -51,14 +52,14 @@ export function WhyExplorerSection({ context, graph, answer, status, error, onAs
             <span className="mini-kicker">Approved demo questions</span>
             <div>
               {suggestedWhyQuestions.map((suggestion, index) => (
-                <button key={suggestion} type="button" disabled={status === 'loading'} onClick={() => { setQuestion(suggestion); onAsk(suggestion); }}>
-                  <span>0{index + 1}</span><b>{suggestion}</b><i>→</i>
+                <button key={suggestion} type="button" aria-busy={status === 'loading' && question === suggestion} disabled={status === 'loading'} onClick={() => { setQuestion(suggestion); onAsk(suggestion); }}>
+                  <span>0{index + 1}</span><b>{suggestion}</b>{status === 'loading' && question === suggestion ? <span className="action-spinner" aria-hidden="true" /> : <i>→</i>}
                 </button>
               ))}
             </div>
             <form onSubmit={submit}>
               <label htmlFor="why-question">Ask about this project</label>
-              <div><input id="why-question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="e.g. What proves NFR-COST-001?" minLength={3} maxLength={500} /><button type="submit" disabled={status === 'loading' || question.trim().length < 3}>{status === 'loading' ? 'Resolving…' : 'Ask Axiom'}</button></div>
+              <div><input id="why-question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="e.g. What proves NFR-COST-001?" minLength={3} maxLength={500} /><button type="submit" aria-busy={status === 'loading'} disabled={status === 'loading' || question.trim().length < 3}><ActionLabel loading={status === 'loading'} loadingText="Resolving answer…">Ask Axiom</ActionLabel></button></div>
               <small>Free text is classified and resolved only against current graph entities.</small>
             </form>
           </div>

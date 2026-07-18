@@ -21,6 +21,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const bundle = await getProject(id);
   if (!bundle) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   if (!bundle.knowledge) return NextResponse.json({ error: 'Analyze project sources before ARB approval' }, { status: 409 });
+  if (!bundle.documentApproval || bundle.documentApproval.graphVersion !== bundle.project.graphVersion) {
+    return NextResponse.json({ error: 'Approve the current document baseline before ARB approval' }, { status: 409 });
+  }
   const blockers = bundle.knowledge.gaps.filter((gap) => gap.status === 'OPEN' && gap.severity === 'BLOCKER');
   if (blockers.length) {
     return NextResponse.json({

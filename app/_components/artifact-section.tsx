@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ArchitectureDecision, Artifact, ArtifactPack } from '../../src/domain/schemas';
+import { ActionLabel } from './action-label';
 
 export type ArtifactStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -61,8 +62,8 @@ export function ArtifactSection({ decision, pack, status, error, onGenerate }: {
           <h2 id="artifact-pack-heading" className="text-xl font-black">Engineering constitution and artifact pack</h2>
           <p className="muted">Deterministic compiled views from the canonical graph and approved ADR. Direct edits here are not authoritative.</p>
         </div>
-        <button type="button" className="btn" disabled={blocked || status === 'loading'} onClick={onGenerate}>
-          {status === 'loading' ? 'Compiling artifact pack…' : pack ? 'Regenerate artifact pack' : 'Generate artifact pack'}
+        <button type="button" className="btn" aria-busy={status === 'loading'} disabled={blocked || status === 'loading'} onClick={onGenerate}>
+          <ActionLabel loading={status === 'loading'} loadingText="Compiling artifact pack…">{pack ? 'Regenerate artifact pack' : 'Generate artifact pack'}</ActionLabel>
         </button>
       </div>
 
@@ -100,8 +101,8 @@ export function ArtifactSection({ decision, pack, status, error, onGenerate }: {
                   <p className="break-anywhere muted text-sm">Graph v{selected.sourceGraphVersion} · artifact v{selected.version} · {selected.hash}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn" disabled={copyState === 'copying'} onClick={copyArtifact}>
-                    {copyState === 'copying' ? 'Copying…' : 'Copy content'}
+                  <button type="button" className="btn" aria-busy={copyState === 'copying'} disabled={copyState === 'copying'} onClick={copyArtifact}>
+                    <ActionLabel loading={copyState === 'copying'} loadingText="Copying content…">Copy content</ActionLabel>
                   </button>
                   <button type="button" className="btn" onClick={downloadArtifact}>Download</button>
                 </div>

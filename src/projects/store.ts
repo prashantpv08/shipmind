@@ -4,6 +4,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import {
   ArbDecision,
   DocumentApproval,
+  JiraPublication,
   NotionPublication,
   Project,
   ProjectDatabase,
@@ -19,6 +20,7 @@ import {
   type ProjectSource as ProjectSourceType,
   type ArbDecision as ArbDecisionType,
   type DocumentApproval as DocumentApprovalType,
+  type JiraPublication as JiraPublicationType,
   type WireframeRevision as WireframeRevisionType,
 } from './schemas';
 
@@ -42,6 +44,7 @@ function emptyDatabase(): ProjectDatabaseType {
     documents: [],
     documentApprovals: [],
     notionPublications: [],
+    jiraPublications: [],
     wireframeRevisions: [],
   });
 }
@@ -119,6 +122,7 @@ export async function getProject(projectId: string) {
     documents: database.documents.filter((item) => item.projectId === projectId),
     documentApproval: database.documentApprovals.filter((item) => item.projectId === projectId).sort((a, b) => b.approvedAt.localeCompare(a.approvedAt))[0] ?? null,
     notionPublication: database.notionPublications.find((item) => item.projectId === projectId) ?? null,
+    jiraPublication: database.jiraPublications.find((item) => item.projectId === projectId) ?? null,
     wireframeRevisions: database.wireframeRevisions.filter((item) => item.projectId === projectId),
   };
 }
@@ -195,6 +199,7 @@ export async function deleteProject(projectId: string) {
     nextDatabase.documents = nextDatabase.documents.filter((item) => item.projectId !== projectId);
     nextDatabase.documentApprovals = nextDatabase.documentApprovals.filter((item) => item.projectId !== projectId);
     nextDatabase.notionPublications = nextDatabase.notionPublications.filter((item) => item.projectId !== projectId);
+    nextDatabase.jiraPublications = nextDatabase.jiraPublications.filter((item) => item.projectId !== projectId);
     nextDatabase.wireframeRevisions = nextDatabase.wireframeRevisions.filter((item) => item.projectId !== projectId);
   });
   const root = resolve(dataRoot);
@@ -228,6 +233,20 @@ export async function saveNotionPublication(publication: NotionPublicationType) 
   });
 }
 
+export async function saveJiraPublication(publication: JiraPublicationType) {
+  return mutate((database) => {
+    const project = database.projects.find((item) => item.id === publication.projectId);
+    if (!project) throw new Error('Project not found');
+    const parsed = JiraPublication.parse(publication);
+    if (parsed.sourceGraphVersion !== project.graphVersion) throw new Error('Jira backlog must reference the current project graph');
+    database.jiraPublications = database.jiraPublications.filter((item) => item.projectId !== publication.projectId);
+    database.jiraPublications.push(parsed);
+    project.status = 'BACKLOG_READY';
+    project.updatedAt = new Date().toISOString();
+    return parsed;
+  });
+}
+
 export async function saveWireframeRevision(revision: WireframeRevisionType) {
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === revision.projectId);
@@ -240,4 +259,4 @@ export async function saveWireframeRevision(revision: WireframeRevisionType) {
   });
 }
 
-export const validators = { Workspace, Project, ProjectSource, ProjectKnowledge, ProjectDocument, DocumentApproval, ArbDecision, NotionPublication, WireframeRevision };
+export const validators = { Workspace, Project, ProjectSource, ProjectKnowledge, ProjectDocument, DocumentApproval, ArbDecision, NotionPublication, JiraPublication, WireframeRevision };

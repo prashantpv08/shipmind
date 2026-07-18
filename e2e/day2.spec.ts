@@ -3,11 +3,20 @@ import { readFile } from 'node:fs/promises';
 import { fixtureAnalysisResult } from '../src/domain/day2';
 
 const now = new Date().toISOString();
+let createdWorkspaceProjectId: string | undefined;
 
 test.setTimeout(180_000);
 
-test('Axiom guides a project from landing through documents, optional wireflow, and approved architecture', async ({ page }) => {
+test.afterEach(async ({ request }) => {
+  if (!createdWorkspaceProjectId) return;
+  await request.delete(`/api/projects/${createdWorkspaceProjectId}`);
+  createdWorkspaceProjectId = undefined;
+});
+
+test('Axiom guides a project from landing through documents, optional wireflow, approved architecture, and delivery planning', async ({ page }) => {
   await page.route('**/api/integrations/notion/status', async (route) => route.fulfill({ json: { configured: false, mode: 'internal-connection', missing: ['E2E_NOTION_DISABLED'] } }));
+  await page.route('**/api/integrations/jira/status', async (route) => route.fulfill({ json: { configured: false, connected: false, mode: 'jira-cloud-api-token', missing: ['E2E_JIRA_DISABLED'] } }));
+  await page.route('**/api/analyze', async (route) => { await new Promise((resolve) => setTimeout(resolve, 350)); await route.continue(); });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Turn raw intent into an approved product system/ })).toBeVisible();
   await page.getByRole('button', { name: /Experience Axiom/ }).click();
@@ -18,7 +27,9 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByLabel('Paste meeting transcript').fill('The service must preserve lending policy decisions. The API response time must remain below 500 milliseconds. The team agreed to review regulatory constraints before architecture approval.');
   await page.getByRole('button', { name: 'Add transcript' }).click();
   await expect(page.getByLabel('Added sources')).toContainText('Meeting transcript 1');
+  const createResponse = page.waitForResponse((response) => response.url().endsWith('/api/projects') && response.request().method() === 'POST');
   await page.getByRole('button', { name: /Create project system/ }).click();
+  createdWorkspaceProjectId = ((await (await createResponse).json()) as { project: { id: string } }).project.id;
   await expect(page.getByRole('status').filter({ hasText: /project system is ready/i })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('heading', { name: 'Review what Axiom understood.' })).toBeVisible();
   await expect(page.locator('.review-document-grid article')).toHaveCount(4);
@@ -34,7 +45,7 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: 'Close document review' }).click();
   for (let index = 0; index < 2; index += 1) {
     await page.locator('.decision-questions details').first().locator('.question-answer-area > div button').first().click();
-    await expect(page.getByRole('status').filter({ hasText: 'Decision recorded' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Decision recorded' })).toBeVisible({ timeout: 20_000 });
   }
   await page.getByRole('button', { name: /Approve documents/ }).click();
   await expect(page.getByRole('heading', { name: 'See the product before choosing the stack.' })).toBeVisible();
@@ -59,7 +70,9 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: 'Ask →' }).click();
   await expect(page.getByText(/grounded answer/)).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: /Approve architecture/ }).click();
-  await expect(page.getByRole('heading', { name: 'Your product system is ready for handoff.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Architecture approved. Delivery can begin.' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'One governed path from decision to code.' })).toContainText('Jira items ready for confirmation');
+  await expect(page.getByRole('button', { name: /Jira connection needs attention/ })).toBeDisabled();
   await expect(page.locator('.handoff-documents article')).toHaveCount(2);
   await page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ }).click();
   await expect(page.getByRole('dialog', { name: 'Your projects' })).toContainText('Digital lending modernization');
@@ -68,7 +81,10 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem')).toHaveCount(9);
-  await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
+  const fixtureButton = page.getByTestId('run-demo-fixture');
+  await fixtureButton.click();
+  await expect(fixtureButton).toHaveAttribute('aria-busy', 'true');
+  await expect(fixtureButton.locator('.action-spinner')).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
   await expect(page.getByLabel('analysis mode')).toContainText('Demo fixture');

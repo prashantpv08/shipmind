@@ -205,6 +205,41 @@ describe('project intelligence and governed design', () => {
     expect(blocks).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'table' })]));
   });
 
+  it('chunks formatted Notion rich text and renders Mermaid fences as SVG image uploads', async () => {
+    process.env.NOTION_ACCESS_TOKEN = 'test-secret-never-returned';
+    process.env.NOTION_PARENT_PAGE_ID = 'parent-page';
+    const { markdownBlocks, publishProjectToNotion } = await import('../src/integrations/notion');
+    const { renderMermaidDiagramSvg, splitNotionMermaid } = await import('../src/integrations/notion-diagrams');
+    const { Project, ProjectDocument, ProjectKnowledge } = await import('../src/projects/schemas');
+    const longBold = `**${'x'.repeat(4_809)}**`;
+    const richText = ((markdownBlocks(longBold)[0] as { paragraph: { rich_text: Array<{ text: { content: string } }> } }).paragraph.rich_text);
+    expect(richText.every((item) => item.text.content.length <= 2_000)).toBe(true);
+    expect(richText.map((item) => item.text.content).join('')).toHaveLength(4_809);
+
+    const content = '# HLD\n\n### System context diagram\n```mermaid\nflowchart LR\n  User["Product user"] --> App["Axiom"]\n```';
+    expect(splitNotionMermaid(content)).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'diagram', title: 'System context diagram' })]));
+    expect(renderMermaidDiagramSvg('System context diagram', 'flowchart LR\nUser["Product user"] --> App["Axiom"]')).toContain('<svg');
+
+    const project = Project.parse({ id: 'PROJ-NOTION-DIAGRAM', workspaceId: 'WS-1', name: 'Diagram project', status: 'HLD_READY', graphVersion: 1, createdAt: '2026-07-18T10:00:00.000Z', updatedAt: '2026-07-18T10:00:00.000Z' });
+    const knowledge = ProjectKnowledge.parse({ projectId: project.id, graphVersion: 1, summary: 'Diagram publication.', entities: [], gaps: [], clarificationQuestions: [], architectureOptions: [0, 1, 2].map((index) => ({ id: `ARCH-${index}`, projectId: project.id, name: `Option ${index}`, summary: 'Option.', recommended: index === 0, why: ['Fit.'], whyNot: ['Tradeoff.'], risks: ['Risk.'], truthStatus: 'AI_SUGGESTED' })), analyzedAt: '2026-07-18T10:00:00.000Z', analyzer: 'axiom-deterministic-grounded-v1' });
+    const document = ProjectDocument.parse({ id: 'DOC-HLD-DIAGRAM', projectId: project.id, type: 'hld', version: 1, sourceGraphVersion: 1, title: 'High-Level Design', content, sha256: 'f'.repeat(64), truthStatus: 'HUMAN_APPROVED', generatedAt: '2026-07-18T10:00:00.000Z' });
+    const requests: Array<{ url: string; body: unknown }> = [];
+    let page = 0;
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      requests.push({ url, body: init?.body });
+      if (url.endsWith('/file_uploads')) return new Response(JSON.stringify({ id: 'upload-1', upload_url: 'https://api.notion.com/v1/file_uploads/upload-1/send' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      if (url.endsWith('/send')) return new Response(JSON.stringify({ id: 'upload-1', status: 'uploaded' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      page += 1;
+      return new Response(JSON.stringify({ id: `page-${page}`, url: `https://notion.so/page-${page}` }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }));
+    await publishProjectToNotion({ project, sources: [], documents: [document], knowledge });
+    expect(requests.some((request) => request.url.endsWith('/file_uploads'))).toBe(true);
+    const pageBodies = requests.filter((request) => request.url.endsWith('/pages')).map((request) => JSON.stringify(request.body));
+    expect(pageBodies.some((body) => body.includes('file_upload') && body.includes('upload-1'))).toBe(true);
+    expect(pageBodies.every((body) => !body.includes('```mermaid'))).toBe(true);
+  });
+
   it('creates a validated AI-assisted section revision without losing document provenance', async () => {
     const { reviseDocument, documentSections } = await import('../src/projects/revise-document');
     const { ProjectDocument } = await import('../src/projects/schemas');

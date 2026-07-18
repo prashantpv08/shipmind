@@ -6,7 +6,7 @@
 **HEAD when this handoff was created:** `08731ff` — `Add release export and reset flow for NotifyFlow demo`  
 **Remote state at handoff:** `main`, `origin/main`, and `origin/HEAD` pointed to `08731ff`  
 **Worktree before adding this file:** clean  
-**Expected uncommitted change after this handoff:** this file only
+**Work continued after this handoff was first created:** see the 2026-07-18 addendum at the end for the Notion SVG, Jira delivery, and coding-task changes now in the worktree.
 
 ## 1. Read this first
 
@@ -153,7 +153,7 @@ Behavior:
 
 Operational requirement: the configured Notion parent page must be shared with the internal connection. The adapter accepts a full Notion page URL or a 32-character page ID and normalizes it server-side.
 
-Known limitation: Axiom renders Mermaid as SVG in its own document studio. The Notion publisher stores the document content and Mermaid definitions, but it does not create a native rendered Mermaid diagram because Notion does not expose that as a normal page block through this adapter.
+The Notion publisher now extracts Mermaid fences, renders deterministic SVG architecture views, uploads them with Notion File Uploads, and attaches them as image blocks. `rendererVersion: svg-v2` forces one synchronization of pages created by the earlier raw-Markdown adapter; unchanged SVG-v2 publications remain idempotent.
 
 Do not inspect or print `.env.local` to determine whether the user's credentials are present. Use the status endpoint or the visible integration state.
 
@@ -519,3 +519,61 @@ f52aec9 Render Mermaid diagrams in document review studio
 ```
 
 Preserve unrelated user changes if the worktree becomes dirty. Use `apply_patch` for edits, keep the application runnable, run proportionate verification after each slice, and never claim a check passed unless its real command completed.
+
+## 11. Addendum — Notion diagrams and approved delivery flow
+
+Work continued on 2026-07-18 after the original handoff snapshot.
+
+### Implemented in the current worktree
+
+- Fixed new-project UX so optional automatic Notion publication cannot hide a successfully persisted/analyzed/documented local project.
+- Applied the same transaction boundary to architecture approval: final HLD/ADR remain available locally even if Notion synchronization fails.
+- Split every formatted Notion rich-text run at the documented 2,000-character boundary, including bold and inline-code tokens. This fixes the observed `text.content.length ... 4809` validation error.
+- Added `src/integrations/notion-diagrams.ts`. Mermaid fences are extracted, rendered to deterministic SVG, uploaded through Notion File Uploads, and attached as image blocks rather than published as raw fenced text.
+- Added `rendererVersion` to Notion publications. Existing `markdown-v1` publications synchronize once into `svg-v2`; unchanged SVG-v2 publications remain idempotent.
+- Replaced raw Markdown `<pre>` output in the Axiom document reader with semantic paragraphs, headings, lists, links, code, quotes, and native HTML tables while keeping Mermaid rendering interactive.
+- Added a server-side Jira Cloud adapter and status endpoint using `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY`. Secrets remain server-side.
+- Added a deterministic delivery compiler that produces one epic and source-linked child stories from the current document approval, canonical graph, NFRs, and human-approved ARB decision.
+- Added plan-hash confirmation, Epic-first Jira creation, child `parent.key` assignment, stored publication keys, and same-plan idempotency.
+- Added a Delivery stage after final HLD/ADR with the Jira preview, explicit confirmation, Jira links, story selection, and a bounded Codex task packet.
+- Added server enforcement that architecture approval requires the current document-baseline approval.
+- Recorded the scope and repository-write boundary in `docs/decisions/0005-approved-system-to-jira-and-controlled-coding.md`.
+
+### Important boundary
+
+The arbitrary-project delivery path now prepares a source-linked coding task after Jira publication, but it does not yet write arbitrary generated code. A generic coding adapter still needs explicit repository selection, path allowlisting, dependency policy, atomic writes, and fixed verification. The NotifyFlow sample remains the only fully executable code-generation/verification template.
+
+### Verification completed for this addendum
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 64 tests
+pnpm test:e2e   PASS — 4 tests
+pnpm build      PASS — Next.js 16.2.10 production build
+```
+
+The local browser pass verified the approved-project Delivery screen, a four-story Jira preview, semantic document-control tables, interactive Mermaid rendering, and no console errors. No synthetic test content was sent to the configured Notion or Jira workspace during browser verification.
+
+The production build emits one pre-existing Turbopack NFT warning because the fixed verification runner uses dynamic filesystem boundaries. Compilation, TypeScript validation, route generation, and page optimization all complete successfully.
+
+## 12. Addendum — live Jira validation, Build Studio, and loading feedback
+
+Work continued on 2026-07-18 after Jira credentials were added locally.
+
+- Jira status now validates the current account plus the configured project's Epic and Story/Task create metadata using GET requests only. Credential values are never returned.
+- The configured local Jira connection was verified against project `KAN`; no Jira issue was created during verification.
+- Axiom Build Studio now explains and visualizes the governed coding path after a Jira story is selected: compiled contract, repository authorization, patch review, and fixed verification.
+- Generic coding remains locked at repository authorization. The UI explicitly says no coding process is running and never invents progress or command output. NotifyFlow remains the executable generated-diff and verification proof.
+- Async actions across project intake, documents, wireframes, architecture, Delivery, the NotifyFlow pipeline, export, and reset now use action-specific copy, visible spinners, disabled controls, and `aria-busy`.
+- The product decision is recorded in `docs/decisions/0006-governed-build-studio-and-visible-action-state.md`.
+
+Verification for this continuation:
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 66 tests
+pnpm test:e2e   PASS — 4 tests
+pnpm build      PASS — Next.js production build
+```

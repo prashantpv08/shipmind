@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'DOCUMENTS_APPROVED', 'DESIGN_READY', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED']);
+export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'DOCUMENTS_APPROVED', 'DESIGN_READY', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED', 'BACKLOG_READY']);
 export const SourceKind = z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']);
 export const SourceStatus = z.enum(['EXTRACTED', 'FAILED']);
 export const KnowledgeCategory = z.enum(['REQUIREMENT', 'NFR', 'DECISION', 'CONSTRAINT', 'RISK', 'OPEN_QUESTION']);
@@ -238,7 +238,53 @@ export const NotionPublication = z.object({
   sourceGraphVersion: z.number().int().positive(),
   documentPageIds: z.record(z.string(), z.string()),
   documentHashes: z.record(z.string(), z.string()),
+  rendererVersion: z.enum(['markdown-v1', 'svg-v2']).default('markdown-v1'),
   publishedAt: z.iso.datetime(),
+}).strict();
+
+export const JiraBacklogStory = z.object({
+  localId: z.string().min(1),
+  summary: z.string().min(1).max(255),
+  description: z.string().min(1),
+  acceptanceCriteria: z.array(z.string().min(1)).min(2),
+  sourceEntityIds: z.array(z.string().min(1)),
+  priority: z.enum(['P0', 'P1']),
+  truthStatus: z.literal('AI_SUGGESTED'),
+}).strict();
+
+export const JiraBacklogPlan = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  sourceGraphVersion: z.number().int().positive(),
+  documentApprovalId: z.string().min(1),
+  arbDecisionId: z.string().min(1),
+  epic: z.object({
+    summary: z.string().min(1).max(255),
+    description: z.string().min(1),
+    sourceEntityIds: z.array(z.string().min(1)),
+    truthStatus: z.literal('AI_SUGGESTED'),
+  }).strict(),
+  stories: z.array(JiraBacklogStory).min(1).max(20),
+  truthStatus: z.literal('AI_SUGGESTED'),
+  generatedAt: z.iso.datetime(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+
+export const JiraPublication = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  sourceGraphVersion: z.number().int().positive(),
+  planId: z.string().min(1),
+  planHash: z.string().regex(/^[a-f0-9]{64}$/),
+  projectKey: z.string().min(1),
+  epicKey: z.string().min(1),
+  epicUrl: z.url(),
+  stories: z.array(z.object({
+    localId: z.string().min(1),
+    key: z.string().min(1),
+    url: z.url(),
+  }).strict()).min(1),
+  createdAt: z.iso.datetime(),
 }).strict();
 
 export const WireframeNode = z.object({
@@ -331,6 +377,7 @@ export const ProjectDatabase = z.object({
   documents: z.array(ProjectDocument),
   documentApprovals: z.array(DocumentApproval).default([]),
   notionPublications: z.array(NotionPublication),
+  jiraPublications: z.array(JiraPublication).default([]),
   wireframeRevisions: z.array(WireframeRevision).default([]),
 }).strict();
 
@@ -358,6 +405,9 @@ export type ArbDecision = z.infer<typeof ArbDecision>;
 export type ProjectDocument = z.infer<typeof ProjectDocument>;
 export type DocumentApproval = z.infer<typeof DocumentApproval>;
 export type NotionPublication = z.infer<typeof NotionPublication>;
+export type JiraBacklogStory = z.infer<typeof JiraBacklogStory>;
+export type JiraBacklogPlan = z.infer<typeof JiraBacklogPlan>;
+export type JiraPublication = z.infer<typeof JiraPublication>;
 export type WireframeScreen = z.infer<typeof WireframeScreen>;
 export type WireframeNode = z.infer<typeof WireframeNode>;
 export type WireframeHandoff = z.infer<typeof WireframeHandoff>;

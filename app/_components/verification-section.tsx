@@ -2,6 +2,7 @@
 
 import type { CodeApproval } from '../../src/codegen/schemas';
 import type { VerificationReport, VerificationRun } from '../../src/runner/schemas';
+import { ActionLabel } from './action-label';
 
 export type VerificationStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -38,8 +39,8 @@ export function VerificationSection({ approval, report, status, error, onRun }: 
           <h2 id="verification-heading" className="text-xl font-black">Real verification evidence</h2>
           <p className="muted">Axiom runs four repository-defined commands in the controlled workspace. Secrets are stripped, output is bounded, and failures remain failures.</p>
         </div>
-        <button type="button" className="btn" disabled={!approval || status === 'loading'} onClick={onRun}>
-          {status === 'loading' ? 'Running fixed verification…' : report ? 'Run verification again' : 'Run fixed verification'}
+        <button type="button" className="btn" aria-busy={status === 'loading'} disabled={!approval || status === 'loading'} onClick={onRun}>
+          <ActionLabel loading={status === 'loading'} loadingText="Running fixed verification…">{report ? 'Run verification again' : 'Run fixed verification'}</ActionLabel>
         </button>
       </div>
 

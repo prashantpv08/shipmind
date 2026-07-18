@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ArtifactPack } from '../../src/domain/schemas';
 import type { CodeApproval, CodeGenerationOutput } from '../../src/codegen/schemas';
+import { ActionLabel } from './action-label';
 
 export type CodeStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -27,8 +28,8 @@ export function CodeSection({ pack, output, status, error, approval, verificatio
           <h2 id="controlled-code-heading" className="text-xl font-black">Controlled implementation</h2>
           <p className="muted">Axiom turns the approved task packet into inspectable code using fixed dependencies, allowlisted paths, and atomic writes.</p>
         </div>
-        <button type="button" className="btn" disabled={!pack || status === 'loading'} onClick={onGenerate}>
-          {status === 'loading' ? 'Generating implementation…' : output ? 'Regenerate implementation' : 'Generate implementation'}
+        <button type="button" className="btn" aria-busy={status === 'loading'} disabled={!pack || status === 'loading'} onClick={onGenerate}>
+          <ActionLabel loading={status === 'loading'} loadingText="Generating implementation…">{output ? 'Regenerate implementation' : 'Generate implementation'}</ActionLabel>
         </button>
       </div>
 

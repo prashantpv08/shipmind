@@ -6,6 +6,7 @@ import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from '@excalidraw/excalidraw/types';
 import type { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 import type { WireframeHandoff, WireframeNode, WireframeScreen } from '../../src/projects/schemas';
+import { ActionLabel } from './action-label';
 
 const Excalidraw = dynamic(async () => (await import('@excalidraw/excalidraw')).Excalidraw, { ssr: false });
 
@@ -74,6 +75,8 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
+  const [pendingSaveStatus, setPendingSaveStatus] = useState<'DRAFT' | 'IN_REVIEW' | 'APPROVED' | null>(null);
+  const [exporting, setExporting] = useState<'scene' | 'svg' | null>(null);
   const active = handoff.screens.find((screen) => screen.id === activeId) ?? handoff.screens[0];
   const baseName = `${handoff.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${active.slug}`;
   const activeGaps = handoff.gaps.filter((gap) => active.unresolvedGapIds.includes(gap.id));
@@ -89,19 +92,26 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
 
   async function exportSvg() {
     if (!api) return;
-    const { exportToSvg } = await import('@excalidraw/excalidraw');
-    const svg = await exportToSvg({ elements: api.getSceneElements(), appState: { exportBackground: true, viewBackgroundColor: '#e9edf3' }, files: api.getFiles() });
-    download(new XMLSerializer().serializeToString(svg), 'image/svg+xml;charset=utf-8', `${baseName}.svg`);
+    setExporting('svg');
+    try {
+      const { exportToSvg } = await import('@excalidraw/excalidraw');
+      const svg = await exportToSvg({ elements: api.getSceneElements(), appState: { exportBackground: true, viewBackgroundColor: '#e9edf3' }, files: api.getFiles() });
+      download(new XMLSerializer().serializeToString(svg), 'image/svg+xml;charset=utf-8', `${baseName}.svg`);
+    } finally { setExporting(null); }
   }
 
   async function exportScene() {
     if (!api) return;
-    const { serializeAsJSON } = await import('@excalidraw/excalidraw');
-    download(serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), 'local'), 'application/json;charset=utf-8', `${baseName}.excalidraw`);
+    setExporting('scene');
+    try {
+      const { serializeAsJSON } = await import('@excalidraw/excalidraw');
+      download(serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), 'local'), 'application/json;charset=utf-8', `${baseName}.excalidraw`);
+    } finally { setExporting(null); }
   }
 
   async function saveRevision(status: 'DRAFT' | 'IN_REVIEW' | 'APPROVED' = 'DRAFT') {
     if (!api) return;
+    setPendingSaveStatus(status);
     setSaveState('saving');
     setSaveMessage('');
     try {
@@ -124,7 +134,7 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
     } catch (cause) {
       setSaveState('error');
       setSaveMessage(cause instanceof Error ? cause.message : String(cause));
-    }
+    } finally { setPendingSaveStatus(null); }
   }
 
   function selectScreen(screen: WireframeScreen) {
@@ -144,9 +154,9 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
       <div><span className="wireframe-brand">A</span><div><h2 id="wireframe-studio-title">Axiom Wireframe Studio</h2><p>{handoff.projectName} · {handoff.templateName} · graph v{handoff.sourceGraphVersion}</p></div></div>
       <div className="wireframe-toolbar-actions">
         <span className="status-pill amber">AI_SUGGESTED · review required</span>
-        <button type="button" className="btn btn-secondary" disabled={!api || saveState === 'saving'} onClick={() => saveRevision('DRAFT')}>{saveState === 'saving' ? 'Saving…' : 'Save revision'}</button>
-        <button type="button" className="btn btn-secondary" disabled={!api} onClick={exportScene}>Download scene</button>
-        <button type="button" className="btn btn-secondary" disabled={!api} onClick={exportSvg}>Export SVG</button>
+        <button type="button" className="btn btn-secondary" aria-busy={pendingSaveStatus === 'DRAFT'} disabled={!api || saveState === 'saving'} onClick={() => saveRevision('DRAFT')}><ActionLabel loading={pendingSaveStatus === 'DRAFT'} loadingText="Saving revision…">Save revision</ActionLabel></button>
+        <button type="button" className="btn btn-secondary" aria-busy={exporting === 'scene'} disabled={!api || Boolean(exporting)} onClick={exportScene}><ActionLabel loading={exporting === 'scene'} loadingText="Preparing scene…">Download scene</ActionLabel></button>
+        <button type="button" className="btn btn-secondary" aria-busy={exporting === 'svg'} disabled={!api || Boolean(exporting)} onClick={exportSvg}><ActionLabel loading={exporting === 'svg'} loadingText="Rendering SVG…">Export SVG</ActionLabel></button>
         <button type="button" className="icon-button" aria-label="Close Wireframe Studio" onClick={onClose}>×</button>
       </div>
     </header>
@@ -174,7 +184,7 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
         </div>}
       </main>
       {inspectorOpen ? <aside className="wireframe-inspector" aria-label="Wireframe evidence inspector">
-        <section><span className="step-kicker">Review status</span><h3>{handoff.reviewStatus.replaceAll('_', ' ')}</h3><p>{active.purpose}</p><span className="status-pill amber">AI_SUGGESTED</span><div className="review-actions"><button type="button" disabled={!api || saveState === 'saving'} onClick={() => saveRevision('IN_REVIEW')}>Submit for review</button><button type="button" disabled={!api || saveState === 'saving' || activeGaps.some((gap) => gap.severity === 'BLOCKER')} onClick={() => saveRevision('APPROVED')}>Approve screen</button></div></section>
+        <section><span className="step-kicker">Review status</span><h3>{handoff.reviewStatus.replaceAll('_', ' ')}</h3><p>{active.purpose}</p><span className="status-pill amber">AI_SUGGESTED</span><div className="review-actions"><button type="button" aria-busy={pendingSaveStatus === 'IN_REVIEW'} disabled={!api || saveState === 'saving'} onClick={() => saveRevision('IN_REVIEW')}><ActionLabel loading={pendingSaveStatus === 'IN_REVIEW'} loadingText="Submitting…">Submit for review</ActionLabel></button><button type="button" aria-busy={pendingSaveStatus === 'APPROVED'} disabled={!api || saveState === 'saving' || activeGaps.some((gap) => gap.severity === 'BLOCKER')} onClick={() => saveRevision('APPROVED')}><ActionLabel loading={pendingSaveStatus === 'APPROVED'} loadingText="Approving…">Approve screen</ActionLabel></button></div></section>
         <section><span className="step-kicker">Traceability coverage</span><h3>{handoff.coverage.coveredEntityCount}/{handoff.coverage.totalEntityCount} mapped</h3><p>{active.sourceEntityIds.length} grounded entities are mapped to this scene. {handoff.coverage.uncoveredEntityIds.length ? `${handoff.coverage.uncoveredEntityIds.length} remain uncovered across the handoff.` : 'No requirement or NFR item is currently uncovered.'}</p></section>
         <section><span className="step-kicker">Open design gaps</span><h3>{activeGaps.length} mapped to this screen</h3>{activeGaps.length ? activeGaps.map((gap) => <article key={gap.id}><b>{gap.id} · {gap.severity}</b><p>{gap.title}</p><small>{gap.rationale}</small></article>) : <p>No unresolved graph gap is mapped to this screen.</p>}</section>
         <section><span className="step-kicker">Grounded inputs</span><h3>{handoff.groundedStatements.length} source statements</h3>{handoff.groundedStatements.slice(0, 4).map((statement) => <article key={statement.entityId}><b>{statement.entityId}</b><p>{statement.text}</p><small>{statement.sourceId}</small></article>)}</section>

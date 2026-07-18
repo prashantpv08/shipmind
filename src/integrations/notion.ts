@@ -9,6 +9,7 @@ import {
   type ProjectSource,
 } from '../projects/schemas';
 import { architectureComparisonMarkdown } from '../projects/documents';
+import { diagramFilename, renderMermaidDiagramSvg, splitNotionMermaid } from './notion-diagrams';
 
 const NOTION_VERSION = '2026-03-11';
 const PAGE_BLOCK_LIMIT = 90;
@@ -16,6 +17,7 @@ const PAGE_BLOCK_LIMIT = 90;
 type NotionPage = { id: string; url: string };
 type RichText = { type: 'text'; text: { content: string; link?: { url: string } }; annotations?: { bold?: boolean; code?: boolean } };
 type NotionBlock = Record<string, unknown>;
+type NotionFileUpload = { id: string; upload_url?: string };
 
 export function notionStatus() {
   const missing = [
@@ -53,9 +55,9 @@ async function notionRequest<T>(method: 'POST' | 'PATCH', path: string, body: un
   return payload as T;
 }
 
-function plainRichText(content: string, link?: string): RichText[] {
+function plainRichText(content: string, link?: string, annotations?: RichText['annotations']): RichText[] {
   const chunks = content.match(/[\s\S]{1,2000}/g) ?? [''];
-  return chunks.map((chunk) => ({ type: 'text', text: { content: chunk, ...(link ? { link: { url: link } } : {}) } }));
+  return chunks.map((chunk) => ({ type: 'text', text: { content: chunk, ...(link ? { link: { url: link } } : {}) }, ...(annotations ? { annotations } : {}) }));
 }
 
 function richText(content: string): RichText[] {
@@ -66,8 +68,8 @@ function richText(content: string): RichText[] {
     const index = match.index ?? 0;
     if (index > cursor) output.push(...plainRichText(content.slice(cursor, index)));
     const token = match[0];
-    if (token.startsWith('**')) output.push({ type: 'text', text: { content: token.slice(2, -2) }, annotations: { bold: true } });
-    else if (token.startsWith('`')) output.push({ type: 'text', text: { content: token.slice(1, -1) }, annotations: { code: true } });
+    if (token.startsWith('**')) output.push(...plainRichText(token.slice(2, -2), undefined, { bold: true }));
+    else if (token.startsWith('`')) output.push(...plainRichText(token.slice(1, -1), undefined, { code: true }));
     else {
       const link = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(token);
       if (link) output.push(...plainRichText(link[1], link[2]));
@@ -144,6 +146,51 @@ export function markdownBlocks(markdown: string) {
   return blocks;
 }
 
+async function uploadNotionSvg(title: string, source: string) {
+  const filename = diagramFilename(title, source);
+  const created = await notionRequest<NotionFileUpload>('POST', '/file_uploads', {
+    mode: 'single_part',
+    filename,
+    content_type: 'image/svg+xml',
+  });
+  const token = process.env.NOTION_ACCESS_TOKEN;
+  if (!token) throw new Error('Notion is not configured: NOTION_ACCESS_TOKEN is missing');
+  const form = new FormData();
+  form.append('file', new Blob([renderMermaidDiagramSvg(title, source)], { type: 'image/svg+xml' }), filename);
+  const response = await fetch(created.upload_url ?? `https://api.notion.com/v1/file_uploads/${created.id}/send`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'notion-version': NOTION_VERSION },
+    body: form,
+  });
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const message = payload && typeof payload === 'object' && 'message' in payload ? String(payload.message) : `Notion file upload failed with ${response.status}`;
+    throw new Error(message);
+  }
+  return created.id;
+}
+
+async function documentBlocks(markdown: string) {
+  const blocks: NotionBlock[] = [];
+  for (const segment of splitNotionMermaid(markdown)) {
+    if (segment.type === 'markdown') {
+      blocks.push(...markdownBlocks(segment.value));
+      continue;
+    }
+    const uploadId = await uploadNotionSvg(segment.title, segment.source);
+    blocks.push({
+      object: 'block',
+      type: 'image',
+      image: {
+        type: 'file_upload',
+        file_upload: { id: uploadId },
+        caption: plainRichText(`${segment.title} · rendered from the versioned architecture source`),
+      },
+    });
+  }
+  return blocks;
+}
+
 async function appendBlocks(pageId: string, blocks: NotionBlock[]) {
   for (let index = 0; index < blocks.length; index += PAGE_BLOCK_LIMIT) {
     await notionRequest('PATCH', `/blocks/${pageId}/children`, { children: blocks.slice(index, index + PAGE_BLOCK_LIMIT) });
@@ -151,7 +198,7 @@ async function appendBlocks(pageId: string, blocks: NotionBlock[]) {
 }
 
 async function createPage(parentPageId: string, title: string, content: string): Promise<NotionPage> {
-  const blocks = markdownBlocks(content);
+  const blocks = await documentBlocks(content);
   const page = await notionRequest<NotionPage>('POST', '/pages', {
     parent: { type: 'page_id', page_id: parentPageId },
     properties: { title: { type: 'title', title: plainRichText(title) } },
@@ -233,7 +280,7 @@ export async function publishProjectToNotion(input: {
   if (!status.configured) throw new Error(`Notion is not configured: ${status.missing.join(', ')} missing`);
   const graphVersion = input.knowledge.graphVersion;
   const documentHashes = Object.fromEntries(input.documents.map((document) => [document.type, document.sha256]));
-  if (input.previousPublication?.sourceGraphVersion === graphVersion && JSON.stringify(input.previousPublication.documentHashes) === JSON.stringify(documentHashes)) return input.previousPublication;
+  if (input.previousPublication?.rendererVersion === 'svg-v2' && input.previousPublication.sourceGraphVersion === graphVersion && JSON.stringify(input.previousPublication.documentHashes) === JSON.stringify(documentHashes)) return input.previousPublication;
 
   const parentPageId = normalizePageId(process.env.NOTION_PARENT_PAGE_ID as string);
   const hubContent = projectHub({ project: input.project, knowledge: input.knowledge, documents: input.documents, decision: input.arbDecision });
@@ -263,6 +310,7 @@ export async function publishProjectToNotion(input: {
     sourceGraphVersion: graphVersion,
     documentPageIds,
     documentHashes,
+    rendererVersion: 'svg-v2',
     publishedAt: new Date().toISOString(),
   });
 }
