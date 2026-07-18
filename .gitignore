@@ -142,6 +142,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Playwright test artifacts
+/test-results/
+/playwright-report/
+
 # Controlled runtime workspace (rebuilt from the committed fixed template)
 /sandbox/notification-service/workspace/
 /sandbox/notification-service/.axiom-stage-*/

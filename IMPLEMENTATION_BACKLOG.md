@@ -212,6 +212,8 @@ Explain the project through graph traversal.
 
 Deliver a polished, resettable, reliable demo.
 
+Current evidence and remaining release blockers are recorded in `docs/implementation/p0-acceptance-audit.md`.
+
 - [x] Export Markdown and JSON artifacts.
 - [x] Generate manifest.
 - [ ] Add ZIP export if time.
