@@ -31,7 +31,7 @@ export function Header({ run, onBack }: { run?: RunMeta; onBack?: () => void }) 
   );
 }
 
-export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved }: {
+export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved, verificationStatus, verificationOutcome }: {
   loaded: boolean;
   loading: boolean;
   answeredCount: number;
@@ -41,6 +41,8 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
   artifactStatus: 'idle' | 'loading' | 'success' | 'error';
   codeStatus: 'idle' | 'loading' | 'success' | 'error';
   codeApproved: boolean;
+  verificationStatus: 'idle' | 'loading' | 'success' | 'error';
+  verificationOutcome?: 'passed' | 'failed';
 }) {
   const stages = [
     { label: 'Intent', href: '#intent', status: loading ? 'Analyzing' : loaded ? 'Captured' : 'Ready', state: loading ? 'active' : loaded ? 'complete' : 'ready' },
@@ -58,7 +60,12 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
       status: codeStatus === 'loading' ? 'Generating' : codeStatus === 'error' ? 'Failed' : codeApproved ? 'Approved' : codeStatus === 'success' ? 'Awaiting approval' : artifactStatus === 'success' ? 'Ready' : 'Locked by artifacts',
       state: codeApproved ? 'complete' : artifactStatus === 'success' ? 'active' : 'locked',
     },
-    { label: 'Verify', status: codeApproved ? 'Ready for verification' : 'Locked by build approval', state: codeApproved ? 'ready' : 'locked' },
+    {
+      label: 'Verify',
+      href: '#verify',
+      status: verificationStatus === 'loading' ? 'Running fixed commands' : verificationStatus === 'error' ? 'Could not start' : verificationOutcome === 'passed' ? 'Evidence verified' : verificationOutcome === 'failed' ? 'Failed evidence recorded' : codeApproved ? 'Ready for verification' : 'Locked by build approval',
+      state: verificationOutcome === 'passed' ? 'complete' : codeApproved ? 'active' : 'locked',
+    },
     { label: 'Traceability', status: 'Awaiting evidence', state: 'locked' },
     { label: 'Why', status: 'Awaiting evidence', state: 'locked' },
   ];

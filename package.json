@@ -8,8 +8,10 @@
     "build": "next build",
     "demo:reset": "node scripts/demo-reset.mjs",
     "sandbox:build": "tsc -p sandbox/notification-service/workspace/tsconfig.json --noEmit",
+    "sandbox:test:unit": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests/notification-service.unit.test.ts",
+    "sandbox:test:api": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests/notification-service.api.test.ts",
     "sandbox:test": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests",
-    "sandbox:coverage": "echo sandbox coverage is implemented in Milestone 6 after code approval"
+    "sandbox:coverage": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=json-summary --coverage.reporter=text --coverage.reportsDirectory=sandbox/notification-service/workspace/coverage"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "0.18.1",
@@ -28,6 +30,7 @@
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "4.1.10",
     "autoprefixer": "10.5.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.10",

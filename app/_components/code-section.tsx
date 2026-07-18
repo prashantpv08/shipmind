@@ -6,12 +6,13 @@ import type { CodeApproval, CodeGenerationOutput } from '../../src/codegen/schem
 
 export type CodeStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export function CodeSection({ pack, output, status, error, approval, onGenerate, onApprove }: {
+export function CodeSection({ pack, output, status, error, approval, verificationOutcome, onGenerate, onApprove }: {
   pack: ArtifactPack | null;
   output: CodeGenerationOutput | null;
   status: CodeStatus;
   error: string;
   approval: CodeApproval | null;
+  verificationOutcome?: 'passed' | 'failed';
   onGenerate: () => void;
   onApprove: () => void;
 }) {
@@ -89,7 +90,7 @@ export function CodeSection({ pack, output, status, error, approval, onGenerate,
           <div className="mt-4 rounded border p-3">
             <h3 className="font-black">Verification approval gate</h3>
             {approval ? (
-              <p className="break-anywhere" role="status"><span className="badge">{approval.truthStatus}</span> Generation {approval.generationId} manifest {approval.manifestHash} approved at {approval.approvedAt}. Verification is now authorized but has not been executed.</p>
+              <p className="break-anywhere" role="status"><span className="badge">{approval.truthStatus}</span> Generation {approval.generationId} manifest {approval.manifestHash} approved at {approval.approvedAt}. {verificationOutcome ? `Latest fixed verification ${verificationOutcome === 'passed' ? 'passed with TOOL_VERIFIED evidence' : 'recorded FAILED evidence'}. See Stage 6 for exact commands and output.` : 'Verification is now authorized but has not been executed.'}</p>
             ) : (
               <>
                 <p className="muted">Inspect the generated files and diff. No verification command can run until this generation is explicitly approved.</p>

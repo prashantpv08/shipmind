@@ -25,6 +25,8 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 - Generated files are limited to five allowlisted paths under `sandbox/notification-service/workspace`; traversal, unknown paths, symlinks, duplicate paths, malformed output, and bounded-size violations are rejected before an atomic workspace swap.
 - The generated slice implements create/get notification handling, trusted tenant isolation, idempotency, audit events, a mocked provider, retry policy, unit tests, and API tests.
 - Code files, hashes, trace links, and exact create-file diffs are visible before explicit approval for verification. Approval authorizes later verification but does not claim that checks ran.
+- `POST /api/verification/run` accepts only the matching human-approved generation and manifest, revalidates every workspace file hash, rejects symlinks, strips secrets from child-process environments, and executes four fixed commands without a shell.
+- Build, unit, API, and V8 coverage results are stored as validated verification runs with command, duration, exit code, timeout state, parsed metrics, and bounded raw output. Requirement proof is linked only through executed generated tests; untested requirements remain `UNKNOWN`.
 
 ## Commands
 
@@ -73,6 +75,7 @@ For the hackathon Notion connection, create an internal Notion integration, set 
 10. Answer blocker clarifications, compare architecture options, and explicitly approve the ADR.
 11. Generate and inspect the governed artifact pack.
 12. Generate the controlled implementation, inspect its diff, and approve it for verification.
+13. Run fixed verification and inspect the exact build, unit, API, coverage, and requirement-matrix evidence.
 
 ## Implementation notes
 
@@ -81,7 +84,8 @@ For the hackathon Notion connection, create an internal Notion integration, set 
 - Generated readiness percentages are not accepted from the model.
 - Artifact compilation lives under `src/artifacts`, validates every output before returning it, and never mutates the canonical graph.
 - Controlled generation lives under `src/codegen`; the committed sandbox template fixes dependencies and build/test commands while the runtime workspace remains generated data.
+- Controlled verification lives under `src/runner`; its registry owns every executable and argument, the runner uses `shell: false`, strips secrets, enforces timeouts and bounded output, parses V8/Vitest measurements, and never rewrites a failed result.
 - Project-intelligence mutation and readiness logic lives under `src/projects/intelligence.ts`; route handlers and React components do not calculate truth transitions or scores.
 - Wireframe compilation lives under `src/projects/wireframes.ts`, with its fixed registry in `src/projects/wireframe-templates.ts`. It consumes only the current graph, human-approved ARB decision, and current HLD; the embedded Excalidraw editor and bounded revision store are replaceable adapters, not sources of product truth.
 - The hackathon deployable is a modular monolith in the pnpm workspace. Module interfaces are explicit so model execution, collaborative scene storage, or a future Rust/WASM renderer can be extracted only when scale or isolation requires it.
-- The app does not fabricate verification evidence; real runner evidence is deferred to the verification milestone.
+- The app does not fabricate verification evidence. A proof claim is available only after its fixed command actually executes and produces validated evidence.

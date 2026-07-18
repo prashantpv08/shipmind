@@ -8,6 +8,7 @@ import { CodeSection, type CodeStatus } from './_components/code-section';
 import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
+import { VerificationSection, type VerificationStatus } from './_components/verification-section';
 import { WorkspaceHome } from './_components/workspace-home';
 import { LandingExperience } from './_components/landing-experience';
 import { answerQuestion, approve, brief as sampleBrief, readiness, resolvedGaps } from '../src/domain/day2';
@@ -25,6 +26,10 @@ import {
   type ArtifactPack as ArtifactPackType,
   type RunMeta,
 } from '../src/domain/schemas';
+import {
+  VerificationReport,
+  type VerificationReport as VerificationReportType,
+} from '../src/runner/schemas';
 
 export default function Page() {
   const [screen, setScreen] = useState<'landing' | 'workspace' | 'sample'>('landing');
@@ -44,6 +49,9 @@ export default function Page() {
   const [codeStatus, setCodeStatus] = useState<CodeStatus>('idle');
   const [codeError, setCodeError] = useState('');
   const [codeApproval, setCodeApproval] = useState<CodeApprovalType | null>(null);
+  const [verificationReport, setVerificationReport] = useState<VerificationReportType | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('idle');
+  const [verificationError, setVerificationError] = useState('');
 
   const questions = analysis?.clarificationQuestions ?? [];
   const gaps = analysis ? resolvedGaps(questions, analysis.gaps) : [];
@@ -111,6 +119,13 @@ export default function Page() {
     setCodeStatus('idle');
     setCodeError('');
     setCodeApproval(null);
+    resetVerification();
+  }
+
+  function resetVerification() {
+    setVerificationReport(null);
+    setVerificationStatus('idle');
+    setVerificationError('');
   }
 
   function approveSelected() {
@@ -169,6 +184,7 @@ export default function Page() {
       setCodeOutput(CodeGenerationOutput.parse(body));
       setCodeApproval(null);
       setCodeStatus('success');
+      resetVerification();
     } catch (cause) {
       setCodeStatus('error');
       setCodeError(cause instanceof Error ? cause.message : String(cause));
@@ -177,12 +193,36 @@ export default function Page() {
 
   function approveCode() {
     if (!codeOutput) return;
+    resetVerification();
     setCodeApproval(CodeApproval.parse({
       generationId: codeOutput.generationId,
       manifestHash: codeOutput.manifestHash,
       truthStatus: 'HUMAN_APPROVED',
       approvedAt: new Date().toISOString(),
     }));
+  }
+
+  async function runVerification() {
+    if (!codeOutput || !codeApproval) return;
+    setVerificationStatus('loading');
+    setVerificationError('');
+    try {
+      const response = await fetch('/api/verification/run', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ generation: codeOutput, approval: codeApproval }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const message = body && typeof body === 'object' && 'error' in body ? String(body.error) : 'Verification failed to start';
+        throw new Error(message);
+      }
+      setVerificationReport(VerificationReport.parse(body));
+      setVerificationStatus('success');
+    } catch (cause) {
+      setVerificationStatus('error');
+      setVerificationError(cause instanceof Error ? cause.message : String(cause));
+    }
   }
 
   function reset() {
@@ -225,6 +265,8 @@ export default function Page() {
         artifactStatus={artifactStatus}
         codeStatus={codeStatus}
         codeApproved={Boolean(codeApproval)}
+        verificationStatus={verificationStatus}
+        verificationOutcome={verificationReport?.overallStatus}
       />
       <AnalyzeSection
         brief={brief}
@@ -265,8 +307,16 @@ export default function Page() {
             status={codeStatus}
             error={codeError}
             approval={codeApproval}
+            verificationOutcome={verificationReport?.overallStatus}
             onGenerate={generateCode}
             onApprove={approveCode}
+          />
+          <VerificationSection
+            approval={codeApproval}
+            report={verificationReport}
+            status={verificationStatus}
+            error={verificationError}
+            onRun={runVerification}
           />
         </>
       ) : null}

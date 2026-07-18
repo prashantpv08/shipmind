@@ -3,6 +3,8 @@ import { fixtureAnalysisResult } from '../src/domain/day2';
 
 const now = new Date().toISOString();
 
+test.setTimeout(180_000);
+
 test('Axiom guides a project from landing through documents, optional wireflow, and approved architecture', async ({ page }) => {
   await page.route('**/api/integrations/notion/status', async (route) => route.fulfill({ json: { configured: false, mode: 'internal-connection', missing: ['E2E_NOTION_DISABLED'] } }));
   await page.goto('/');
@@ -54,7 +56,7 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('heading', { name: 'Architecture diagrams' })).toBeVisible();
   await page.getByLabel('Ask an architecture question').fill('Why not event-driven services?');
   await page.getByRole('button', { name: 'Ask →' }).click();
-  await expect(page.getByText(/grounded answer/)).toBeVisible();
+  await expect(page.getByText(/grounded answer/)).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: /Approve architecture/ }).click();
   await expect(page.getByRole('heading', { name: 'Your product system is ready for handoff.' })).toBeVisible();
   await expect(page.locator('.handoff-documents article')).toHaveCount(2);
@@ -83,14 +85,14 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByText(/Versioned ADR ADR-001/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Generate artifact pack' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Artifact pack ready' })).toContainText('9 validated artifacts');
+  await expect(page.getByRole('status').filter({ hasText: 'Artifact pack ready' })).toContainText('9 validated artifacts', { timeout: 30_000 });
   await expect(page.getByRole('tab')).toHaveCount(9);
   await page.getByRole('tab', { name: /OpenAPI 3.1/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('"openapi": "3.1.0"');
   await expect(page.getByRole('tabpanel')).toContainText('sha256:');
 
   await page.getByRole('button', { name: 'Generate implementation' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Controlled implementation generated' })).toContainText('5 validated writes');
+  await expect(page.getByRole('status').filter({ hasText: 'Controlled implementation generated' })).toContainText('5 validated writes', { timeout: 30_000 });
   await expect(page.getByLabel('Generated file tree').getByRole('button')).toHaveCount(5);
   await page.getByRole('button', { name: /src\/notification-service.ts/ }).click();
   await expect(page.getByText(/Unified diff · src\/notification-service.ts/)).toBeVisible();
@@ -98,6 +100,16 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: 'Approve generated code for verification' }).click();
   await expect(page.getByText(/Verification is now authorized but has not been executed/)).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Build' })).toContainText('Approved');
+
+  await page.getByRole('button', { name: 'Run fixed verification' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'All fixed commands passed' })).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator('.verification-run-card')).toHaveCount(4);
+  await expect(page.getByLabel('TypeScript build verification result')).toContainText('TOOL_VERIFIED');
+  await expect(page.getByLabel('Unit tests verification result')).toContainText('Tests Passed');
+  await expect(page.getByLabel('API tests verification result')).toContainText('Tests Passed');
+  await expect(page.getByLabel('V8 coverage verification result')).toContainText('Lines');
+  await expect(page.locator('.coverage-matrix')).toContainText('UNKNOWN');
+  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Verify' })).toContainText('Evidence verified');
 
   await page.getByRole('button', { name: /100 requests\/sec/ }).first().click();
   await expect(page.getByText(/Potentially stale/)).toBeVisible();
