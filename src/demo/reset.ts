@@ -25,8 +25,14 @@ async function exists(path: string) {
 
 async function resetOnce(options: DemoResetOptions = {}): Promise<DemoResetResultType> {
   const startedAt = Date.now();
-  const repositoryRoot = resolve(options.repositoryRoot ?? process.cwd());
-  const dataRoot = resolve(options.dataRoot ?? process.env.AXIOM_DATA_DIR ?? join(repositoryRoot, '.axiom-data'));
+  const repositoryRoot = options.repositoryRoot
+    ? resolve(/* turbopackIgnore: true */ options.repositoryRoot)
+    : join(/* turbopackIgnore: true */ process.cwd(), '.');
+  const dataRoot = options.dataRoot
+    ? resolve(/* turbopackIgnore: true */ options.dataRoot)
+    : process.env.AXIOM_DATA_DIR
+      ? resolve(/* turbopackIgnore: true */ process.env.AXIOM_DATA_DIR)
+      : join(repositoryRoot, '.axiom-data');
   const sandboxRoot = join(repositoryRoot, 'sandbox/notification-service');
   const verificationRoot = join(dataRoot, 'verification');
   assertInside(repositoryRoot, sandboxRoot);
