@@ -1,6 +1,6 @@
 # Axiom — AI Engineering Operating System
 
-Axiom turns scattered project knowledge into grounded requirements, governed engineering artifacts, product wireflows, approved architecture, controlled implementation, and verification evidence. The visible journey is **Landing → Sources → Document review → Optional wireflow → Architecture decision → Approved HLD and ADR**, followed by build and verification. NotifyFlow remains one preloaded sample project used to demonstrate the existing engineering pipeline; it is not the product identity.
+Axiom turns scattered project knowledge into grounded requirements, governed engineering artifacts, product wireflows, approved architecture, controlled implementation, verification evidence, and explainable engineering decisions. The visible journey is **Landing → Sources → Document review → Optional wireflow → Architecture decision → Approved HLD and ADR → Build → Verification → Traceability → Why / Why Not / Proof**. NotifyFlow remains one preloaded sample project used to demonstrate the existing engineering pipeline; it is not the product identity.
 
 ## Current scope
 
@@ -27,6 +27,8 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 - Code files, hashes, trace links, and exact create-file diffs are visible before explicit approval for verification. Approval authorizes later verification but does not claim that checks ran.
 - `POST /api/verification/run` accepts only the matching human-approved generation and manifest, revalidates every workspace file hash, rejects symlinks, strips secrets from child-process environments, and executes four fixed commands without a shell.
 - Build, unit, API, and V8 coverage results are stored as validated verification runs with command, duration, exit code, timeout state, parsed metrics, and bounded raw output. Requirement proof is linked only through executed generated tests; untested requirements remain `UNKNOWN`.
+- The Stage 7 traceability compiler creates a validated typed graph across source spans, requirements, gaps, clarification answers, architecture options, the approved ADR, artifacts, constitution rules, the selected task, generated code, tests, and evidence. The visual requirement traversal has an accessible table fallback and exposes orphaned requirements, unlinked tests, and unknown proof.
+- `POST /api/why` validates the current graph, artifact, generation, and verification versions before resolving predefined or free-text Why, Why Not, Proof, and Reconsider questions. Decision answers cite approved graph entities; proof answers cite executed evidence or return `UNKNOWN`.
 
 ## Commands
 
@@ -76,6 +78,8 @@ For the hackathon Notion connection, create an internal Notion integration, set 
 11. Generate and inspect the governed artifact pack.
 12. Generate the controlled implementation, inspect its diff, and approve it for verification.
 13. Run fixed verification and inspect the exact build, unit, API, coverage, and requirement-matrix evidence.
+14. Select a requirement in Traceability and follow it through the approved decision, compiled artifacts, generated code, tests, and evidence. Switch to the accessible list and inspect explicit orphans and unknowns.
+15. Ask the four approved Why questions or enter free text. Confirm that architecture reasoning cites the approved ADR, proof cites executed evidence, and uncovered cost proof remains `UNKNOWN`.
 
 ## Implementation notes
 
@@ -85,6 +89,7 @@ For the hackathon Notion connection, create an internal Notion integration, set 
 - Artifact compilation lives under `src/artifacts`, validates every output before returning it, and never mutates the canonical graph.
 - Controlled generation lives under `src/codegen`; the committed sandbox template fixes dependencies and build/test commands while the runtime workspace remains generated data.
 - Controlled verification lives under `src/runner`; its registry owns every executable and argument, the runner uses `shell: false`, strips secrets, enforces timeouts and bounded output, parses V8/Vitest measurements, and never rewrites a failed result.
+- Traceability and grounded question resolution live under `src/traceability`. The graph compiler and Why resolver are deterministic domain services; React and route handlers only validate inputs, invoke them, and render their typed results.
 - Project-intelligence mutation and readiness logic lives under `src/projects/intelligence.ts`; route handlers and React components do not calculate truth transitions or scores.
 - Wireframe compilation lives under `src/projects/wireframes.ts`, with its fixed registry in `src/projects/wireframe-templates.ts`. It consumes only the current graph, human-approved ARB decision, and current HLD; the embedded Excalidraw editor and bounded revision store are replaceable adapters, not sources of product truth.
 - The hackathon deployable is a modular monolith in the pnpm workspace. Module interfaces are explicit so model execution, collaborative scene storage, or a future Rust/WASM renderer can be extracted only when scale or isolation requires it.

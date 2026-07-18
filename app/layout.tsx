@@ -1,5 +1,6 @@
 import './globals.css';
 import './verification.css';
+import './traceability.css';
 
 export const metadata = {
   title: 'Axiom — Engineering OS',

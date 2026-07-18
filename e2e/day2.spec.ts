@@ -111,6 +111,34 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.locator('.coverage-matrix')).toContainText('UNKNOWN');
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Verify' })).toContainText('Evidence verified');
 
+  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Traceability' })).toContainText('Graph compiled');
+  await expect(page.getByRole('heading', { name: 'Follow every claim to its proof.' })).toBeVisible();
+  await expect(page.getByLabel('Traceability graph summary')).toContainText('Explicit unknowns');
+  await page.getByLabel('Traceable requirements').getByRole('button', { name: /NFR-COST-001/ }).click();
+  await expect(page.getByLabel('NFR-COST-001 visual traceability graph')).toContainText('No linked node');
+  await page.getByRole('button', { name: 'Accessible list' }).click();
+  await expect(page.getByRole('table', { name: /Accessible ordered trace for NFR-COST-001/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Visual graph' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Ask Why, Why Not, Proof, or Reconsider.' })).toBeVisible();
+  await page.getByRole('button', { name: /Why was the serverless event-driven architecture selected/ }).click();
+  await expect(page.locator('.why-answer-card')).toContainText('human-approved fit');
+  await expect(page.locator('.why-answer-card')).toContainText('ADR-001');
+  await page.getByRole('button', { name: /Why not Kafka-based microservices/ }).click();
+  await expect(page.locator('.why-answer-card')).toContainText('was rejected for this MVP');
+  await expect(page.locator('.why-answer-card')).toContainText('ARCH-KAFKA');
+  await page.getByRole('button', { name: /What proves the notification API works/ }).click();
+  await expect(page.locator('.why-grounding')).toHaveText('TOOL_VERIFIED');
+  await expect(page.locator('.why-evidence > article')).toHaveCount(2);
+  await expect(page.locator('.why-answer-card')).toContainText('NFR-COST-001');
+  await page.getByRole('button', { name: /What would make us reconsider this architecture/ }).click();
+  await expect(page.locator('.why-answer-card')).toContainText('Monthly cost exceeds USD 1,000 for two consecutive months');
+  await page.getByLabel('Ask about this project').fill('What proves NFR-COST-001?');
+  await page.getByRole('button', { name: 'Ask Axiom' }).click();
+  await expect(page.locator('.why-grounding')).toHaveText('UNKNOWN');
+  await expect(page.locator('.why-answer-card')).toContainText('No executed generated test is linked');
+  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Why' })).toContainText('UNKNOWN answer');
+
   await page.getByRole('button', { name: /100 requests\/sec/ }).first().click();
   await expect(page.getByText(/Potentially stale/)).toBeVisible();
   await expect(page.getByText(/The ADR is stale/)).toBeVisible();

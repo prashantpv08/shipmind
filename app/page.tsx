@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AnalyzeSection } from './_components/analyze-section';
 import { ArtifactSection, type ArtifactStatus } from './_components/artifact-section';
 import { ClarificationSection } from './_components/clarification-section';
@@ -9,6 +9,8 @@ import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
 import { VerificationSection, type VerificationStatus } from './_components/verification-section';
+import { TraceabilitySection } from './_components/traceability-section';
+import { WhyExplorerSection, type WhyStatus } from './_components/why-explorer-section';
 import { WorkspaceHome } from './_components/workspace-home';
 import { LandingExperience } from './_components/landing-experience';
 import { answerQuestion, approve, brief as sampleBrief, readiness, resolvedGaps } from '../src/domain/day2';
@@ -30,6 +32,12 @@ import {
   VerificationReport,
   type VerificationReport as VerificationReportType,
 } from '../src/runner/schemas';
+import { buildTraceabilityGraph } from '../src/traceability/graph';
+import {
+  TraceabilityContext,
+  WhyAnswer,
+  type WhyAnswer as WhyAnswerType,
+} from '../src/traceability/schemas';
 
 export default function Page() {
   const [screen, setScreen] = useState<'landing' | 'workspace' | 'sample'>('landing');
@@ -52,12 +60,29 @@ export default function Page() {
   const [verificationReport, setVerificationReport] = useState<VerificationReportType | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('idle');
   const [verificationError, setVerificationError] = useState('');
+  const [whyAnswer, setWhyAnswer] = useState<WhyAnswerType | null>(null);
+  const [whyStatus, setWhyStatus] = useState<WhyStatus>('idle');
+  const [whyError, setWhyError] = useState('');
 
   const questions = analysis?.clarificationQuestions ?? [];
   const gaps = analysis ? resolvedGaps(questions, analysis.gaps) : [];
   const score = readiness(gaps);
   const before = analysis ? readiness(analysis.gaps).total : 0;
   const unlocked = analysis ? score.blockers.length === 0 : false;
+  const traceabilityContext = useMemo(() => {
+    if (!analysis || !adr || !artifactPack || !codeOutput || !verificationReport || adr.stale) return null;
+    return TraceabilityContext.parse({
+      analysis,
+      decision: adr,
+      artifactPack,
+      generation: codeOutput,
+      verification: verificationReport,
+    });
+  }, [analysis, adr, artifactPack, codeOutput, verificationReport]);
+  const traceabilityGraph = useMemo(
+    () => traceabilityContext ? buildTraceabilityGraph(traceabilityContext) : null,
+    [traceabilityContext],
+  );
 
   async function analyze(useFixture = false) {
     setLoading(true);
@@ -126,6 +151,13 @@ export default function Page() {
     setVerificationReport(null);
     setVerificationStatus('idle');
     setVerificationError('');
+    resetWhy();
+  }
+
+  function resetWhy() {
+    setWhyAnswer(null);
+    setWhyStatus('idle');
+    setWhyError('');
   }
 
   function approveSelected() {
@@ -204,6 +236,7 @@ export default function Page() {
 
   async function runVerification() {
     if (!codeOutput || !codeApproval) return;
+    resetWhy();
     setVerificationStatus('loading');
     setVerificationError('');
     try {
@@ -222,6 +255,29 @@ export default function Page() {
     } catch (cause) {
       setVerificationStatus('error');
       setVerificationError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
+  async function askWhy(question: string) {
+    if (!traceabilityContext) return;
+    setWhyStatus('loading');
+    setWhyError('');
+    try {
+      const response = await fetch('/api/why', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question, context: traceabilityContext }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const message = body && typeof body === 'object' && 'error' in body ? String(body.error) : 'Why question failed';
+        throw new Error(message);
+      }
+      setWhyAnswer(WhyAnswer.parse(body));
+      setWhyStatus('success');
+    } catch (cause) {
+      setWhyStatus('error');
+      setWhyError(cause instanceof Error ? cause.message : String(cause));
     }
   }
 
@@ -267,6 +323,9 @@ export default function Page() {
         codeApproved={Boolean(codeApproval)}
         verificationStatus={verificationStatus}
         verificationOutcome={verificationReport?.overallStatus}
+        traceabilityReady={Boolean(traceabilityGraph)}
+        whyStatus={whyStatus}
+        whyGrounding={whyAnswer?.grounding}
       />
       <AnalyzeSection
         brief={brief}
@@ -317,6 +376,15 @@ export default function Page() {
             status={verificationStatus}
             error={verificationError}
             onRun={runVerification}
+          />
+          <TraceabilitySection graph={traceabilityGraph} />
+          <WhyExplorerSection
+            context={traceabilityContext}
+            graph={traceabilityGraph}
+            answer={whyAnswer}
+            status={whyStatus}
+            error={whyError}
+            onAsk={askWhy}
           />
         </>
       ) : null}

@@ -189,15 +189,15 @@ Execute real tools and show exact evidence.
 
 Explain the project through graph traversal.
 
-- [ ] Implement graph query service.
-- [ ] Build graph visualization.
-- [ ] Build accessible list/tree fallback.
-- [ ] Show orphans and unknowns.
-- [ ] Implement suggested Why questions.
-- [ ] Implement free-text grounded Why endpoint.
-- [ ] Require entity citations in answers.
-- [ ] Distinguish Why, Why Not, Proof, and Reconsider When.
-- [ ] Add tests preventing proof claims without Evidence.
+- [x] Implement graph query service.
+- [x] Build graph visualization.
+- [x] Build accessible list/tree fallback.
+- [x] Show orphans and unknowns.
+- [x] Implement suggested Why questions.
+- [x] Implement free-text grounded Why endpoint.
+- [x] Require entity citations in answers.
+- [x] Distinguish Why, Why Not, Proof, and Reconsider When.
+- [x] Add tests preventing proof claims without Evidence.
 
 ### Exit Criteria
 

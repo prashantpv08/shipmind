@@ -31,7 +31,7 @@ export function Header({ run, onBack }: { run?: RunMeta; onBack?: () => void }) 
   );
 }
 
-export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved, verificationStatus, verificationOutcome }: {
+export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved, verificationStatus, verificationOutcome, traceabilityReady, whyStatus, whyGrounding }: {
   loaded: boolean;
   loading: boolean;
   answeredCount: number;
@@ -43,6 +43,9 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
   codeApproved: boolean;
   verificationStatus: 'idle' | 'loading' | 'success' | 'error';
   verificationOutcome?: 'passed' | 'failed';
+  traceabilityReady: boolean;
+  whyStatus: 'idle' | 'loading' | 'success' | 'error';
+  whyGrounding?: 'HUMAN_APPROVED' | 'TOOL_VERIFIED' | 'UNKNOWN';
 }) {
   const stages = [
     { label: 'Intent', href: '#intent', status: loading ? 'Analyzing' : loaded ? 'Captured' : 'Ready', state: loading ? 'active' : loaded ? 'complete' : 'ready' },
@@ -66,8 +69,18 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
       status: verificationStatus === 'loading' ? 'Running fixed commands' : verificationStatus === 'error' ? 'Could not start' : verificationOutcome === 'passed' ? 'Evidence verified' : verificationOutcome === 'failed' ? 'Failed evidence recorded' : codeApproved ? 'Ready for verification' : 'Locked by build approval',
       state: verificationOutcome === 'passed' ? 'complete' : codeApproved ? 'active' : 'locked',
     },
-    { label: 'Traceability', status: 'Awaiting evidence', state: 'locked' },
-    { label: 'Why', status: 'Awaiting evidence', state: 'locked' },
+    {
+      label: 'Traceability',
+      href: '#traceability',
+      status: traceabilityReady ? 'Graph compiled' : 'Awaiting evidence',
+      state: traceabilityReady ? 'complete' : 'locked',
+    },
+    {
+      label: 'Why',
+      href: '#why',
+      status: whyStatus === 'loading' ? 'Traversing graph' : whyStatus === 'error' ? 'Question failed' : whyGrounding ? `${whyGrounding} answer` : traceabilityReady ? 'Ready for questions' : 'Awaiting evidence',
+      state: whyGrounding ? 'complete' : traceabilityReady ? 'active' : 'locked',
+    },
   ];
 
   return (
