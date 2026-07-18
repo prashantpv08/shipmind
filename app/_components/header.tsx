@@ -31,7 +31,7 @@ export function Header({ run, onBack }: { run?: RunMeta; onBack?: () => void }) 
   );
 }
 
-export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved, verificationStatus, verificationOutcome, traceabilityReady, whyStatus, whyGrounding }: {
+export function StageNav({ loaded, loading, answeredCount, questionCount, unlocked, approved, artifactStatus, codeStatus, codeApproved, verificationStatus, verificationOutcome, traceabilityReady, whyStatus, whyGrounding, releaseReady }: {
   loaded: boolean;
   loading: boolean;
   answeredCount: number;
@@ -46,6 +46,7 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
   traceabilityReady: boolean;
   whyStatus: 'idle' | 'loading' | 'success' | 'error';
   whyGrounding?: 'HUMAN_APPROVED' | 'TOOL_VERIFIED' | 'UNKNOWN';
+  releaseReady: boolean;
 }) {
   const stages = [
     { label: 'Intent', href: '#intent', status: loading ? 'Analyzing' : loaded ? 'Captured' : 'Ready', state: loading ? 'active' : loaded ? 'complete' : 'ready' },
@@ -80,6 +81,12 @@ export function StageNav({ loaded, loading, answeredCount, questionCount, unlock
       href: '#why',
       status: whyStatus === 'loading' ? 'Traversing graph' : whyStatus === 'error' ? 'Question failed' : whyGrounding ? `${whyGrounding} answer` : traceabilityReady ? 'Ready for questions' : 'Awaiting evidence',
       state: whyGrounding ? 'complete' : traceabilityReady ? 'active' : 'locked',
+    },
+    {
+      label: 'Release',
+      href: '#release',
+      status: releaseReady ? 'Export ready' : 'Awaiting evidence',
+      state: releaseReady ? 'active' : 'locked',
     },
   ];
 

@@ -212,11 +212,11 @@ Explain the project through graph traversal.
 
 Deliver a polished, resettable, reliable demo.
 
-- [ ] Export Markdown and JSON artifacts.
-- [ ] Generate manifest.
+- [x] Export Markdown and JSON artifacts.
+- [x] Generate manifest.
 - [ ] Add ZIP export if time.
-- [ ] Complete main E2E test.
-- [ ] Complete failure E2E test.
+- [x] Complete main E2E test.
+- [x] Complete failure E2E test.
 - [ ] Add all loading, empty, failure, and retry states.
 - [ ] Run accessibility review.
 - [ ] Deploy on child-process-capable host.

@@ -8,6 +8,7 @@ import { CodeSection, type CodeStatus } from './_components/code-section';
 import { DecisionSection } from './_components/decision-section';
 import { Header, StageNav } from './_components/header';
 import { ReadinessSection } from './_components/readiness-section';
+import { ReleaseSection } from './_components/release-section';
 import { VerificationSection, type VerificationStatus } from './_components/verification-section';
 import { TraceabilitySection } from './_components/traceability-section';
 import { WhyExplorerSection, type WhyStatus } from './_components/why-explorer-section';
@@ -32,6 +33,7 @@ import {
   VerificationReport,
   type VerificationReport as VerificationReportType,
 } from '../src/runner/schemas';
+import type { DemoResetResult } from '../src/export/schemas';
 import { buildTraceabilityGraph } from '../src/traceability/graph';
 import {
   TraceabilityContext,
@@ -63,6 +65,7 @@ export default function Page() {
   const [whyAnswer, setWhyAnswer] = useState<WhyAnswerType | null>(null);
   const [whyStatus, setWhyStatus] = useState<WhyStatus>('idle');
   const [whyError, setWhyError] = useState('');
+  const [demoResetNotice, setDemoResetNotice] = useState('');
 
   const questions = analysis?.clarificationQuestions ?? [];
   const gaps = analysis ? resolvedGaps(questions, analysis.gaps) : [];
@@ -87,6 +90,7 @@ export default function Page() {
   async function analyze(useFixture = false) {
     setLoading(true);
     setError('');
+    setDemoResetNotice('');
 
     try {
       const response = await fetch('/api/analyze', {
@@ -293,6 +297,14 @@ export default function Page() {
     setArtifactError('');
     resetCode();
     setHighlight('');
+    setDemoResetNotice('');
+  }
+
+  function completeDemoReset(result: DemoResetResult) {
+    reset();
+    const removed = result.removedTargets.length === 1 ? '1 generated target' : `${result.removedTargets.length} generated targets`;
+    setDemoResetNotice(`NotifyFlow sample reset in ${result.durationMs} ms. Cleared ${removed}; saved workspace projects were preserved.`);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }));
   }
 
   function openScreen(nextScreen: typeof screen) {
@@ -326,7 +338,9 @@ export default function Page() {
         traceabilityReady={Boolean(traceabilityGraph)}
         whyStatus={whyStatus}
         whyGrounding={whyAnswer?.grounding}
+        releaseReady={Boolean(traceabilityContext)}
       />
+      {demoResetNotice ? <p className="demo-reset-notice" role="status"><b>Demo ready.</b> {demoResetNotice}</p> : null}
       <AnalyzeSection
         brief={brief}
         setBrief={setBrief}
@@ -385,6 +399,11 @@ export default function Page() {
             status={whyStatus}
             error={whyError}
             onAsk={askWhy}
+          />
+          <ReleaseSection
+            context={traceabilityContext}
+            whyAnswer={whyAnswer}
+            onResetComplete={completeDemoReset}
           />
         </>
       ) : null}

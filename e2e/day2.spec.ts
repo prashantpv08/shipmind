@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { fixtureAnalysisResult } from '../src/domain/day2';
 
 const now = new Date().toISOString();
@@ -66,7 +67,7 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: 'Axiom' }).click();
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem')).toHaveCount(8);
+  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem')).toHaveCount(9);
   await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
 
   await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
@@ -139,7 +140,54 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.locator('.why-answer-card')).toContainText('No executed generated test is linked');
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Why' })).toContainText('UNKNOWN answer');
 
+  await expect(page.getByRole('heading', { name: 'Package the reasoning. Reset with confidence.' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem').filter({ hasText: 'Release' })).toContainText('Export ready');
+  const [jsonDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download JSON pack' }).click(),
+  ]);
+  expect(jsonDownload.suggestedFilename()).toMatch(/graph-v5\.json$/);
+  const jsonDownloadPath = await jsonDownload.path();
+  expect(jsonDownloadPath).not.toBeNull();
+  const exportBundle = JSON.parse(await readFile(jsonDownloadPath!, 'utf8')) as {
+    manifest: { exportId: string; fileCount: number };
+    files: Array<{ path: string; sha256: string }>;
+  };
+  expect(exportBundle.manifest.exportId).toMatch(/^EXPORT-[A-F0-9]{16}$/);
+  expect(exportBundle.manifest.fileCount).toBe(15);
+  expect(exportBundle.files).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: 'traceability/graph.json', sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) }),
+    expect.objectContaining({ path: 'evidence/verification.json', sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) }),
+  ]));
+
+  const [markdownDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download Markdown handoff' }).click(),
+  ]);
+  expect(markdownDownload.suggestedFilename()).toMatch(/graph-v5\.md$/);
+  const markdownDownloadPath = await markdownDownload.path();
+  expect(markdownDownloadPath).not.toBeNull();
+  expect(await readFile(markdownDownloadPath!, 'utf8')).toContain('## Machine-readable manifest');
+
+  await page.getByRole('button', { name: 'Reset NotifyFlow demo' }).click();
+  await expect(page.getByRole('group', { name: 'Confirm NotifyFlow reset' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm reset' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'NotifyFlow sample reset' })).toContainText('saved workspace projects were preserved');
+  await expect(page.getByRole('button', { name: 'Run demo fixture instead' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Package the reasoning. Reset with confidence.' })).not.toBeVisible();
+});
+
+test('invalidates approved downstream work when a clarification changes', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Explore the live sample/ }).click();
+  await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
+  await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
+  for (const name of [/100 requests\/sec/, /At-least-once/, /Metadata 90 days/, /Tenant ID from authenticated token/]) {
+    await page.getByRole('button', { name }).first().click();
+  }
+  await page.getByRole('button', { name: 'Explicitly approve selected option' }).click();
   await page.getByRole('button', { name: /100 requests\/sec/ }).first().click();
+
   await expect(page.getByText(/Potentially stale/)).toBeVisible();
   await expect(page.getByText(/The ADR is stale/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Generate artifact pack' })).toBeDisabled();
