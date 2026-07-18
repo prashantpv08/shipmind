@@ -19,6 +19,7 @@ import {
 
 const MAX_OUTPUT_BYTES = 36_000;
 const OUTPUT_HALF = Math.floor(MAX_OUTPUT_BYTES / 2);
+const CONTROLLED_WORKSPACE_PATH = 'sandbox/notification-service/workspace';
 const SAFE_ENV_KEYS = ['PATH', 'HOME', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot'] as const;
 
 type ProcessResult = {
@@ -160,7 +161,7 @@ async function assertNoSymlinks(path: string): Promise<void> {
 }
 
 async function assertApprovedWorkspace(generation: CodeGenerationOutput) {
-  const root = resolve(/* turbopackIgnore: true */ process.cwd(), generation.workspaceRoot);
+  const root = join(/* turbopackIgnore: true */ process.cwd(), CONTROLLED_WORKSPACE_PATH);
   await assertNoSymlinks(root);
   for (const file of generation.files) {
     const target = resolve(root, file.path);
@@ -174,7 +175,7 @@ async function assertApprovedWorkspace(generation: CodeGenerationOutput) {
 
 async function attachCoverageMetrics(run: VerificationRunType) {
   if (run.commandId !== 'coverage' || run.status !== 'passed') return run;
-  const summaryPath = join(/* turbopackIgnore: true */ process.cwd(), 'sandbox/notification-service/workspace/coverage/coverage-summary.json');
+  const summaryPath = join(/* turbopackIgnore: true */ process.cwd(), CONTROLLED_WORKSPACE_PATH, 'coverage/coverage-summary.json');
   try {
     const summary: unknown = JSON.parse(await readFile(summaryPath, 'utf8'));
     const coverage = parseCoverageMetrics(summary);
@@ -232,7 +233,7 @@ function evidenceForRun(run: VerificationRunType, generation: CodeGenerationOutp
 async function runOnce(request: VerificationRequestType): Promise<VerificationReportType> {
   const startedAt = new Date().toISOString();
   await assertApprovedWorkspace(request.generation);
-  await rm(join(/* turbopackIgnore: true */ process.cwd(), request.generation.workspaceRoot, 'coverage'), { recursive: true, force: true });
+  await rm(join(/* turbopackIgnore: true */ process.cwd(), CONTROLLED_WORKSPACE_PATH, 'coverage'), { recursive: true, force: true });
   const registry = fixedCommandRegistry();
   const runs: VerificationRunType[] = [];
   for (const id of VERIFICATION_ORDER) {
