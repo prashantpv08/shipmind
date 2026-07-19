@@ -649,3 +649,24 @@ pnpm build      PASS — Next.js production build
 ```
 
 The production build still emits the existing non-blocking Turbopack NFT trace warning for the fixed verification runner.
+
+## 16. Addendum — wireflow action visibility and startup cleanup
+
+Work continued on 2026-07-19 on branch `codex/wireflow-button-abort-fix`.
+
+- The selected-template label rule is now scoped to the label itself, so it no longer overrides the white text inside the purple **Generate product flow** action.
+- Workspace startup requests now use an inactive-component guard for state updates instead of aborting fetches during React development remounts. This removes the Turbopack `AbortError: signal is aborted without reason` overlay while still preventing updates after unmount.
+- The primary browser journey asserts the action's computed white text color and records any AbortError emitted while the workspace mounts and unmounts.
+- A 1440×1000 browser capture of the exact wireflow stage confirmed the full action label is visible and no runtime error was raised.
+
+Verification for this continuation:
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 69 tests
+pnpm test:e2e   PASS — 5 tests
+pnpm build      PASS — Next.js production build
+```
+
+The production build still emits the existing non-blocking Turbopack NFT trace warning for the fixed verification runner.
