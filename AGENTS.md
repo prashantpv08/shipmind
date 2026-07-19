@@ -127,3 +127,15 @@ For each milestone:
 5. Summarize changed files, tests, known gaps, and the next milestone.
 
 Do not silently reinterpret the SRS. Record open decisions in `docs/decisions/`.
+
+## Engineering Discipline
+
+These repository-local rules adapt the [Karpathy-inspired coding guidelines](https://github.com/multica-ai/andrej-karpathy-skills) and [Ponytail's lazy senior developer mode](https://github.com/DietrichGebert/ponytail). They complement, and never override, the Axiom product, safety, and verification rules above.
+
+- Understand the requested behavior and trace its real callers before changing code. Surface material ambiguity and tradeoffs instead of silently assuming.
+- Reuse an existing repository pattern, platform feature, standard-library capability, or installed dependency before adding an abstraction or dependency.
+- Implement the smallest complete change that satisfies visible acceptance criteria. Avoid speculative flexibility, unrelated cleanup, and drive-by refactors.
+- Fix shared root causes at the narrowest correct boundary rather than patching one symptom or duplicating guards across callers.
+- Preserve validation, security, accessibility, evidence integrity, error handling, and data-loss protection; brevity never excuses weakening them.
+- Make every non-trivial change leave the smallest useful runnable regression check. Define success criteria up front and loop until they pass.
+- Every changed line must trace to the current goal. Remove only dead code made obsolete by the current change; report unrelated debt without editing it.

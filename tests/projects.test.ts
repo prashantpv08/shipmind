@@ -130,6 +130,86 @@ describe('arbitrary project knowledge pipeline', () => {
   });
 });
 
+describe('Groq project intelligence', () => {
+  function generatedGap(category: string, entityId: string, subject: string) {
+    return {
+      type: 'AMBIGUOUS',
+      category,
+      title: `${subject} decision`,
+      description: `The uploaded lending documents do not resolve the ${subject} decision.`,
+      severity: category === 'SECURITY_PRIVACY' ? 'BLOCKER' : 'HIGH',
+      impactAreas: ['requirements', 'architecture'],
+      affectedEntityIds: [entityId],
+      affectedArtifacts: ['SRS', 'HLD'],
+      rationale: `The ${subject} decision changes the lending workflow and its verification evidence.`,
+      question: `For the lending application, which ${subject} rule should underwriters follow?`,
+      whyItMatters: `The selected ${subject} rule determines implementation and acceptance criteria.`,
+      options: [`Use the documented ${subject} baseline`, `Require reviewer approval for ${subject}`],
+    };
+  }
+
+  it('generates document-specific questions and materializes stable graph IDs', async () => {
+    const { extractProjectEntities } = await import('../src/projects/analyze');
+    const { GroqProjectIntelligenceProvider } = await import('../src/projects/intelligence-provider');
+    const { ProjectSource } = await import('../src/projects/schemas');
+    const source = ProjectSource.parse({
+      id: 'SRC-GROQ', workspaceId: 'WS-1', projectId: 'PROJ-GROQ', name: 'lending-srs.md', kind: 'FILE', mimeType: 'text/markdown', size: 180,
+      sha256: 'f'.repeat(64), rawPath: '/tmp/lending-srs.md', status: 'EXTRACTED', createdAt: '2026-07-19T10:00:00.000Z',
+      extractedText: 'Underwriters must review lending applications above USD 50,000. The service must retain the approval decision.',
+    });
+    const entities = extractProjectEntities(source.projectId, [source]);
+    const entityId = entities.find((entity) => entity.truthStatus === 'SOURCE_GROUNDED')?.id;
+    expect(entityId).toBeDefined();
+    const output = {
+      gaps: [
+        generatedGap('FUNCTIONAL_SCOPE', entityId!, 'approval ownership'),
+        generatedGap('DATA', entityId!, 'application lifecycle'),
+        generatedGap('INTEGRATION', entityId!, 'credit-provider boundary'),
+        generatedGap('SECURITY_PRIVACY', entityId!, 'underwriter access'),
+        generatedGap('NFR', entityId!, 'decision latency'),
+      ],
+    };
+    const create = vi.fn().mockResolvedValue({ choices: [{ message: { content: JSON.stringify(output) } }] });
+    const provider = new GroqProjectIntelligenceProvider({ chat: { completions: { create } } } as never, 'openai/gpt-oss-120b');
+    const input = { projectId: source.projectId, projectName: 'Lending decisions', entities, sources: [source] };
+
+    const first = await provider.analyze(input);
+    const second = await provider.analyze(input);
+
+    expect(first.clarificationQuestions).toHaveLength(5);
+    expect(first.clarificationQuestions[0].question).toContain('lending application');
+    expect(second.gaps.map((gap) => gap.id)).toEqual(first.gaps.map((gap) => gap.id));
+    expect(first.gaps.every((gap) => gap.affectedEntityIds.every((id) => entities.some((entity) => entity.id === id)))).toBe(true);
+    expect(JSON.stringify(create.mock.calls[0]?.[0])).toContain(source.extractedText);
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      model: 'openai/gpt-oss-120b',
+      response_format: { type: 'json_schema', json_schema: { name: 'project_intelligence', strict: true } },
+    });
+  });
+
+  it('rejects unknown evidence references instead of substituting fixture questions', async () => {
+    const { extractProjectEntities } = await import('../src/projects/analyze');
+    const { GroqProjectIntelligenceProvider } = await import('../src/projects/intelligence-provider');
+    const { ProjectSource } = await import('../src/projects/schemas');
+    const source = ProjectSource.parse({
+      id: 'SRC-GROQ-INVALID', workspaceId: 'WS-1', projectId: 'PROJ-GROQ-INVALID', name: 'brief.txt', kind: 'FILE', mimeType: 'text/plain', size: 80,
+      sha256: '9'.repeat(64), rawPath: '/tmp/brief.txt', status: 'EXTRACTED', createdAt: '2026-07-19T10:00:00.000Z',
+      extractedText: 'Operators must approve customer cases before release.',
+    });
+    const entities = extractProjectEntities(source.projectId, [source]);
+    const output = {
+      gaps: ['FUNCTIONAL_SCOPE', 'DATA', 'INTEGRATION', 'SECURITY_PRIVACY', 'NFR']
+        .map((category) => generatedGap(category, 'KN-INVENTED', category.toLowerCase())),
+    };
+    const create = vi.fn().mockResolvedValue({ choices: [{ message: { content: JSON.stringify(output) } }] });
+    const provider = new GroqProjectIntelligenceProvider({ chat: { completions: { create } } } as never, 'openai/gpt-oss-120b');
+
+    await expect(provider.analyze({ projectId: source.projectId, projectName: 'Cases', entities, sources: [source] }))
+      .rejects.toThrow('referenced unknown entity');
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('project intelligence and governed design', () => {
   it('creates ranked gaps, contextual clarifications, readiness, and architecture detail', async () => {
     const { analyzeProjectSources } = await import('../src/projects/analyze');

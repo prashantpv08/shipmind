@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import OpenAI from 'openai';
-import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
+import { strictJsonSchema } from '../ai/structured-output';
 import { ProjectDocument, type KnowledgeEntity, type ProjectDocument as ProjectDocumentType } from './schemas';
 
 const RevisionOutput = z.object({
@@ -30,7 +30,7 @@ function replaceSection(content: string, heading: string, replacementBody: strin
 }
 
 interface RevisionProvider {
-  readonly name: 'axiom-fixture' | 'openai-responses';
+  readonly name: 'axiom-fixture' | 'groq' | 'openai-responses';
   revise(input: { documentTitle: string; heading: string; currentBody: string; instruction: string; groundedContext: string }): Promise<z.infer<typeof RevisionOutput>>;
 }
 
@@ -50,21 +50,24 @@ This update is recorded as a review instruction. Any new product claim remains *
   }
 }
 
-let openAIClient: OpenAI | null = null;
+let groqClient: OpenAI | null = null;
 
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required for live AI document revision');
-  openAIClient ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return openAIClient;
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY is required for Groq document revision');
+  groqClient ??= new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+  });
+  return groqClient;
 }
 
-class OpenAIRevisionProvider implements RevisionProvider {
-  readonly name = 'openai-responses' as const;
+class GroqRevisionProvider implements RevisionProvider {
+  readonly name = 'groq' as const;
 
   async revise(input: { documentTitle: string; heading: string; currentBody: string; instruction: string; groundedContext: string }) {
-    const response = await getOpenAIClient().responses.parse({
-      model: process.env.OPENAI_MODEL || 'gpt-5.6-sol',
-      input: [
+    const response = await getGroqClient().chat.completions.create({
+      model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+      messages: [
         {
           role: 'system',
           content: 'You revise one section of an engineering document. Preserve stable IDs, truth-status labels, exact source references, and explicit UNKNOWN values. Never invent measurements, approvals, evidence, or source quotations. Return only the replacement Markdown body for the requested section plus a short summary.',
@@ -74,15 +77,17 @@ class OpenAIRevisionProvider implements RevisionProvider {
           content: `Document: ${input.documentTitle}\nSection: ${input.heading}\nInstruction: ${input.instruction}\n\nCurrent section:\n${input.currentBody}\n\nGrounded project context:\n${input.groundedContext}`,
         },
       ],
-      text: { format: zodTextFormat(RevisionOutput, 'document_revision') },
+      response_format: strictJsonSchema(RevisionOutput, 'document_revision'),
     });
-    if (!response.output_parsed) throw new Error('AI returned no validated document revision');
-    return RevisionOutput.parse(response.output_parsed);
+    const content = response.choices[0]?.message.content;
+    if (!content) throw new Error('Groq returned no validated document revision');
+    return RevisionOutput.parse(JSON.parse(content));
   }
 }
 
 function providerForEnvironment(): RevisionProvider {
-  return process.env.AXIOM_AI_MODE === 'live' ? new OpenAIRevisionProvider() : new FixtureRevisionProvider();
+  if (process.env.AXIOM_AI_MODE !== 'live') return new FixtureRevisionProvider();
+  return new GroqRevisionProvider();
 }
 
 export async function reviseDocument(input: {
