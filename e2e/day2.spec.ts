@@ -14,6 +14,10 @@ test.afterEach(async ({ request }) => {
 });
 
 test('Axiom guides a project from landing through documents, optional wireflow, approved architecture, and delivery planning', async ({ page }) => {
+  const abortErrors: string[] = [];
+  page.on('pageerror', (error) => {
+    if (/AbortError|signal is aborted/i.test(`${error.name}: ${error.message}`)) abortErrors.push(error.message);
+  });
   await page.route('**/api/integrations/notion/status', async (route) => route.fulfill({ json: { configured: false, mode: 'internal-connection', missing: ['E2E_NOTION_DISABLED'] } }));
   await page.route('**/api/integrations/jira/status', async (route) => route.fulfill({ json: { configured: false, connected: false, mode: 'jira-cloud-api-token', missing: ['E2E_JIRA_DISABLED'] } }));
   await page.route('**/api/analyze', async (route) => { await new Promise((resolve) => setTimeout(resolve, 350)); await route.continue(); });
@@ -69,7 +73,9 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('heading', { name: 'See the product before choosing the stack.' })).toBeVisible();
   await expect(page.locator('.template-gallery > button')).toHaveCount(12);
   await page.locator('.template-gallery > button').filter({ hasText: 'AI copilot' }).click();
-  await page.getByRole('button', { name: /Generate product flow/ }).click();
+  const generateFlowButton = page.getByRole('button', { name: /Generate product flow/ });
+  await expect(generateFlowButton).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await generateFlowButton.click();
   await expect(page.getByRole('status').filter({ hasText: 'produced 4 requirement-linked screens' })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.flow-map article')).toHaveCount(4, { timeout: 20_000 });
   await page.getByRole('button', { name: 'Open editable studio' }).click();
@@ -112,6 +118,7 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('status').filter({ hasText: 'Opened Digital lending modernization.' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Architecture approved. Delivery can begin.' })).toBeVisible();
   await page.getByRole('button', { name: 'Axiom' }).click();
+  expect(abortErrors).toEqual([]);
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Axiom product lifecycle' }).getByRole('listitem')).toHaveCount(9);
