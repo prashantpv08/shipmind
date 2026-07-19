@@ -142,7 +142,9 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
     setOpeningProjectId(project.id);
     setStatus('loading'); setNotice(''); setProjectLibraryOpen(false); setWireframe(null); setOpenDocument(null); setDeliveryPlan(null); setCodingPacket('');
     try {
-      const bundle = await readJson(await fetch(`/api/projects/${project.id}`));
+      const migrationBody = await readJson(await fetch(`/api/projects/${project.id}/migrate`, { method: 'POST' }));
+      const bundle = migrationBody.bundle as Record<string, unknown>;
+      const migrated = Boolean(migrationBody.migrated);
       const knowledge = bundle.knowledge as { entities?: KnowledgeEntity[]; gaps?: ProjectGap[]; clarificationQuestions?: ClarificationQuestion[]; readiness?: ProjectReadiness; techStack?: TechStackRecommendation[]; architectureOptions?: ArchitectureOption[] } | null;
       const graphVersion = (bundle.project as { graphVersion: number }).graphVersion;
       setProjectName(project.name); setSources([]);
@@ -161,7 +163,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
         const delivery = await readJson(await fetch(`/api/projects/${project.id}/delivery/plan`));
         setDeliveryPlan(delivery.plan as JiraBacklogPlan);
       }
-      setStatus('success'); setNotice(`Opened ${project.name}.`);
+      setStatus('success'); setNotice(migrated ? `Opened ${project.name}. Saved clarification answers and all documents were upgraded to graph v${graphVersion}; review and approve the regenerated baseline.` : `Opened ${project.name}.`);
     } catch (cause) { setStatus('error'); setNotice(cause instanceof Error ? cause.message : String(cause)); }
     finally { setOpeningProjectId(''); }
   }

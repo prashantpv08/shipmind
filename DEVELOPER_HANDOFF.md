@@ -608,13 +608,14 @@ Work continued on 2026-07-19 on branch `codex/clarification-document-regeneratio
 - Measurable NFR choices now contain explicit load, latency, availability, recovery, and budget targets, and response-time wording is parsed into the NFR catalogue.
 - Guided clarification, document-revision, and architecture-question fields share the actionable validation message `Enter only 2,000 characters.` in both the UI and API.
 - Regression coverage verifies document locking, server-side approval rejection, the exact length error, answer classification, constraints, and all four regenerated document versions.
+- Opening a saved project calls the idempotent migration route. Legacy clarification entities stored as generic decisions are reclassified once, the graph version advances, all four documents regenerate atomically, and stale approvals remain invalidated.
 
 Verification for this continuation:
 
 ```text
 pnpm lint       PASS
 pnpm typecheck  PASS
-pnpm test       PASS — 10 files, 68 tests
+pnpm test       PASS — 10 files, 69 tests
 pnpm test:e2e   PASS — 5 tests
 pnpm build      PASS — Next.js production build
 ```
