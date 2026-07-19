@@ -108,20 +108,21 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   const projectLibraryRef = useModalDialog(closeProjectLibrary, projectLibraryOpen);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
     Promise.all([
-      fetch('/api/integrations/notion/status', { signal: controller.signal }).then((response) => response.json()),
-      fetch('/api/integrations/jira/status', { signal: controller.signal }).then((response) => response.json()),
-      fetch('/api/projects', { signal: controller.signal }).then(readJson),
+      fetch('/api/integrations/notion/status').then((response) => response.json()),
+      fetch('/api/integrations/jira/status').then((response) => response.json()),
+      fetch('/api/projects').then(readJson),
     ]).then(([notion, jira, projects]) => {
+      if (!active) return;
       setNotionConfigured(Boolean((notion as { configured?: boolean }).configured));
       const jiraView = jira as JiraConnectionView;
       setJiraConnection(jiraView);
       setJiraConfigured(Boolean(jiraView.connected));
       setStoredProjects(((projects.projects as StoredProject[] | undefined) ?? []).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-    }).catch(() => { if (!controller.signal.aborted) setNotice('The local project library could not be loaded.'); })
-      .finally(() => { if (!controller.signal.aborted) setConnectionsLoading(false); });
-    return () => controller.abort();
+    }).catch(() => { if (active) setNotice('The local project library could not be loaded.'); })
+      .finally(() => { if (active) setConnectionsLoading(false); });
+    return () => { active = false; };
   }, []);
 
   async function refreshProjects() {
