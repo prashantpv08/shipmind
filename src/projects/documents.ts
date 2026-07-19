@@ -20,6 +20,25 @@ function lines(entities: KnowledgeEntity[], category: KnowledgeEntity['category'
   return matches.map((entity) => `- **${entity.id}** [${entity.truthStatus}] ${entity.text}${entity.sourceId ? ` — Source: ${entity.sourceId}` : entity.clarificationQuestionId ? ` — Clarification: ${entity.clarificationQuestionId}` : ''}`).join('\n');
 }
 
+function decisionLines(knowledge: ProjectKnowledge) {
+  const explicit = knowledge.entities
+    .filter((entity) => entity.category === 'DECISION')
+    .map((entity) => `- **${entity.id}** [${entity.truthStatus}] ${entity.text}${entity.sourceId ? ` — Source: ${entity.sourceId}` : entity.clarificationQuestionId ? ` — Clarification: ${entity.clarificationQuestionId}` : ''}`);
+  const confirmed = knowledge.clarificationQuestions
+    .filter((question) => question.status === 'ANSWERED' && question.answer)
+    .map((question) => `- **${question.id}** [HUMAN_CONFIRMED] ${clean(question.question)} — ${clean(question.answer ?? '')}`);
+  return [...explicit, ...confirmed].join('\n') || '- **UNKNOWN** — No decision has been confirmed.';
+}
+
+function riskLines(knowledge: ProjectKnowledge) {
+  const explicit = knowledge.entities
+    .filter((entity) => entity.category === 'RISK' && entity.truthStatus !== 'UNKNOWN')
+    .map((entity) => `- **${entity.id}** [${entity.truthStatus}] ${entity.text}${entity.sourceId ? ` — Source: ${entity.sourceId}` : ''}`);
+  const gapDerived = knowledge.gaps.map((gap) => `- **${gap.id}** [${gap.truthStatus} · ${gap.status}] ${gap.title} — ${gap.rationale}`);
+  if (explicit.length || gapDerived.length) return [...explicit, ...gapDerived].join('\n');
+  return lines(knowledge.entities, 'RISK');
+}
+
 function documentControl(project: Project, knowledge: ProjectKnowledge, version: number, generatedAt: string, status = 'AI_SUGGESTED until human approval') {
   return `| Field | Value |
 |---|---|
@@ -174,13 +193,13 @@ ${requirementsTable(knowledge, 'REQUIREMENT')}
 ${requirementsTable(knowledge, 'NFR')}
 
 ## Decisions
-${lines(knowledge.entities, 'DECISION')}
+${decisionLines(knowledge)}
 
 ## Constraints
 ${lines(knowledge.entities, 'CONSTRAINT')}
 
 ## Risks
-${lines(knowledge.entities, 'RISK')}
+${riskLines(knowledge)}
 
 ## Gap register
 | Gap ID | Severity | Title | Status | Affected artifacts | Rationale |
@@ -243,7 +262,7 @@ ${answeredByCategory(knowledge, 'INTEGRATION')}
 
 ## 8. Business rules and constraints
 ### Confirmed decisions
-${lines(knowledge.entities, 'DECISION')}
+${decisionLines(knowledge)}
 
 ### Constraints
 ${lines(knowledge.entities, 'CONSTRAINT')}
@@ -252,7 +271,7 @@ ${lines(knowledge.entities, 'CONSTRAINT')}
 ${answeredByCategory(knowledge, 'DATA')}
 
 ## 9. Risks and dependencies
-${lines(knowledge.entities, 'RISK')}
+${riskLines(knowledge)}
 
 ### Gap-derived risks
 ${knowledge.gaps.filter((gap) => gap.status === 'OPEN').map((gap) => `- **${gap.id}** (${gap.severity}) ${gap.title} — impacts ${gap.impactAreas.join(', ')}.`).join('\n') || '- No open gap-derived risks.'}

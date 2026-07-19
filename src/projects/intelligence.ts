@@ -24,6 +24,14 @@ const categoryByGap: Record<ProjectGap['category'], KnowledgeEntity['category']>
   DELIVERY: 'CONSTRAINT',
 };
 
+function reconcileUnknownEntities(entities: KnowledgeEntity[], gaps: ProjectGap[]) {
+  const confirmedCategories = new Set(entities
+    .filter((entity) => entity.truthStatus !== 'UNKNOWN')
+    .map((entity) => entity.category));
+  return entities.filter((entity) => entity.truthStatus !== 'UNKNOWN'
+    || (!confirmedCategories.has(entity.category) && !(entity.category === 'RISK' && gaps.length > 0)));
+}
+
 type GapDraft = Omit<ProjectGap, 'id' | 'projectId' | 'status' | 'truthStatus'> & {
   question: string;
   whyItMatters: string;
@@ -277,7 +285,7 @@ export function applyClarificationAnswer(input: {
     truthStatus: 'HUMAN_CONFIRMED' as const,
   } : gap);
   const answerEntityId = stableId('KN-ANSWER', input.knowledge.projectId, question.id);
-  const entities = [
+  const entities = reconcileUnknownEntities([
     ...input.knowledge.entities.filter((entity) => entity.id !== answerEntityId),
     {
       id: answerEntityId,
@@ -287,7 +295,7 @@ export function applyClarificationAnswer(input: {
       truthStatus: 'HUMAN_CONFIRMED' as const,
       clarificationQuestionId: question.id,
     },
-  ];
+  ], gaps);
   const graphVersion = input.knowledge.graphVersion + 1;
   return ProjectKnowledge.parse({
     ...input.knowledge,
@@ -307,20 +315,22 @@ export function migrateLegacyClarificationAnswers(input: {
   const answers = new Map(input.knowledge.clarificationQuestions
     .filter((question) => question.status === 'ANSWERED' && question.answer)
     .map((question) => [question.id, question]));
-  let changed = false;
-  const entities = input.knowledge.entities.map((entity) => {
+  let legacyAnswerChanged = false;
+  const migratedEntities = input.knowledge.entities.map((entity) => {
     if (!entity.clarificationQuestionId || entity.category !== 'DECISION') return entity;
     const question = answers.get(entity.clarificationQuestionId);
     if (!question?.answer) return entity;
     const gap = input.knowledge.gaps.find((item) => item.id === question.gapId);
     if (!gap) return entity;
-    changed = true;
+    legacyAnswerChanged = true;
     return {
       ...entity,
       category: categoryByGap[gap.category],
       text: `${question.question} Human-confirmed answer: ${question.answer}`,
     };
   });
+  const entities = reconcileUnknownEntities(migratedEntities, input.knowledge.gaps);
+  const changed = legacyAnswerChanged || entities.length !== migratedEntities.length;
   if (!changed) return { knowledge: input.knowledge, migrated: false };
   const graphVersion = input.knowledge.graphVersion + 1;
   const knowledge = ProjectKnowledge.parse({

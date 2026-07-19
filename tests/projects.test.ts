@@ -202,6 +202,37 @@ describe('project intelligence and governed design', () => {
     expect(repeated.knowledge.graphVersion).toBe(migration.knowledge.graphVersion);
   });
 
+  it('reconciles superseded unknown sentinels in saved graphs exactly once', async () => {
+    const { analyzeProjectSources } = await import('../src/projects/analyze');
+    const { applyClarificationAnswer, migrateLegacyClarificationAnswers } = await import('../src/projects/intelligence');
+    const { ProjectKnowledge, ProjectSource } = await import('../src/projects/schemas');
+    const source = ProjectSource.parse({
+      id: 'SRC-STALE-UNKNOWN', workspaceId: 'WS-1', projectId: 'PROJ-STALE-UNKNOWN', name: 'brief.txt', kind: 'FILE', mimeType: 'text/plain', size: 44,
+      sha256: 'f'.repeat(64), rawPath: '/tmp/brief.txt', status: 'EXTRACTED', createdAt: '2026-07-18T10:00:00.000Z', extractedText: 'The product must support an approval workflow.',
+    });
+    const initial = analyzeProjectSources(source.projectId, 1, [source], '2026-07-18T10:01:00.000Z', 'Saved project');
+    const nfrQuestion = initial.clarificationQuestions.find((question) => initial.gaps.some((gap) => gap.id === question.gapId && gap.category === 'NFR'));
+    expect(nfrQuestion).toBeDefined();
+    const answered = applyClarificationAnswer({
+      knowledge: initial,
+      questionId: nfrQuestion!.id,
+      answer: 'P95 response time under 500 ms with 99.9% availability.',
+      answeredAt: '2026-07-18T10:02:00.000Z',
+    });
+    const staleUnknowns = initial.entities.filter((entity) => entity.truthStatus === 'UNKNOWN' && ['NFR', 'RISK'].includes(entity.category));
+    const saved = ProjectKnowledge.parse({ ...answered, entities: [...answered.entities, ...staleUnknowns] });
+
+    const migration = migrateLegacyClarificationAnswers({ knowledge: saved, migratedAt: '2026-07-19T10:00:00.000Z' });
+    expect(migration.migrated).toBe(true);
+    expect(migration.knowledge.entities).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: 'NFR', truthStatus: 'UNKNOWN' }),
+      expect.objectContaining({ category: 'RISK', truthStatus: 'UNKNOWN' }),
+    ]));
+
+    const repeated = migrateLegacyClarificationAnswers({ knowledge: migration.knowledge, migratedAt: '2026-07-19T10:01:00.000Z' });
+    expect(repeated.migrated).toBe(false);
+  });
+
   it('classifies clarification answers and regenerates every document at each graph version', async () => {
     const { analyzeProjectSources } = await import('../src/projects/analyze');
     const { compileProjectDocuments } = await import('../src/projects/documents');
@@ -245,6 +276,11 @@ describe('project intelligence and governed design', () => {
     const nfr = documents.find((document) => document.type === 'nfr')?.content ?? '';
     const hld = documents.find((document) => document.type === 'hld')?.content ?? '';
     expect(requirements).not.toContain('| UNKNOWN | UNKNOWN | No items extracted');
+    expect(requirements).not.toContain('No measurable non-functional requirements were found in the submitted sources.');
+    expect(requirements).not.toContain('## Decisions\n- **UNKNOWN**');
+    expect(requirements).toContain(`**${knowledge.clarificationQuestions[0].id}** [HUMAN_CONFIRMED]`);
+    expect(requirements).not.toContain('No explicit delivery or architecture risks were found in the submitted sources.');
+    expect(requirements).toContain('[HUMAN_CONFIRMED · ANSWERED]');
     expect(requirements).not.toContain('## Constraints\n- **UNKNOWN**');
     expect(srs).not.toContain('### Constraints\n- **UNKNOWN**');
     expect(nfr).toContain('| p95 latency | < 500 | ms |');

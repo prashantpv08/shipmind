@@ -25,7 +25,7 @@ function ClarificationCard({ question, onSubmit }: {
     <div className="rounded-xl border p-3">
       <div className="flex gap-2">
         <b>{question.id}</b>
-        <span className="badge">{question.severity}</span>
+        <span className={`badge severity-${question.severity.toLowerCase()}`}>{question.severity}</span>
         <span className="badge">{question.answerStatus}</span>
       </div>
       <h3 className="mt-2 font-bold">{question.text}</h3>
