@@ -278,7 +278,7 @@ test('invalidates approved downstream work when a clarification changes', async 
 test('renders server-returned live mode metadata from a mocked API response', async ({ page }) => {
   const response = fixtureAnalysisResult({
     label: 'Live AI',
-    providerName: 'openai-responses',
+    providerName: 'groq',
     modelName: 'mock-live-model',
     mode: 'live',
     startedAt: now,
@@ -297,7 +297,7 @@ test('renders server-returned live mode metadata from a mocked API response', as
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await page.getByRole('button', { name: 'Analyze intent' }).click();
 
-  await expect(page.getByLabel('analysis mode')).toContainText('Live AI · openai-responses · mock-live-model · SUCCEEDED');
+  await expect(page.getByLabel('analysis mode')).toContainText('Live AI · groq · mock-live-model · SUCCEEDED');
   await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
 });
 
@@ -315,7 +315,7 @@ test('preserves the last valid analysis and displays failed live-run metadata', 
         error: 'Mock live provider failure',
         run: {
           label: 'Live AI failed · no fixture substituted',
-          providerName: 'openai-responses',
+          providerName: 'groq',
           modelName: 'mock-live-model',
           mode: 'live',
           startedAt: now,
