@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GUIDED_TEXT_LIMIT_MESSAGE, MAX_GUIDED_TEXT_CHARACTERS } from './validation';
+import { architectureBudgetErrors } from './architecture-budget';
 
 export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'DOCUMENTS_APPROVED', 'DESIGN_READY', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED', 'BACKLOG_READY']);
 export const SourceKind = z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']);
@@ -141,6 +142,50 @@ export const TechStackRecommendation = z.object({
   truthStatus: z.literal('AI_SUGGESTED'),
 }).strict();
 
+const ArchitecturePlanningFields = z.object({
+  productSurface: z.enum(['STATIC_SITE', 'WEB_APP', 'MOBILE_APP', 'WEB_AND_MOBILE', 'API_SERVICE']),
+  deliveryPriority: z.enum(['LOWEST_COST', 'FASTEST_DELIVERY', 'BALANCED', 'SCALE_READY']),
+  developmentBudget: z.object({ currency: z.enum(['USD', 'INR', 'EUR', 'GBP']), maximum: z.number().int().positive().max(100_000_000) }).strict(),
+  monthlyHostingBudget: z.object({ currency: z.enum(['USD', 'INR', 'EUR', 'GBP']), maximum: z.number().int().nonnegative().max(10_000_000) }).strict(),
+  teamSize: z.number().int().positive().max(500),
+  teamSkills: z.array(z.enum(['AI_ASSISTED', 'HTML_CSS_JS', 'REACT_TYPESCRIPT', 'PHP_LARAVEL', 'PYTHON', 'GO', 'JAVA', 'DOTNET', 'DART_FLUTTER', 'SWIFT', 'KOTLIN'])).min(1),
+  expectedScale: z.enum(['PROTOTYPE', 'SMALL', 'GROWING', 'HIGH_SCALE']),
+  hostingPreference: z.enum(['RECOMMEND_FOR_ME', 'CONNECT_EXISTING', 'SELF_HOSTED']),
+  preferredProvider: z.string().trim().min(2).max(80).optional(),
+  mobileCapabilities: z.array(z.enum(['PUSH_NOTIFICATIONS', 'OFFLINE', 'CAMERA', 'LOCATION', 'PAYMENTS', 'BLUETOOTH'])).max(6),
+  selectedPackageId: z.enum(['LEAN', 'BALANCED', 'SCALE_READY']),
+}).strict();
+
+function validateArchitecturePlanningInput(value: z.infer<typeof ArchitecturePlanningFields>, context: z.RefinementCtx) {
+  if (value.hostingPreference === 'CONNECT_EXISTING' && !value.preferredProvider) context.addIssue({ code: 'custom', path: ['preferredProvider'], message: 'Name the provider you want to connect' });
+  const errors = architectureBudgetErrors(value);
+  if (errors.development) context.addIssue({ code: 'custom', path: ['developmentBudget', 'maximum'], message: errors.development });
+  if (errors.monthlyHosting) context.addIssue({ code: 'custom', path: ['monthlyHostingBudget', 'maximum'], message: errors.monthlyHosting });
+}
+
+export const ArchitecturePlanningInput = ArchitecturePlanningFields.superRefine(validateArchitecturePlanningInput);
+
+export const ArchitectureBrief = ArchitecturePlanningFields.extend({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  graphVersion: z.number().int().positive(),
+  truthStatus: z.literal('HUMAN_CONFIRMED'),
+  updatedAt: z.iso.datetime(),
+}).strict().superRefine(validateArchitecturePlanningInput);
+
+export const ApprovedStackSnapshot = z.object({
+  packageId: z.enum(['LEAN', 'BALANCED', 'SCALE_READY']),
+  packageName: z.string().min(1),
+  frontend: z.string().min(1),
+  backend: z.string().min(1),
+  database: z.string().min(1),
+  mobile: z.string().min(1),
+  hosting: z.string().min(1),
+  estimatedMonthlyCost: z.string().min(1),
+  validationSummary: z.array(z.string().min(1)).min(1),
+  truthStatus: z.literal('HUMAN_APPROVED'),
+}).strict();
+
 export const ArchitectureOption = z.object({
   id: z.string().min(1),
   projectId: z.string().min(1),
@@ -198,6 +243,8 @@ export const ArbDecision = z.object({
   rationale: z.array(z.string().min(1)).min(1),
   rejectedOptionIds: z.array(z.string().min(1)).min(1),
   risks: z.array(z.string().min(1)).min(1),
+  architectureBriefId: z.string().min(1).optional(),
+  stack: ApprovedStackSnapshot.optional(),
   graphVersion: z.number().int().positive(),
   version: z.number().int().positive(),
   truthStatus: z.literal('HUMAN_APPROVED'),
@@ -374,6 +421,7 @@ export const ProjectDatabase = z.object({
   projects: z.array(Project),
   sources: z.array(ProjectSource),
   knowledge: z.array(ProjectKnowledge),
+  architectureBriefs: z.array(ArchitectureBrief).default([]),
   arbDecisions: z.array(ArbDecision),
   documents: z.array(ProjectDocument),
   documentApprovals: z.array(DocumentApproval).default([]),
@@ -400,6 +448,9 @@ export type ProjectGap = z.infer<typeof ProjectGap>;
 export type ClarificationQuestion = z.infer<typeof ClarificationQuestion>;
 export type ProjectReadiness = z.infer<typeof ProjectReadiness>;
 export type TechStackRecommendation = z.infer<typeof TechStackRecommendation>;
+export type ArchitecturePlanningInput = z.infer<typeof ArchitecturePlanningInput>;
+export type ArchitectureBrief = z.infer<typeof ArchitectureBrief>;
+export type ApprovedStackSnapshot = z.infer<typeof ApprovedStackSnapshot>;
 export type ArchitectureOption = z.infer<typeof ArchitectureOption>;
 export type ProjectKnowledge = z.infer<typeof ProjectKnowledge>;
 export type ArbDecision = z.infer<typeof ArbDecision>;

@@ -56,11 +56,41 @@ describe('approved delivery planning', () => {
     const fixture = await approvedProjectFixture();
     const { compileJiraBacklogPlan } = await import('../src/projects/delivery');
     const plan = compileJiraBacklogPlan({ ...fixture, documentApproval: fixture.approval, generatedAt: '2026-07-18T10:01:00.000Z' });
-    const html = renderToStaticMarkup(createElement(CodingStudio, { codingPacket: '# Approved task', jiraKey: 'AX-2', story: plan.stories[0], onOpenExecutableSample: () => undefined }));
+    const html = renderToStaticMarkup(createElement(CodingStudio, { codingPacket: '# Approved task', jiraKey: 'AX-2', story: plan.stories[0] }));
     expect(html).toContain('Axiom Build Studio');
-    expect(html).toContain('Repository authorization required');
+    expect(html).toContain('MVP handoff complete');
+    expect(html).toContain('Current MVP ends here.');
+    expect(html).toContain('Next phase');
     expect(html).toContain('No coding process is running');
-    expect(html).toContain('No simulated progress or fabricated command output');
+    expect(html).not.toContain('Open live coding proof');
+    expect(html).not.toContain('NotifyFlow');
+  });
+
+  it('keeps Jira confirmation independent from unrelated delivery work', async () => {
+    const [{ createElement }, { renderToStaticMarkup }, { DeliveryStage }, { compileJiraBacklogPlan }] = await Promise.all([
+      import('react'),
+      import('react-dom/server'),
+      import('../app/_components/delivery-stage'),
+      import('../src/projects/delivery'),
+    ]);
+    const fixture = await approvedProjectFixture();
+    const plan = compileJiraBacklogPlan({ ...fixture, documentApproval: fixture.approval, generatedAt: '2026-07-18T10:01:00.000Z' });
+    const baseProps = {
+      plan, publication: null, jiraConfigured: true, jiraChecking: false, codingPacket: '', busy: true,
+      loadingAction: 'notion' as const, option: fixture.knowledge.architectureOptions[0], projectName: fixture.project.name,
+      onReviewDecision: () => undefined, onPublishNotion: () => undefined, onPreparePlan: () => undefined,
+      onCreateJira: () => undefined, onPrepareCoding: () => undefined,
+    };
+    const html = renderToStaticMarkup(createElement(DeliveryStage, baseProps));
+    const labelIndex = html.indexOf('Confirm &amp; create in Jira');
+    const buttonStart = html.lastIndexOf('<button', labelIndex);
+    const buttonTag = html.slice(buttonStart, html.indexOf('>', buttonStart) + 1);
+    const checkingHtml = renderToStaticMarkup(createElement(DeliveryStage, { ...baseProps, jiraChecking: true }));
+
+    expect(labelIndex).toBeGreaterThan(-1);
+    expect(buttonTag).not.toContain('disabled');
+    expect(checkingHtml).toContain('Checking Jira connection…');
+    expect(checkingHtml).toMatch(/<button[^>]*disabled=""[^>]*aria-busy="true"|<button[^>]*aria-busy="true"[^>]*disabled=""/);
   });
 
   it('reports Jira configuration without exposing credential values', async () => {

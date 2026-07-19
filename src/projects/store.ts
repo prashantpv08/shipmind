@@ -5,6 +5,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { BlobPreconditionFailedError, del, get, put } from '@vercel/blob';
 import {
   ArbDecision,
+  ArchitectureBrief,
   DocumentApproval,
   JiraPublication,
   NotionPublication,
@@ -21,6 +22,7 @@ import {
   type ProjectKnowledge as ProjectKnowledgeType,
   type ProjectSource as ProjectSourceType,
   type ArbDecision as ArbDecisionType,
+  type ArchitectureBrief as ArchitectureBriefType,
   type DocumentApproval as DocumentApprovalType,
   type JiraPublication as JiraPublicationType,
   type WireframeRevision as WireframeRevisionType,
@@ -62,6 +64,7 @@ function emptyDatabase(): ProjectDatabaseType {
     projects: [],
     sources: [],
     knowledge: [],
+    architectureBriefs: [],
     arbDecisions: [],
     documents: [],
     documentApprovals: [],
@@ -188,6 +191,7 @@ export async function getProject(projectId: string) {
     workspace: database.workspaces.find((item) => item.id === project.workspaceId) ?? null,
     sources: database.sources.filter((item) => item.projectId === projectId),
     knowledge: database.knowledge.find((item) => item.projectId === projectId) ?? null,
+    architectureBrief: database.architectureBriefs.find((item) => item.projectId === projectId && item.graphVersion === project.graphVersion) ?? null,
     arbDecision: database.arbDecisions.filter((item) => item.projectId === projectId).sort((a, b) => b.version - a.version)[0] ?? null,
     documents: database.documents.filter((item) => item.projectId === projectId),
     documentApproval: database.documentApprovals.filter((item) => item.projectId === projectId).sort((a, b) => b.approvedAt.localeCompare(a.approvedAt))[0] ?? null,
@@ -222,6 +226,19 @@ export async function saveKnowledge(knowledge: ProjectKnowledgeType) {
     project.graphVersion = parsed.graphVersion;
     project.status = parsed.gaps.some((gap) => gap.status === 'OPEN') ? 'NEEDS_CLARIFICATION' : 'ANALYZED';
     project.updatedAt = new Date().toISOString();
+    return parsed;
+  });
+}
+
+export async function saveArchitectureBrief(brief: ArchitectureBriefType) {
+  return mutate((database) => {
+    const project = database.projects.find((item) => item.id === brief.projectId);
+    if (!project) throw new Error('Project not found');
+    const parsed = ArchitectureBrief.parse(brief);
+    if (parsed.graphVersion !== project.graphVersion) throw new Error('Architecture brief must reference the current project graph');
+    database.architectureBriefs = database.architectureBriefs.filter((item) => item.projectId !== brief.projectId || item.graphVersion !== brief.graphVersion);
+    database.architectureBriefs.push(parsed);
+    project.updatedAt = parsed.updatedAt;
     return parsed;
   });
 }
@@ -287,6 +304,7 @@ export async function deleteProject(projectId: string) {
     nextDatabase.projects = nextDatabase.projects.filter((item) => item.id !== projectId);
     nextDatabase.sources = nextDatabase.sources.filter((item) => item.projectId !== projectId);
     nextDatabase.knowledge = nextDatabase.knowledge.filter((item) => item.projectId !== projectId);
+    nextDatabase.architectureBriefs = nextDatabase.architectureBriefs.filter((item) => item.projectId !== projectId);
     nextDatabase.arbDecisions = nextDatabase.arbDecisions.filter((item) => item.projectId !== projectId);
     nextDatabase.documents = nextDatabase.documents.filter((item) => item.projectId !== projectId);
     nextDatabase.documentApprovals = nextDatabase.documentApprovals.filter((item) => item.projectId !== projectId);

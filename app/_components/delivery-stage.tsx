@@ -12,6 +12,7 @@ type DeliveryStageProps = {
   plan: JiraBacklogPlan | null;
   publication: JiraPublication | null;
   jiraConfigured: boolean;
+  jiraChecking: boolean;
   codingPacket: string;
   busy: boolean;
   loadingAction: DeliveryLoadingAction;
@@ -25,10 +26,9 @@ type DeliveryStageProps = {
   onPreparePlan: () => void;
   onCreateJira: () => void;
   onPrepareCoding: (storyId: string) => void;
-  onOpenExecutableSample: () => void;
 };
 
-export function DeliveryStage({ plan, publication, jiraConfigured, codingPacket, busy, loadingAction, option, projectName, notionUrl, jiraProjectKey, jiraError, onReviewDecision, onPublishNotion, onPreparePlan, onCreateJira, onPrepareCoding, onOpenExecutableSample }: DeliveryStageProps) {
+export function DeliveryStage({ plan, publication, jiraConfigured, jiraChecking, codingPacket, busy, loadingAction, option, projectName, notionUrl, jiraProjectKey, jiraError, onReviewDecision, onPublishNotion, onPreparePlan, onCreateJira, onPrepareCoding }: DeliveryStageProps) {
   const [selectedStoryId, setSelectedStoryId] = useState('');
   const selectedStory = selectedStoryId || publication?.stories[0]?.localId || plan?.stories[0]?.localId || '';
   const selectedStoryPlan = plan?.stories.find((story) => story.localId === selectedStory);
@@ -43,9 +43,9 @@ export function DeliveryStage({ plan, publication, jiraConfigured, codingPacket,
       {!plan ? <div className="delivery-empty"><span>JR</span><div><b>Prepare the Jira delivery plan</b><p>Axiom will compile one epic and source-linked child stories from the approved documents and architecture. This does not create Jira issues.</p></div><button type="button" aria-busy={loadingAction === 'plan'} disabled={busy} onClick={onPreparePlan}><ActionLabel loading={loadingAction === 'plan'} loadingText="Preparing preview…">Prepare preview →</ActionLabel></button></div> : <div className="backlog-preview">
         <div className="epic-preview"><span>EPIC</span><div><small>AI_SUGGESTED · graph v{plan.sourceGraphVersion}</small><h4>{plan.epic.summary}</h4><p>{plan.epic.description}</p></div>{publication ? <a href={publication.epicUrl} target="_blank" rel="noreferrer">{publication.epicKey} ↗</a> : null}</div>
         <div className="story-preview-list" aria-label="Jira story preview">{plan.stories.map((story) => { const created = publication?.stories.find((item) => item.localId === story.localId); return <button type="button" key={story.localId} className={selectedStory === story.localId ? 'selected' : ''} onClick={() => setSelectedStoryId(story.localId)}><span>{created?.key ?? story.localId}</span><div><b>{story.summary}</b><small>{story.sourceEntityIds.join(' · ') || 'Requires scope clarification'} · {story.acceptanceCriteria.length} acceptance criteria</small></div><i>{created ? 'Created' : story.priority}</i></button>; })}</div>
-        {!publication ? <div className="jira-confirmation"><div><b>{plan.stories.length + 1} Jira items ready for confirmation</b><p>The epic is created first; every story is then created as its child. Axiom stores the returned issue keys and will not recreate the same approved plan.</p>{jiraConfigured ? <small>Connected to Jira project {jiraProjectKey}.</small> : jiraError ? <small className="jira-error">Jira connection failed: {jiraError}</small> : null}</div><button type="button" className="primary-glow-button compact" aria-busy={loadingAction === 'jira'} disabled={busy || !jiraConfigured} onClick={onCreateJira}><ActionLabel loading={loadingAction === 'jira'} loadingText="Creating Jira hierarchy…">{jiraConfigured ? <>Confirm & create in Jira <span>↗</span></> : 'Jira connection needs attention'}</ActionLabel></button></div> : <div className="coding-handoff"><div><span className="approved-mark">✓</span><div><b>Jira backlog created</b><p>{publication.epicKey} with {publication.stories.length} child stories is ready. Select a story and prepare the controlled coding task.</p></div></div><button type="button" className="primary-glow-button compact" aria-busy={loadingAction === 'coding'} disabled={busy || !selectedStory} onClick={() => onPrepareCoding(selectedStory)}><ActionLabel loading={loadingAction === 'coding'} loadingText="Compiling coding task…">Prepare coding task <span>→</span></ActionLabel></button></div>}
+        {!publication ? <div className="jira-confirmation"><div><b>{plan.stories.length + 1} Jira items ready for confirmation</b><p>The epic is created first; every story is then created as its child. Axiom stores the returned issue keys and will not recreate the same approved plan.</p>{jiraConfigured ? <small>Connected to Jira project {jiraProjectKey}.</small> : jiraError ? <small className="jira-error">Jira connection failed: {jiraError}</small> : null}</div><button type="button" className="primary-glow-button compact" aria-busy={loadingAction === 'jira' || jiraChecking} disabled={loadingAction === 'jira' || jiraChecking || !jiraConfigured} onClick={onCreateJira}><ActionLabel loading={loadingAction === 'jira' || jiraChecking} loadingText={jiraChecking ? 'Checking Jira connection…' : 'Creating Jira hierarchy…'}>{jiraConfigured ? <>Confirm & create in Jira <span>↗</span></> : 'Jira connection needs attention'}</ActionLabel></button></div> : <div className="coding-handoff"><div><span className="approved-mark">✓</span><div><b>Jira backlog created</b><p>{publication.epicKey} with {publication.stories.length} child stories is ready. Select a story and prepare the controlled coding task.</p></div></div><button type="button" className="primary-glow-button compact" aria-busy={loadingAction === 'coding'} disabled={busy || !selectedStory} onClick={() => onPrepareCoding(selectedStory)}><ActionLabel loading={loadingAction === 'coding'} loadingText="Compiling coding task…">Prepare coding task <span>→</span></ActionLabel></button></div>}
       </div>}
-      {codingPacket ? <CodingStudio codingPacket={codingPacket} jiraKey={selectedJiraStory?.key} story={selectedStoryPlan} onOpenExecutableSample={onOpenExecutableSample} /> : null}
+      {codingPacket ? <CodingStudio codingPacket={codingPacket} jiraKey={selectedJiraStory?.key} story={selectedStoryPlan} /> : null}
     </section>
   </section>;
 }

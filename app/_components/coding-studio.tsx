@@ -8,10 +8,9 @@ type CodingStudioProps = {
   codingPacket: string;
   jiraKey?: string;
   story?: JiraBacklogStory;
-  onOpenExecutableSample: () => void;
 };
 
-export function CodingStudio({ codingPacket, jiraKey, story, onOpenExecutableSample }: CodingStudioProps) {
+export function CodingStudio({ codingPacket, jiraKey, story }: CodingStudioProps) {
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -27,8 +26,8 @@ export function CodingStudio({ codingPacket, jiraKey, story, onOpenExecutableSam
 
   return <section className="coding-studio" aria-labelledby="coding-studio-title">
     <header>
-      <div><span className="mini-kicker">Axiom Build Studio</span><h4 id="coding-studio-title">Watch implementation become evidence.</h4><p>Axiom will code inside an allowlisted workspace. The product streams real file changes and commands here; an external IDE is an optional handoff, not a requirement.</p></div>
-      <span className="studio-mode"><i /> Repository authorization required</span>
+      <div><span className="mini-kicker">Axiom Build Studio</span><h4 id="coding-studio-title">Governed coding handoff complete.</h4><p>The approved Jira story is compiled into a controlled task contract. This is the final implemented stage of the current MVP.</p></div>
+      <span className="studio-mode complete"><i /> MVP handoff complete</span>
     </header>
     <div className="coding-studio-grid">
       <aside className="coding-story-context">
@@ -40,19 +39,19 @@ export function CodingStudio({ codingPacket, jiraKey, story, onOpenExecutableSam
       </aside>
       <div className="coding-execution-ledger">
         <div className="execution-step complete"><span>01</span><div><b>Task contract compiled</b><p>Approved scope, sources, acceptance criteria, and fixed verification commands are frozen.</p></div><i>Complete</i></div>
-        <div className="execution-step active"><span>02</span><div><b>Authorize repository workspace</b><p>Select the target repository and write allowlist before an agent may change files.</p></div><i>Waiting</i></div>
-        <div className="execution-step locked"><span>03</span><div><b>Generate and review patch</b><p>The file tree, diffs, source links, and agent events will appear here from real tool output.</p></div><i>Locked</i></div>
-        <div className="execution-step locked"><span>04</span><div><b>Run fixed verification</b><p>Build, tests, coverage, command duration, and exit codes become stored evidence.</p></div><i>Locked</i></div>
+        <div className="execution-step next-phase"><span>02</span><div><b>Connect repository workspace</b><p>Repository authorization and the write allowlist are planned for the next implementation phase.</p></div><i>Next phase</i></div>
+        <div className="execution-step next-phase"><span>03</span><div><b>Generate and review patch</b><p>Project-specific file changes, source links, and agent events will be added in the next phase.</p></div><i>Next phase</i></div>
+        <div className="execution-step next-phase"><span>04</span><div><b>Run fixed verification</b><p>Build, tests, coverage, command duration, and exit codes will become stored evidence in the next phase.</p></div><i>Next phase</i></div>
       </div>
       <aside className="coding-live-panel">
-        <header><span /><span /><span /><b>Live activity</b></header>
-        <div><time>READY</time><p>Task packet compiled from the approved Jira story.</p><time>WAIT</time><p>No coding process is running. Repository authorization is required.</p></div>
-        <small>No simulated progress or fabricated command output is displayed.</small>
+        <header><span /><span /><span /><b>Handoff status</b></header>
+        <div><time>READY</time><p>Task packet compiled from the approved Jira story.</p><time>DONE</time><p>The current MVP ends at this governed coding handoff.</p><time>NEXT</time><p>Repository execution and verification are planned next.</p></div>
+        <small>No coding process is running and no simulated command output is displayed.</small>
       </aside>
     </div>
     <footer>
-      <div><button type="button" aria-busy={copying} disabled={copying} onClick={copyPacket}><ActionLabel loading={copying} loadingText="Copying task…">{copied ? 'Task packet copied' : 'Copy task for IDE'}</ActionLabel></button><button type="button" className="primary-glow-button compact" onClick={onOpenExecutableSample}>Open live coding proof <span>→</span></button></div>
-      <p>The NotifyFlow sample demonstrates the real generated-file diff and verification runner while generic repository authorization remains intentionally locked.</p>
+      <div><button type="button" aria-busy={copying} disabled={copying} onClick={copyPacket}><ActionLabel loading={copying} loadingText="Copying task…">{copied ? 'Task packet copied' : 'Copy task for IDE'}</ActionLabel></button></div>
+      <p className="mvp-boundary-note"><b>Current MVP ends here.</b><span>Live repository authorization, project-specific code generation, and verification are planned for the next implementation phase.</span></p>
     </footer>
     <details><summary>View compiled coding contract</summary><pre>{codingPacket}</pre></details>
   </section>;

@@ -531,7 +531,7 @@ Architecture estimates remain AI_SUGGESTED until load assumptions and verificati
 ## 12. Deployment view
 ${option.deploymentModel}
 
-Key technologies: ${option.technologies.join(', ')}.
+Key technologies: ${input.decision.stack ? [input.decision.stack.frontend, input.decision.stack.backend, input.decision.stack.database, input.decision.stack.mobile, input.decision.stack.hosting].join(', ') : option.technologies.join(', ')}.
 
 ## 13. Assumptions
 ${option.assumptions.map((assumption) => `- [AI_SUGGESTED] ${assumption}`).join('\n')}
@@ -550,7 +550,17 @@ ${option.reconsiderationTriggers.map((trigger) => `- **${trigger.metric}:** ${tr
 ## 17. Technology recommendation
 | Layer | Recommendation | Rationale | Alternatives | Status |
 |---|---|---|---|---|
-${input.knowledge.techStack.map((item) => `| ${item.layer} | ${clean(item.recommendation)} | ${clean(item.rationale)} | ${clean(item.alternatives.join('; '))} | ${item.truthStatus} |`).join('\n') || '| UNKNOWN | UNKNOWN | No recommendation available | UNKNOWN | UNKNOWN |'}
+${input.decision.stack ? [
+  ['EXPERIENCE', input.decision.stack.frontend],
+  ['APPLICATION', input.decision.stack.backend],
+  ['DATA', input.decision.stack.database],
+  ['MOBILE', input.decision.stack.mobile],
+  ['HOSTING', input.decision.stack.hosting],
+].map(([layer, recommendation]) => `| ${layer} | ${clean(recommendation)} | Selected from the human-confirmed architecture brief | Reopen the architecture brief to compare alternatives | HUMAN_APPROVED |`).join('\n') : input.knowledge.techStack.map((item) => `| ${item.layer} | ${clean(item.recommendation)} | ${clean(item.rationale)} | ${clean(item.alternatives.join('; '))} | ${item.truthStatus} |`).join('\n') || '| UNKNOWN | UNKNOWN | No recommendation available | UNKNOWN | UNKNOWN |'}
+
+Estimated hosting cost: ${input.decision.stack?.estimatedMonthlyCost ?? 'UNKNOWN — requires confirmed hosting inputs'}.
+
+Validation boundary: ${input.decision.stack?.validationSummary.join(' ') ?? 'Technology fit remains AI_SUGGESTED until the architecture inputs are confirmed.'}
 
 ## 18. Wireframe handoff
 Axiom Wireframe Studio may compile source-linked design hypotheses from this current HLD. Screens, interactions, roles, and example records remain AI_SUGGESTED until design review and approval.
@@ -589,6 +599,16 @@ Which architecture should govern the current approved scope of ${input.project.n
 
 ## Selected option
 **${option.name}** — ${option.summary}
+
+## Approved technology and hosting package
+${input.decision.stack ? `- Package: ${input.decision.stack.packageName}
+- Frontend: ${input.decision.stack.frontend}
+- Backend: ${input.decision.stack.backend}
+- Database: ${input.decision.stack.database}
+- Mobile: ${input.decision.stack.mobile}
+- Hosting: ${input.decision.stack.hosting}
+- Estimated monthly cost: ${input.decision.stack.estimatedMonthlyCost}
+- Architecture brief: ${input.decision.architectureBriefId}` : 'UNKNOWN — no architecture brief was captured for this legacy decision.'}
 
 ## Rationale
 ${input.decision.rationale.map((reason) => `- ${reason}`).join('\n')}

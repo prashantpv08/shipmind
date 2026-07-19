@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import type {
+  ArchitectureBrief,
   ArchitectureOption,
   ClarificationQuestion,
   JiraBacklogPlan,
@@ -16,6 +17,7 @@ import { guidedTextLimitError } from '../../src/projects/validation';
 import { useModalDialog } from '../_hooks/use-modal-dialog';
 import { ActionLabel } from './action-label';
 import { ArchitectureDiagrams } from './architecture-diagrams';
+import { ArchitecturePlanningLab } from './architecture-planning-lab';
 import { DocumentReviewStudio, type ReviewDocument } from './document-review-studio';
 import { DeliveryStage } from './delivery-stage';
 import { TemplateGallery } from './template-gallery';
@@ -34,6 +36,7 @@ type PipelineResult = {
   readiness?: ProjectReadiness;
   techStack: TechStackRecommendation[];
   architectureOptions: ArchitectureOption[];
+  architectureBrief?: ArchitectureBrief;
   documents: GeneratedDocument[];
   documentApproval?: DocumentApproval;
   approvedOptionId?: string;
@@ -102,26 +105,31 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   const [askingArchitecture, setAskingArchitecture] = useState(false);
   const [openingProjectId, setOpeningProjectId] = useState('');
   const [activeClarification, setActiveClarification] = useState('');
-  const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [notionConnectionLoading, setNotionConnectionLoading] = useState(true);
+  const [jiraConnectionLoading, setJiraConnectionLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [jiraCreating, setJiraCreating] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const projectLibraryRef = useModalDialog(closeProjectLibrary, projectLibraryOpen);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetch('/api/integrations/notion/status').then((response) => response.json()),
-      fetch('/api/integrations/jira/status').then((response) => response.json()),
-      fetch('/api/projects').then(readJson),
-    ]).then(([notion, jira, projects]) => {
+    fetch('/api/integrations/notion/status').then((response) => response.json()).then((notion) => {
+      if (active) setNotionConfigured(Boolean((notion as { configured?: boolean }).configured));
+    }).catch(() => undefined).finally(() => { if (active) setNotionConnectionLoading(false); });
+    fetch('/api/integrations/jira/status').then((response) => response.json()).then((jira) => {
       if (!active) return;
-      setNotionConfigured(Boolean((notion as { configured?: boolean }).configured));
       const jiraView = jira as JiraConnectionView;
       setJiraConnection(jiraView);
       setJiraConfigured(Boolean(jiraView.connected));
-      setStoredProjects(((projects.projects as StoredProject[] | undefined) ?? []).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    }).catch(() => {
+      if (active) setJiraConnection({ configured: false, connected: false, error: 'Jira connection check could not be completed.' });
+    }).finally(() => { if (active) setJiraConnectionLoading(false); });
+    fetch('/api/projects').then(readJson).then((projects) => {
+      if (active) setStoredProjects(((projects.projects as StoredProject[] | undefined) ?? []).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
     }).catch(() => { if (active) setNotice('The local project library could not be loaded.'); })
-      .finally(() => { if (active) setConnectionsLoading(false); });
+      .finally(() => { if (active) setProjectsLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -155,10 +163,11 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
       const publication = bundle.notionPublication as { projectPageUrl?: string } | null;
       const jiraPublication = bundle.jiraPublication as JiraPublication | null;
       const documentApproval = bundle.documentApproval as DocumentApproval | null;
+      const architectureBrief = bundle.architectureBrief as ArchitectureBrief | null;
       const architectureOptions = knowledge.architectureOptions ?? [];
       const currentApproval = arbDecision?.graphVersion === graphVersion ? arbDecision.optionId : undefined;
       setSelectedOptionId(currentApproval ?? architectureOptions.find((option) => option.recommended)?.id ?? architectureOptions[0]?.id ?? '');
-      setResult({ projectId: project.id, graphVersion, entities: knowledge.entities ?? [], gaps: knowledge.gaps ?? [], clarificationQuestions: knowledge.clarificationQuestions ?? [], readiness: knowledge.readiness, techStack: knowledge.techStack ?? [], architectureOptions, documents, documentApproval: documentApproval?.graphVersion === graphVersion ? documentApproval : undefined, approvedOptionId: currentApproval, notionUrl: publication?.projectPageUrl, jiraPublication: jiraPublication?.sourceGraphVersion === graphVersion ? jiraPublication : undefined });
+      setResult({ projectId: project.id, graphVersion, entities: knowledge.entities ?? [], gaps: knowledge.gaps ?? [], clarificationQuestions: knowledge.clarificationQuestions ?? [], readiness: knowledge.readiness, techStack: knowledge.techStack ?? [], architectureOptions, architectureBrief: architectureBrief?.graphVersion === graphVersion ? architectureBrief : undefined, documents, documentApproval: documentApproval?.graphVersion === graphVersion ? documentApproval : undefined, approvedOptionId: currentApproval, notionUrl: publication?.projectPageUrl, jiraPublication: jiraPublication?.sourceGraphVersion === graphVersion ? jiraPublication : undefined });
       setActiveStage(currentApproval ? 'handoff' : documentApproval?.graphVersion === graphVersion ? 'wireflow' : 'documents');
       if (currentApproval) {
         const delivery = await readJson(await fetch(`/api/projects/${project.id}/delivery/plan`));
@@ -238,7 +247,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
       const documents = latestDocuments((documentBody.documents as GeneratedDocument[]) ?? [], knowledge.graphVersion);
       const architectureOptions = knowledge.architectureOptions ?? [];
       setSelectedOptionId(architectureOptions.find((option) => option.recommended)?.id ?? architectureOptions[0]?.id ?? '');
-      setResult({ ...result, graphVersion: knowledge.graphVersion, entities: knowledge.entities ?? [], gaps: knowledge.gaps ?? [], clarificationQuestions: knowledge.clarificationQuestions ?? [], readiness: knowledge.readiness, techStack: knowledge.techStack ?? [], architectureOptions, documents, documentApproval: undefined, approvedOptionId: undefined });
+      setResult({ ...result, graphVersion: knowledge.graphVersion, entities: knowledge.entities ?? [], gaps: knowledge.gaps ?? [], clarificationQuestions: knowledge.clarificationQuestions ?? [], readiness: knowledge.readiness, techStack: knowledge.techStack ?? [], architectureOptions, architectureBrief: undefined, documents, documentApproval: undefined, approvedOptionId: undefined });
       setStatus('success'); setNotice('Project intelligence and the complete document baseline were rebuilt.');
     } catch (cause) { setStatus('error'); setNotice(cause instanceof Error ? cause.message : String(cause)); }
   }
@@ -264,11 +273,13 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   async function createJiraBacklog() {
     if (!result || !deliveryPlan) return;
     try {
+      setJiraCreating(true);
       setStatus('creating-jira');
       const body = await readJson(await fetch(`/api/projects/${result.projectId}/delivery/jira`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: true, planHash: deliveryPlan.sha256 }) }));
       const publication = body.publication as JiraPublication;
-      setResult({ ...result, jiraPublication: publication }); setStatus('success'); setNotice(`${publication.epicKey} and ${publication.stories.length} child stories were created in Jira.`); await refreshProjects();
+      setResult((current) => current?.projectId === publication.projectId ? { ...current, jiraPublication: publication } : current); setStatus('success'); setNotice(`${publication.epicKey} and ${publication.stories.length} child stories were created in Jira.`); await refreshProjects();
     } catch (cause) { setStatus('error'); setNotice(cause instanceof Error ? cause.message : String(cause)); }
+    finally { setJiraCreating(false); }
   }
 
   async function prepareCodingTask(storyId: string) {
@@ -292,7 +303,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
       const knowledge = body.knowledge as PipelineResult & { graphVersion: number };
       const documents = latestDocuments((body.documents as GeneratedDocument[]) ?? [], knowledge.graphVersion);
       setClarificationDrafts((current) => ({ ...current, [question.id]: '' }));
-      setResult({ ...result, graphVersion: knowledge.graphVersion, entities: knowledge.entities, gaps: knowledge.gaps, clarificationQuestions: knowledge.clarificationQuestions, readiness: knowledge.readiness, techStack: knowledge.techStack, architectureOptions: knowledge.architectureOptions, documents, documentApproval: undefined, approvedOptionId: undefined });
+      setResult({ ...result, graphVersion: knowledge.graphVersion, entities: knowledge.entities, gaps: knowledge.gaps, clarificationQuestions: knowledge.clarificationQuestions, readiness: knowledge.readiness, techStack: knowledge.techStack, architectureOptions: knowledge.architectureOptions, architectureBrief: undefined, documents, documentApproval: undefined, approvedOptionId: undefined });
       setStatus('success'); setNotice(`Decision recorded. Readiness is now ${knowledge.readiness?.score ?? 'UNKNOWN'}/100 and affected documents were regenerated.`);
       await refreshProjects();
     } catch (cause) { setStatus('error'); setNotice(cause instanceof Error ? cause.message : String(cause)); }
@@ -377,6 +388,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   }
 
   const busy = !['idle', 'success', 'error'].includes(status);
+  const connectionsLoading = notionConnectionLoading || jiraConnectionLoading || projectsLoading;
   const currentOption = result?.architectureOptions.find((option) => option.id === selectedOptionId) ?? result?.architectureOptions[0];
   const openBlockers = result?.gaps.filter((gap) => gap.status === 'OPEN' && gap.severity === 'BLOCKER') ?? [];
   const openQuestions = result?.clarificationQuestions.filter((question) => question.status === 'OPEN') ?? [];
@@ -392,7 +404,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   return <main id="main-content" className="experience-shell" tabIndex={-1}>
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{busy ? statusCopy[status] : connectionsLoading ? 'Checking integrations and saved projects…' : ''}</div>
-    <header className="experience-topbar"><button type="button" className="experience-brand" onClick={onBackHome}><span>A</span><b>Axiom</b></button><div className="experience-top-actions"><span className={`connection-pill ${notionConfigured ? 'connected' : ''}`}><i /> Notion {connectionsLoading ? 'checking…' : notionConfigured ? 'connected' : 'not configured'}</span><span className={`connection-pill ${jiraConfigured ? 'connected' : ''}`} title={jiraConnection.error}><i /> Jira {connectionsLoading ? 'checking…' : jiraConfigured ? `${jiraConnection.projectKey} connected` : jiraConnection.configured ? 'needs attention' : 'not configured'}</span><button type="button" className="ghost-action" onClick={() => setProjectLibraryOpen(true)}>Projects <span>{storedProjects.length}</span></button>{result ? <button type="button" className="solid-action" onClick={resetWorkspace}>+ New project</button> : <button type="button" className="ghost-action" onClick={onOpenSample}>View sample</button>}</div></header>
+    <header className="experience-topbar"><button type="button" className="experience-brand" onClick={onBackHome}><span>A</span><b>Axiom</b></button><div className="experience-top-actions"><span className={`connection-pill ${notionConfigured ? 'connected' : ''}`}><i /> Notion {notionConnectionLoading ? 'checking…' : notionConfigured ? 'connected' : 'not configured'}</span><span className={`connection-pill ${jiraConfigured ? 'connected' : ''}`} title={jiraConnection.error}><i /> Jira {jiraConnectionLoading ? 'checking…' : jiraConfigured ? `${jiraConnection.projectKey} connected` : jiraConnection.configured ? 'needs attention' : 'not configured'}</span><button type="button" className="ghost-action" onClick={() => setProjectLibraryOpen(true)}>Projects <span>{storedProjects.length}</span></button>{result ? <button type="button" className="solid-action" onClick={resetWorkspace}>+ New project</button> : <button type="button" className="ghost-action" onClick={onOpenSample}>View sample</button>}</div></header>
 
     {!result ? <div className="intake-experience">
       <section className="intake-hero"><span className="experience-kicker"><i /> Start with real project context</span><h1>Upload the context.<br /><em>Get the whole system.</em></h1><p>Axiom reads product documents and conversations, then creates a source-linked requirements catalogue, SRS, NFR specification, proposed HLD, and architecture diagrams.</p></section>
@@ -431,14 +443,14 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
 
       {activeStage === 'architecture' && currentOption ? <section className="stage-surface architecture-stage">
         <div className="stage-heading"><div><span className="experience-kicker"><i /> Architecture decision lab</span><h2>Choose with context, not fashion.</h2><p>Compare three viable directions. Axiom explains what, why, why not, failure behavior, cost basis, and the trigger that should reopen the decision.</p></div><span className="truth-chip">AI_SUGGESTED</span></div>
+        <ArchitecturePlanningLab projectId={result.projectId} projectName={projectName} graphVersion={result.graphVersion} entities={result.entities} existing={result.architectureBrief} approved={Boolean(result.approvedOptionId)} onSaved={(architectureBrief) => setResult((current) => current ? { ...current, architectureBrief } : current)} />
         <div className="architecture-selector">{result.architectureOptions.map((option) => <button type="button" key={option.id} className={selectedOptionId === option.id ? 'selected' : ''} onClick={() => { setSelectedOptionId(option.id); setArchitectureAnswer(null); setArchitectureError(''); }} disabled={Boolean(result.approvedOptionId)}><span>{option.recommended ? 'Recommended for current evidence' : 'Viable alternative'}</span><b>{option.name}</b><small>{option.deploymentModel}</small><i>{Object.values(option.scoreBreakdown).length ? `${Math.round(Object.values(option.scoreBreakdown).reduce((total, score) => total + score, 0) / Object.values(option.scoreBreakdown).length * 20)} fit` : 'Review'}</i></button>)}</div>
         <div className="architecture-focus"><ArchitectureDiagrams option={currentOption} projectName={projectName} /><div className="architecture-reasoning"><div className="reasoning-title"><span>{currentOption.recommended ? 'Recommended' : 'Alternative'}</span><h3>{currentOption.name}</h3><p>{currentOption.summary}</p></div><div className="reasoning-grid"><article><span>WHAT</span><p>{currentOption.deploymentModel}</p></article><article><span>WHY</span><ul>{currentOption.why.map((item) => <li key={item}>{item}</li>)}</ul></article><article><span>WHY NOT</span><ul>{currentOption.whyNot.map((item) => <li key={item}>{item}</li>)}</ul></article><article><span>RECONSIDER WHEN</span><ul>{currentOption.reconsiderationTriggers.map((item) => <li key={item.metric}><b>{item.metric}:</b> {item.condition}</li>)}</ul></article></div></div></div>
-        <div className="technology-direction"><div><span className="mini-kicker">Contextual technology direction</span><h3>Recommended layers for this project</h3></div><div>{result.techStack.map((item) => <article key={item.id}><span>{item.layer}</span><b>{item.recommendation}</b><p>{item.rationale}</p><small>Alternative: {item.alternatives[0]}</small></article>)}</div></div>
         <div className="ask-axiom"><div><span className="ai-orb">✦</span><div><h3>Ask Axiom about this decision</h3><p>Ask “why not microservices?”, “what fails?”, “what will this cost?”, or anything grounded in the current graph.</p></div></div><div className="ask-composer"><textarea aria-label="Ask an architecture question" value={architectureQuestion} onChange={(event) => setArchitectureQuestion(event.target.value)} aria-invalid={Boolean(architectureQuestionLimitError)} aria-describedby={architectureQuestionLimitError ? 'architecture-question-limit-error' : undefined} placeholder="Why is this a better fit than event-driven services for our current scope?" /><button type="button" aria-busy={askingArchitecture} disabled={askingArchitecture || !architectureQuestion.trim() || Boolean(architectureQuestionLimitError)} onClick={askArchitecture}><ActionLabel loading={askingArchitecture} loadingText="Grounding answer…">Ask →</ActionLabel></button></div>{architectureQuestionLimitError ? <p id="architecture-question-limit-error" className="experience-notice error" role="alert">{architectureQuestionLimitError}</p> : null}{architectureError ? <p className="experience-notice error" role="alert"><b>Question could not be answered.</b> {architectureError} Review the question and try again.</p> : null}{architectureAnswer ? <div className="grounded-answer"><span>AI_SUGGESTED · grounded answer</span><p>{architectureAnswer.answer}</p><small>References: {architectureAnswer.citations.join(' · ') || 'No matching entity reference'}</small></div> : null}</div>
-        <div className="architecture-approval-bar"><div>{openBlockers.length ? <><span className="approval-mark">!</span><div><b>{openBlockers.length} blocking decision{openBlockers.length === 1 ? '' : 's'} remain</b><small>Return to Documents and answer them before final approval.</small></div></> : <><span className="approved-mark">✓</span><div><b>Architecture decision is ready</b><small>Approval generates the final HLD diagrams and ADR, then republishes Notion.</small></div></>}</div><button type="button" className="primary-glow-button compact" aria-busy={status === 'approving' || status === 'hld'} disabled={busy || openBlockers.length > 0 || Boolean(result.approvedOptionId)} onClick={approveArchitecture}><ActionLabel loading={status === 'approving' || status === 'hld'} loadingText={statusCopy[status]}>{result.approvedOptionId ? 'Architecture approved' : 'Approve architecture'} <span>→</span></ActionLabel></button></div>
+        <div className="architecture-approval-bar"><div>{openBlockers.length ? <><span className="approval-mark">!</span><div><b>{openBlockers.length} blocking decision{openBlockers.length === 1 ? '' : 's'} remain</b><small>Return to Documents and answer them before final approval.</small></div></> : !result.architectureBrief ? <><span className="approval-mark">!</span><div><b>Confirm architecture inputs</b><small>Budget, hosting ownership, product surface, and team skills must be captured before approval.</small></div></> : <><span className="approved-mark">✓</span><div><b>Architecture decision is ready</b><small>Approval captures the selected stack package in the final HLD and ADR.</small></div></>}</div><button type="button" className="primary-glow-button compact" aria-busy={status === 'approving' || status === 'hld'} disabled={busy || openBlockers.length > 0 || !result.architectureBrief || Boolean(result.approvedOptionId)} onClick={approveArchitecture}><ActionLabel loading={status === 'approving' || status === 'hld'} loadingText={statusCopy[status]}>{result.approvedOptionId ? 'Architecture approved' : 'Approve architecture'} <span>→</span></ActionLabel></button></div>
       </section> : null}
 
-      {activeStage === 'handoff' && currentOption ? <><DeliveryStage plan={deliveryPlan} publication={result.jiraPublication ?? null} jiraConfigured={jiraConfigured} jiraProjectKey={jiraConnection.projectKey} jiraError={jiraConnection.error} codingPacket={codingPacket} busy={busy} loadingAction={status === 'publishing' ? 'notion' : status === 'planning-delivery' ? 'plan' : status === 'creating-jira' ? 'jira' : status === 'preparing-code' ? 'coding' : null} option={currentOption} projectName={projectName} notionUrl={result.notionUrl} onReviewDecision={() => setActiveStage('architecture')} onPublishNotion={publishExisting} onPreparePlan={() => prepareDeliveryPlan()} onCreateJira={createJiraBacklog} onPrepareCoding={prepareCodingTask} onOpenExecutableSample={onOpenSample} /><div className="handoff-documents">{result.documents.filter((document) => document.type === 'hld' || document.type === 'adr').map((document) => <article key={`${document.type}-${document.version}`}><span>{document.type.toUpperCase()}</span><div><b>{document.title}</b><small>v{document.version} · {document.truthStatus}</small></div><button type="button" onClick={() => setOpenDocument(document)}>Open</button><button type="button" onClick={() => downloadDocument(document)}>Download</button></article>)}</div></> : null}
+      {activeStage === 'handoff' && currentOption ? <><DeliveryStage plan={deliveryPlan} publication={result.jiraPublication ?? null} jiraConfigured={jiraConfigured} jiraChecking={jiraConnectionLoading} jiraProjectKey={jiraConnection.projectKey} jiraError={jiraConnection.error} codingPacket={codingPacket} busy={busy} loadingAction={jiraCreating ? 'jira' : status === 'publishing' ? 'notion' : status === 'planning-delivery' ? 'plan' : status === 'preparing-code' ? 'coding' : null} option={currentOption} projectName={projectName} notionUrl={result.notionUrl} onReviewDecision={() => setActiveStage('architecture')} onPublishNotion={publishExisting} onPreparePlan={() => prepareDeliveryPlan()} onCreateJira={createJiraBacklog} onPrepareCoding={prepareCodingTask} /><div className="handoff-documents">{result.documents.filter((document) => document.type === 'hld' || document.type === 'adr').map((document) => <article key={`${document.type}-${document.version}`}><span>{document.type.toUpperCase()}</span><div><b>{document.title}</b><small>v{document.version} · {document.truthStatus}</small></div><button type="button" onClick={() => setOpenDocument(document)}>Open</button><button type="button" onClick={() => downloadDocument(document)}>Download</button></article>)}</div></> : null}
     </div>}
 
     {projectLibraryOpen ? <div ref={projectLibraryRef} className="project-library-backdrop" role="dialog" aria-modal="true" aria-labelledby="project-library-title" tabIndex={-1}><aside className="project-library"><header><div><span className="mini-kicker">Workspace</span><h2 id="project-library-title">Your projects</h2><p>Open one project at a time. Delete experiments you no longer need.</p></div><button type="button" aria-label="Close project library" data-modal-initial-focus onClick={closeProjectLibrary}>×</button></header><button type="button" className="new-project-row" onClick={() => { resetWorkspace(); setProjectLibraryOpen(false); }}><span>+</span><div><b>Start a new project</b><small>Upload a fresh source set</small></div></button><div className="project-library-list">{storedProjects.map((project) => { const loading = openingProjectId === project.id; return <article key={project.id}><button type="button" aria-busy={loading} disabled={busy} onClick={() => openStoredProject(project)}><span>{project.name.slice(0, 2).toUpperCase()}</span><div><b>{project.name}</b><small>{project.status.replaceAll('_', ' ').toLowerCase()} · {new Date(project.updatedAt).toLocaleDateString()}</small></div>{loading ? <span className="action-spinner" aria-hidden="true" /> : null}</button><button type="button" className="delete-project-button" aria-label={`Delete ${project.name}`} onClick={() => setPendingDelete(project)}>⌫</button></article>; })}{!storedProjects.length ? <p>No saved projects yet.</p> : null}</div><button type="button" className="sample-project-row" onClick={onOpenSample}><span>NF</span><div><b>NotifyFlow demo</b><small>Controlled build and proof journey</small></div><i>Open →</i></button>{pendingDelete ? <div className="delete-confirmation"><b>Delete “{pendingDelete.name}”?</b><p>This removes its local sources, documents, decisions, and saved wireframe revisions. Published Notion pages are not deleted.</p>{status === 'error' && notice ? <p className="revision-error" role="alert">Delete failed: {notice} You can retry or cancel.</p> : null}<div><button type="button" onClick={() => setPendingDelete(null)}>Cancel</button><button type="button" aria-busy={status === 'deleting'} disabled={status === 'deleting'} onClick={confirmDelete}><ActionLabel loading={status === 'deleting'} loadingText="Deleting project…">Delete project</ActionLabel></button></div></div> : null}</aside></div> : null}
