@@ -18,6 +18,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const bundle = await getProject(id);
   if (!bundle) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   if (!bundle.knowledge) return NextResponse.json({ error: 'Project knowledge is required for a grounded revision' }, { status: 409 });
+  if (bundle.knowledge.clarificationQuestions.some((question) => question.status === 'OPEN')) {
+    return NextResponse.json({ error: 'Answer all clarification questions before reviewing or revising documents.' }, { status: 409 });
+  }
   const document = bundle.documents
     .filter((candidate) => candidate.id === documentId && candidate.sourceGraphVersion === bundle.project.graphVersion)
     .sort((a, b) => b.version - a.version)[0];

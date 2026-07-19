@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ArchitectureOption } from '../../src/projects/schemas';
+import { guidedTextLimitError } from '../../src/projects/validation';
 import { useModalDialog } from '../_hooks/use-modal-dialog';
 import { ActionLabel } from './action-label';
 import { ArchitectureDiagrams } from './architecture-diagrams';
@@ -49,10 +50,11 @@ export function DocumentReviewStudio({
   const [revisionState, setRevisionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [revisionError, setRevisionError] = useState('');
   const active = documentSections.find((section) => section.heading === activeSection) ?? documentSections[0];
+  const instructionLimitError = guidedTextLimitError(instruction);
   const dialogRef = useModalDialog(onClose);
 
   async function revise() {
-    if (!active || !instruction.trim()) return;
+    if (!active || !instruction.trim() || instructionLimitError) return;
     setRevisionState('loading');
     setRevisionError('');
     try {
@@ -75,7 +77,7 @@ export function DocumentReviewStudio({
           {document.type === 'hld' && architectureOption ? <ArchitectureDiagrams option={architectureOption} projectName={projectName} status={document.truthStatus === 'HUMAN_APPROVED' ? 'HUMAN_APPROVED' : 'AI_SUGGESTED'} /> : null}
           <article className="markdown-reader"><span className="mini-kicker">Selected section</span><h1>{active?.heading}</h1><MermaidDocumentBody body={active?.body || 'No content is available in this section.'} label={active?.heading ?? 'Architecture'} /></article>
         </main>
-        <aside className="ai-revision-panel"><span className="ai-orb">✦</span><span className="mini-kicker">Revise with Axiom</span><h3>Change this section</h3><p>Describe what should change. Stable IDs, sources, unknowns, and truth status are preserved.</p><div className="revision-suggestions"><button type="button" onClick={() => setInstruction('Make this section more detailed and add explicit acceptance criteria without inventing unsupported facts.')}>Add detail</button><button type="button" onClick={() => setInstruction('Clarify the responsibilities, edge cases, and unresolved decisions in this section.')}>Clarify gaps</button><button type="button" onClick={() => setInstruction('Rewrite this section for an executive and architecture review audience while preserving all technical meaning.')}>Executive rewrite</button></div><label htmlFor="document-revision-prompt">Revision instruction</label><textarea id="document-revision-prompt" value={instruction} onChange={(event) => setInstruction(event.target.value)} placeholder="e.g. Add a retention matrix and clarify who owns deletion approval…" /><button type="button" className="primary-glow-button compact" aria-busy={revisionState === 'loading'} disabled={revisionState === 'loading' || !instruction.trim()} onClick={revise}><ActionLabel loading={revisionState === 'loading'} loadingText="Revising section…">Generate revision <span>✦</span></ActionLabel></button>{revisionError ? <p className="revision-error" role="alert">{revisionError}</p> : null}<small>AI output remains suggested until the updated document baseline is approved.</small></aside>
+        <aside className="ai-revision-panel"><span className="ai-orb">✦</span><span className="mini-kicker">Revise with Axiom</span><h3>Change this section</h3><p>Describe what should change. Stable IDs, sources, unknowns, and truth status are preserved.</p><div className="revision-suggestions"><button type="button" onClick={() => setInstruction('Make this section more detailed and add explicit acceptance criteria without inventing unsupported facts.')}>Add detail</button><button type="button" onClick={() => setInstruction('Clarify the responsibilities, edge cases, and unresolved decisions in this section.')}>Clarify gaps</button><button type="button" onClick={() => setInstruction('Rewrite this section for an executive and architecture review audience while preserving all technical meaning.')}>Executive rewrite</button></div><label htmlFor="document-revision-prompt">Revision instruction</label><textarea id="document-revision-prompt" value={instruction} onChange={(event) => setInstruction(event.target.value)} aria-invalid={Boolean(instructionLimitError)} aria-describedby={instructionLimitError ? 'document-revision-limit-error' : undefined} placeholder="e.g. Add a retention matrix and clarify who owns deletion approval…" />{instructionLimitError ? <p id="document-revision-limit-error" className="revision-error" role="alert">{instructionLimitError}</p> : null}<button type="button" className="primary-glow-button compact" aria-busy={revisionState === 'loading'} disabled={revisionState === 'loading' || !instruction.trim() || Boolean(instructionLimitError)} onClick={revise}><ActionLabel loading={revisionState === 'loading'} loadingText="Revising section…">Generate revision <span>✦</span></ActionLabel></button>{revisionError ? <p className="revision-error" role="alert">{revisionError}</p> : null}<small>AI output remains suggested until the updated document baseline is approved.</small></aside>
       </div>
     </div>
   </div>;

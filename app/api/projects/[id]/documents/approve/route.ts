@@ -10,6 +10,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   const bundle = await getProject(id);
   if (!bundle) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   if (!bundle.knowledge) return NextResponse.json({ error: 'Analyze the project before approving documents' }, { status: 409 });
+  if (bundle.knowledge.clarificationQuestions.some((question) => question.status === 'OPEN')) {
+    return NextResponse.json({ error: 'Answer all clarification questions before approving documents.' }, { status: 409 });
+  }
   const current = bundle.documents
     .filter((document) => document.sourceGraphVersion === bundle.project.graphVersion)
     .sort((a, b) => b.version - a.version)

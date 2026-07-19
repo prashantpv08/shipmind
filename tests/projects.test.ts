@@ -171,6 +171,64 @@ describe('project intelligence and governed design', () => {
     expect(knowledge.entities).toEqual(expect.arrayContaining([expect.objectContaining({ truthStatus: 'HUMAN_CONFIRMED', clarificationQuestionId: expect.any(String) })]));
   });
 
+  it('classifies clarification answers and regenerates every document at each graph version', async () => {
+    const { analyzeProjectSources } = await import('../src/projects/analyze');
+    const { compileProjectDocuments } = await import('../src/projects/documents');
+    const { applyClarificationAnswer } = await import('../src/projects/intelligence');
+    const { Project, ProjectSource } = await import('../src/projects/schemas');
+    const project = Project.parse({ id: 'PROJ-REGEN', workspaceId: 'WS-1', name: 'Interview project', status: 'ANALYZED', graphVersion: 1, createdAt: '2026-07-18T10:00:00.000Z', updatedAt: '2026-07-18T10:00:00.000Z' });
+    const source = ProjectSource.parse({
+      id: 'SRC-REGEN', workspaceId: 'WS-1', projectId: project.id, name: 'interview.txt', kind: 'MEETING_TRANSCRIPT', mimeType: 'text/plain', size: 320,
+      sha256: 'd'.repeat(64), rawPath: '/tmp/interview.txt', status: 'EXTRACTED', createdAt: '2026-07-18T10:00:00.000Z',
+      extractedText: 'Administrators have roles and permissions. Personal data uses retention and encryption. An external API is the system of record. P95 latency is below 500 ms with an availability target. Failures retry with recovery. Records have lifecycle states and audit history. Acceptance criteria require product sign-off.',
+    });
+    let knowledge = analyzeProjectSources(project.id, 1, [source], '2026-07-18T10:01:00.000Z', project.name);
+    let documents = compileProjectDocuments({ project, knowledge, sources: [source], generatedAt: '2026-07-18T10:02:00.000Z' });
+    const answersByCategory = {
+      DELIVERY: 'A four-person TypeScript team must deliver by 30 September on managed cloud and own weekday support.',
+      FUNCTIONAL_SCOPE: 'Administrators create and approve interviews; recruiters create and update interviews; candidates only view and respond to their own interview.',
+      SECURITY_PRIVACY: 'Interview responses contain personal data, are restricted to recruiters and administrators, and are retained for 90 days.',
+      INTEGRATION: 'The first release integrates with one synchronous HR system, which owns candidate records.',
+      NFR: 'Peak 100 requests/second, p95 response time under 500 ms, 99.9% availability, RTO 1 hour, RPO 15 minutes, and USD 2,000/month.',
+    } as const;
+
+    for (const [index, question] of [...knowledge.clarificationQuestions].entries()) {
+      const category = knowledge.gaps.find((gap) => gap.id === question.gapId)?.category;
+      expect(category).toBeDefined();
+      const answer = answersByCategory[category as keyof typeof answersByCategory];
+      expect(answer).toBeDefined();
+      knowledge = applyClarificationAnswer({ knowledge, questionId: question.id, answer, answeredAt: `2026-07-18T10:${String(index + 3).padStart(2, '0')}:00.000Z` });
+      documents = compileProjectDocuments({ project: { ...project, graphVersion: knowledge.graphVersion }, knowledge, sources: [source], previousDocuments: documents, generatedAt: `2026-07-18T10:${String(index + 3).padStart(2, '0')}:30.000Z` });
+      expect(documents.map((document) => document.type)).toEqual(['requirements', 'srs', 'nfr', 'hld']);
+      expect(documents.every((document) => document.sourceGraphVersion === knowledge.graphVersion && document.version === index + 2)).toBe(true);
+    }
+
+    expect(knowledge.clarificationQuestions.every((question) => question.status === 'ANSWERED')).toBe(true);
+    expect(knowledge.entities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: 'REQUIREMENT', truthStatus: 'HUMAN_CONFIRMED' }),
+      expect.objectContaining({ category: 'NFR', truthStatus: 'HUMAN_CONFIRMED' }),
+      expect.objectContaining({ category: 'CONSTRAINT', truthStatus: 'HUMAN_CONFIRMED' }),
+    ]));
+    const requirements = documents.find((document) => document.type === 'requirements')?.content ?? '';
+    const srs = documents.find((document) => document.type === 'srs')?.content ?? '';
+    const nfr = documents.find((document) => document.type === 'nfr')?.content ?? '';
+    const hld = documents.find((document) => document.type === 'hld')?.content ?? '';
+    expect(requirements).not.toContain('| UNKNOWN | UNKNOWN | No items extracted');
+    expect(requirements).not.toContain('## Constraints\n- **UNKNOWN**');
+    expect(srs).not.toContain('### Constraints\n- **UNKNOWN**');
+    expect(nfr).toContain('| p95 latency | < 500 | ms |');
+    expect(nfr).toContain(answersByCategory.DELIVERY);
+    expect(hld).toContain(answersByCategory.DELIVERY);
+  });
+
+  it('returns the same actionable 2,000-character message for guided text fields', async () => {
+    const { ReviseDocumentRequest } = await import('../src/projects/schemas');
+    const { GUIDED_TEXT_LIMIT_MESSAGE } = await import('../src/projects/validation');
+    const parsed = ReviseDocumentRequest.safeParse({ section: 'Executive summary', instruction: 'x'.repeat(2_001) });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(parsed.error.issues[0]?.message).toBe(GUIDED_TEXT_LIMIT_MESSAGE);
+  });
+
   it('compiles detailed artifacts and a template-specific traceable wireframe handoff', async () => {
     const { analyzeProjectSources } = await import('../src/projects/analyze');
     const { compileArchitectureDocuments, compileProjectDocuments } = await import('../src/projects/documents');

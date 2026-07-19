@@ -74,7 +74,11 @@ export function buildProjectIntelligence(input: {
       rationale: 'Architecture and technology recommendations require measurable load, latency, availability, recovery, and budget assumptions.',
       question: `What peak load, response-time target, availability target, recovery objective, and monthly budget should ${subject} meet?`,
       whyItMatters: 'These numbers determine capacity, caching, async boundaries, database design, deployment shape, and verification thresholds.',
-      options: ['Low-volume internal workflow', 'Moderate customer-facing workload', 'High-volume or business-critical workload'],
+      options: [
+        'Peak 10 requests/second, p95 response time under 1 second, 99.0% availability, RTO 4 hours, RPO 24 hours, and USD 500/month',
+        'Peak 100 requests/second, p95 response time under 500 ms, 99.9% availability, RTO 1 hour, RPO 15 minutes, and USD 2,000/month',
+        'Peak 1,000 requests/second, p95 response time under 250 ms, 99.95% availability, RTO 15 minutes, RPO 5 minutes, and USD 10,000/month',
+      ],
       signal: /\b(p95|p99|latency|requests per|throughput|availability|rto|rpo|monthly cost|budget)\b/i,
     },
     {
@@ -246,6 +250,8 @@ export function applyClarificationAnswer(input: {
   const question = input.knowledge.clarificationQuestions.find((item) => item.id === input.questionId);
   if (!question) throw new Error('Clarification question not found');
   if (question.status === 'ANSWERED') throw new Error('Clarification question is already answered');
+  const gap = input.knowledge.gaps.find((item) => item.id === question.gapId);
+  if (!gap) throw new Error('Clarification gap not found');
 
   const clarificationQuestions = input.knowledge.clarificationQuestions.map((item) => item.id === question.id ? {
     ...item,
@@ -260,13 +266,23 @@ export function applyClarificationAnswer(input: {
     truthStatus: 'HUMAN_CONFIRMED' as const,
   } : gap);
   const answerEntityId = stableId('KN-ANSWER', input.knowledge.projectId, question.id);
+  const categoryByGap: Record<ProjectGap['category'], KnowledgeEntity['category']> = {
+    FUNCTIONAL_SCOPE: 'REQUIREMENT',
+    NFR: 'NFR',
+    DATA: 'CONSTRAINT',
+    INTEGRATION: 'REQUIREMENT',
+    FAILURE_HANDLING: 'NFR',
+    SECURITY_PRIVACY: 'NFR',
+    TESTABILITY: 'REQUIREMENT',
+    DELIVERY: 'CONSTRAINT',
+  };
   const entities = [
     ...input.knowledge.entities.filter((entity) => entity.id !== answerEntityId),
     {
       id: answerEntityId,
       projectId: input.knowledge.projectId,
-      category: 'DECISION' as const,
-      text: `${question.question} Answer: ${answer}`,
+      category: categoryByGap[gap.category],
+      text: `${question.question} Human-confirmed answer: ${answer}`,
       truthStatus: 'HUMAN_CONFIRMED' as const,
       clarificationQuestionId: question.id,
     },

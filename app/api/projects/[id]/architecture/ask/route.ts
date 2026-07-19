@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { answerArchitectureQuestion } from '../../../../../../src/projects/architecture-answer';
 import { getProject } from '../../../../../../src/projects/store';
+import { GUIDED_TEXT_LIMIT_MESSAGE, MAX_GUIDED_TEXT_CHARACTERS } from '../../../../../../src/projects/validation';
 
 export const runtime = 'nodejs';
 
 const RequestBody = z.object({
-  question: z.string().trim().min(3).max(2_000),
+  question: z.string().trim().min(3).max(MAX_GUIDED_TEXT_CHARACTERS, GUIDED_TEXT_LIMIT_MESSAGE),
   selectedOptionId: z.string().min(1).optional(),
 }).strict();
 
