@@ -333,6 +333,7 @@ This is sufficient for the single-process hackathon demo but not a production mu
 - `docs/decisions/0002-wireframe-engine-and-deployment-boundary.md`
 - `docs/decisions/0003-project-intelligence-and-curated-wireframe-templates.md`
 - `docs/decisions/0004-guided-document-first-product-journey.md`
+- `docs/decisions/0008-groq-live-ai-provider.md`
 
 Read these before changing the visible journey, whiteboard stack, Notion ownership, HLD approval boundary, or deployment topology.
 
@@ -344,14 +345,14 @@ Environment variable names are documented in `.env.example`:
 
 ```text
 AXIOM_AI_MODE
-OPENAI_API_KEY
-OPENAI_MODEL
+GROQ_API_KEY
+GROQ_MODEL
 AXIOM_DATA_DIR
 NOTION_ACCESS_TOKEN
 NOTION_PARENT_PAGE_ID
 ```
 
-Fixture mode works without external credentials. Live AI uses the server-side OpenAI Responses adapter. A live provider failure is shown honestly and does not silently substitute fixture output; the last valid analysis remains visible.
+Fixture mode works without external credentials. Live AI uses Groq's OpenAI-compatible endpoint with strict JSON-schema output and server-side Zod validation. The default model is `openai/gpt-oss-120b` on Groq; it does not require an OpenAI API key. A live provider failure is shown honestly and does not silently substitute fixture output; the last valid analysis remains visible.
 
 Available commands:
 

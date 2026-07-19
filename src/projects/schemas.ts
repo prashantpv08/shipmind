@@ -217,7 +217,7 @@ export const ProjectDocument = z.object({
   parentVersion: z.number().int().positive().optional(),
   revisedSection: z.string().min(1).max(180).optional(),
   revisionInstruction: z.string().min(1).max(2_000).optional(),
-  revisionProvider: z.enum(['axiom-fixture', 'openai-responses']).optional(),
+  revisionProvider: z.enum(['axiom-fixture', 'groq', 'openai-responses']).optional(),
 }).strict();
 
 export const DocumentApproval = z.object({

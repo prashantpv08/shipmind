@@ -15,7 +15,7 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
 - Fixture mode is explicit, works without an API key, and is labelled `Demo fixture` / `notifyflow-day2-fixture`.
-- Live mode uses the server-side OpenAI Responses provider, structured outputs, Zod validation, and no silent fixture substitution on failure.
+- Live mode uses Groq's OpenAI-compatible API with strict structured outputs, server-side Zod validation, and no silent fixture substitution on failure.
 - Source-grounded live findings must include exact quotes; the server verifies quotes verbatim and derives offsets itself.
 - Deterministic readiness scoring stays in application code and recalculates after clarification answers.
 - Architecture approval is explicit; the ADR is `HUMAN_APPROVED` and becomes stale if clarifications change.
@@ -61,8 +61,8 @@ The permanent hackathon deployment runs the existing Next.js modular monolith on
 
 ```bash
 AXIOM_AI_MODE=fixture
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.6-sol
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
 AXIOM_DATA_DIR=
 AXIOM_STORAGE_MODE=
 NOTION_ACCESS_TOKEN=
@@ -75,7 +75,7 @@ JIRA_PROJECT_KEY=
 
 For Vercel, connect a private Blob store and set `AXIOM_STORAGE_MODE=vercel-blob`. Vercel supplies the store identity and short-lived OIDC credentials to the Functions and Sandbox SDKs. Keep `.env.local` local; transfer integration values with the Vercel environment-variable UI or CLI without committing them.
 
-Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
+Set `AXIOM_AI_MODE=live` and provide a server-only `GROQ_API_KEY` to exercise live analysis and document revision. The default `GROQ_MODEL` is `openai/gpt-oss-120b`; that model is served and billed by Groq and does not require an OpenAI API key. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
 
 For the hackathon Notion connection, create an internal Notion integration, set `NOTION_ACCESS_TOKEN` in `.env.local`, share one parent page with that integration, and set its page ID as `NOTION_PARENT_PAGE_ID`. Tokens remain server-side. Multi-workspace OAuth is a post-hackathon hardening step; the current adapter intentionally supports one configured Notion workspace.
 
