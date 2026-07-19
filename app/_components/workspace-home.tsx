@@ -12,6 +12,7 @@ import type {
   WireframeHandoff,
   WireframeTemplateId,
 } from '../../src/projects/schemas';
+import { guidedTextLimitError } from '../../src/projects/validation';
 import { useModalDialog } from '../_hooks/use-modal-dialog';
 import { ActionLabel } from './action-label';
 import { ArchitectureDiagrams } from './architecture-diagrams';
@@ -107,20 +108,21 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   const projectLibraryRef = useModalDialog(closeProjectLibrary, projectLibraryOpen);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
     Promise.all([
-      fetch('/api/integrations/notion/status', { signal: controller.signal }).then((response) => response.json()),
-      fetch('/api/integrations/jira/status', { signal: controller.signal }).then((response) => response.json()),
-      fetch('/api/projects', { signal: controller.signal }).then(readJson),
+      fetch('/api/integrations/notion/status').then((response) => response.json()),
+      fetch('/api/integrations/jira/status').then((response) => response.json()),
+      fetch('/api/projects').then(readJson),
     ]).then(([notion, jira, projects]) => {
+      if (!active) return;
       setNotionConfigured(Boolean((notion as { configured?: boolean }).configured));
       const jiraView = jira as JiraConnectionView;
       setJiraConnection(jiraView);
       setJiraConfigured(Boolean(jiraView.connected));
       setStoredProjects(((projects.projects as StoredProject[] | undefined) ?? []).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-    }).catch(() => { if (!controller.signal.aborted) setNotice('The local project library could not be loaded.'); })
-      .finally(() => { if (!controller.signal.aborted) setConnectionsLoading(false); });
-    return () => controller.abort();
+    }).catch(() => { if (active) setNotice('The local project library could not be loaded.'); })
+      .finally(() => { if (active) setConnectionsLoading(false); });
+    return () => { active = false; };
   }, []);
 
   async function refreshProjects() {
@@ -141,7 +143,9 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
     setOpeningProjectId(project.id);
     setStatus('loading'); setNotice(''); setProjectLibraryOpen(false); setWireframe(null); setOpenDocument(null); setDeliveryPlan(null); setCodingPacket('');
     try {
-      const bundle = await readJson(await fetch(`/api/projects/${project.id}`));
+      const migrationBody = await readJson(await fetch(`/api/projects/${project.id}/migrate`, { method: 'POST' }));
+      const bundle = migrationBody.bundle as Record<string, unknown>;
+      const migrated = Boolean(migrationBody.migrated);
       const knowledge = bundle.knowledge as { entities?: KnowledgeEntity[]; gaps?: ProjectGap[]; clarificationQuestions?: ClarificationQuestion[]; readiness?: ProjectReadiness; techStack?: TechStackRecommendation[]; architectureOptions?: ArchitectureOption[] } | null;
       const graphVersion = (bundle.project as { graphVersion: number }).graphVersion;
       setProjectName(project.name); setSources([]);
@@ -160,7 +164,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
         const delivery = await readJson(await fetch(`/api/projects/${project.id}/delivery/plan`));
         setDeliveryPlan(delivery.plan as JiraBacklogPlan);
       }
-      setStatus('success'); setNotice(`Opened ${project.name}.`);
+      setStatus('success'); setNotice(migrated ? `Opened ${project.name}. Saved clarification answers and all documents were upgraded to graph v${graphVersion}; review and approve the regenerated baseline.` : `Opened ${project.name}.`);
     } catch (cause) { setStatus('error'); setNotice(cause instanceof Error ? cause.message : String(cause)); }
     finally { setOpeningProjectId(''); }
   }
@@ -279,6 +283,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   async function answerClarification(question: ClarificationQuestion, answerValue?: string) {
     if (!result) return;
     const answer = (answerValue ?? clarificationDrafts[question.id] ?? '').trim(); if (!answer) return;
+    if (guidedTextLimitError(answer)) return;
     const clarificationAction = `${question.id}:${answer}`;
     setActiveClarification(clarificationAction);
     try {
@@ -306,6 +311,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
 
   async function reviseDocument(document: ReviewDocument, section: string, instruction: string) {
     if (!result) return;
+    if (openQuestions.length) throw new Error('Answer all clarification questions before reviewing or revising documents.');
     setStatus('revising-document');
     const body = await readJson(await fetch(`/api/projects/${result.projectId}/documents/${encodeURIComponent(document.id)}/revise`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ section, instruction }) }));
     const revised = body.document as GeneratedDocument;
@@ -347,7 +353,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   }
 
   async function askArchitecture() {
-    if (!result || !architectureQuestion.trim()) return;
+    if (!result || !architectureQuestion.trim() || guidedTextLimitError(architectureQuestion)) return;
     setAskingArchitecture(true); setArchitectureAnswer(null); setArchitectureError('');
     try {
       const body = await readJson(await fetch(`/api/projects/${result.projectId}/architecture/ask`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: architectureQuestion, selectedOptionId }) }));
@@ -374,6 +380,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
   const currentOption = result?.architectureOptions.find((option) => option.id === selectedOptionId) ?? result?.architectureOptions[0];
   const openBlockers = result?.gaps.filter((gap) => gap.status === 'OPEN' && gap.severity === 'BLOCKER') ?? [];
   const openQuestions = result?.clarificationQuestions.filter((question) => question.status === 'OPEN') ?? [];
+  const architectureQuestionLimitError = guidedTextLimitError(architectureQuestion);
   const documentsApproved = Boolean(result?.documentApproval && result.documentApproval.graphVersion === result.graphVersion);
   const stages: Array<{ id: Stage; label: string; detail: string; unlocked: boolean }> = [
     { id: 'documents', label: 'Documents', detail: 'Review & shape', unlocked: true },
@@ -409,9 +416,10 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
       {activeStage === 'documents' ? <section className="stage-surface documents-stage">
         <div className="stage-heading"><div><span className="experience-kicker"><i /> Document system</span><h2>Review what Axiom understood.</h2><p>Open any artifact, inspect every section, then ask Axiom to revise only what needs to change.</p></div><div className="readiness-orbit"><strong>{result.readiness?.score ?? '—'}</strong><span>Readiness</span><small>{openBlockers.length} blocker{openBlockers.length === 1 ? '' : 's'}</small></div></div>
         {!result.readiness ? <div className="legacy-upgrade"><div><b>This project uses the earlier analysis model.</b><p>Rebuild it from its saved sources to get detailed architecture, contextual technology recommendations, gaps, and HLD diagrams.</p></div><button type="button" aria-busy={status === 'analyzing' || status === 'documenting'} disabled={busy} onClick={rebuildProjectIntelligence}><ActionLabel loading={status === 'analyzing' || status === 'documenting'} loadingText={statusCopy[status]}>Upgrade project intelligence</ActionLabel></button></div> : null}
-        <div className="review-document-grid">{result.documents.filter((document) => document.type !== 'adr').map((document) => <article key={`${document.type}-${document.version}`}><div className="document-card-top"><span>{document.type.toUpperCase().slice(0, 3)}</span><div><small>{document.truthStatus ?? 'AI_SUGGESTED'}</small><b>{document.title}</b></div></div><p>{documentDescription(document.type)}</p><div><small>v{document.version} · graph v{document.sourceGraphVersion ?? result.graphVersion}</small><button type="button" onClick={() => setOpenDocument(document)}>Review & modify →</button></div></article>)}</div>
-        {openQuestions.length ? <div className="decision-questions"><div className="question-heading"><div><span className="mini-kicker">Decisions needed</span><h3>{openQuestions.length} questions can materially improve the documents</h3></div><span>{openBlockers.length} block architecture approval</span></div>{openQuestions.map((question, index) => <details key={question.id} open={index === 0}><summary><span>{String(index + 1).padStart(2, '0')}</span><div><b>{question.question}</b><small>{question.whyItMatters}</small></div><i>{result.gaps.find((gap) => gap.id === question.gapId)?.severity}</i></summary><div className="question-answer-area"><div>{question.options.map((option) => { const loading = activeClarification === `${question.id}:${option.value}`; return <button type="button" key={option.id} aria-busy={loading} disabled={busy} onClick={() => answerClarification(question, option.value)}><ActionLabel loading={loading} loadingText="Applying answer…">{option.label}</ActionLabel></button>; })}</div><label htmlFor={`answer-${question.id}`}>Or give a precise answer</label><textarea id={`answer-${question.id}`} value={clarificationDrafts[question.id] ?? ''} onChange={(event) => setClarificationDrafts((current) => ({ ...current, [question.id]: event.target.value }))} placeholder="Add project-specific context…" /><button type="button" className="solid-action" aria-busy={activeClarification === `${question.id}:${(clarificationDrafts[question.id] ?? '').trim()}`} disabled={busy || !(clarificationDrafts[question.id] ?? '').trim()} onClick={() => answerClarification(question)}><ActionLabel loading={activeClarification === `${question.id}:${(clarificationDrafts[question.id] ?? '').trim()}`} loadingText="Applying answer…">Apply answer</ActionLabel></button></div></details>)}</div> : <div className="all-clear"><span>✓</span><div><b>No clarification question remains.</b><p>The document baseline is ready for product approval.</p></div></div>}
-        <div className="document-approval-bar"><div>{documentsApproved ? <><span className="approved-mark">✓</span><div><b>Document baseline approved</b><small>Approved at graph v{result.graphVersion}. Wireflow and architecture review are unlocked.</small></div></> : <><span className="approval-mark">◇</span><div><b>Ready to approve the document baseline?</b><small>Approval records the exact hashes of Requirements, SRS, NFR, and proposed HLD.</small></div></>}</div><div>{result.notionUrl ? <a href={result.notionUrl} target="_blank" rel="noreferrer">Review in Notion ↗</a> : null}<button type="button" className="primary-glow-button compact" aria-busy={status === 'approving-documents'} disabled={busy || documentsApproved || !result.readiness} onClick={approveDocuments}><ActionLabel loading={status === 'approving-documents'} loadingText="Approving documents…">{documentsApproved ? 'Approved' : 'Approve documents'} <span>→</span></ActionLabel></button></div></div>
+        {openQuestions.length ? <p className="experience-notice project-notice" role="status">Answer all clarification questions to unlock document review and approval. Each answer regenerates Requirements, SRS, NFR, and HLD from the same graph version.</p> : null}
+        <div className="review-document-grid">{result.documents.filter((document) => document.type !== 'adr').map((document) => <article key={`${document.type}-${document.version}`}><div className="document-card-top"><span>{document.type.toUpperCase().slice(0, 3)}</span><div><small>{document.truthStatus ?? 'AI_SUGGESTED'}</small><b>{document.title}</b></div></div><p>{documentDescription(document.type)}</p><div><small>v{document.version} · graph v{document.sourceGraphVersion ?? result.graphVersion}</small><button type="button" disabled={openQuestions.length > 0} title={openQuestions.length ? 'Answer all clarification questions to unlock document review.' : undefined} onClick={() => setOpenDocument(document)}>Review & modify →</button></div></article>)}</div>
+        {openQuestions.length ? <div className="decision-questions"><div className="question-heading"><div><span className="mini-kicker">Decisions needed</span><h3>{openQuestions.length} questions can materially improve the documents</h3></div><span>{openBlockers.length} block architecture approval</span></div>{openQuestions.map((question, index) => { const draft = clarificationDrafts[question.id] ?? ''; const draftLimitError = guidedTextLimitError(draft); const errorId = `answer-limit-${question.id}`; return <details key={question.id} open={index === 0}><summary><span>{String(index + 1).padStart(2, '0')}</span><div><b>{question.question}</b><small>{question.whyItMatters}</small></div><i>{result.gaps.find((gap) => gap.id === question.gapId)?.severity}</i></summary><div className="question-answer-area"><div>{question.options.map((option) => { const loading = activeClarification === `${question.id}:${option.value}`; return <button type="button" key={option.id} aria-busy={loading} disabled={busy} onClick={() => answerClarification(question, option.value)}><ActionLabel loading={loading} loadingText="Applying answer…">{option.label}</ActionLabel></button>; })}</div><label htmlFor={`answer-${question.id}`}>Or give a precise answer</label><textarea id={`answer-${question.id}`} value={draft} onChange={(event) => setClarificationDrafts((current) => ({ ...current, [question.id]: event.target.value }))} aria-invalid={Boolean(draftLimitError)} aria-describedby={draftLimitError ? errorId : undefined} placeholder="Add project-specific context…" />{draftLimitError ? <p id={errorId} className="revision-error" role="alert">{draftLimitError}</p> : null}<button type="button" className="solid-action" aria-busy={activeClarification === `${question.id}:${draft.trim()}`} disabled={busy || !draft.trim() || Boolean(draftLimitError)} onClick={() => answerClarification(question)}><ActionLabel loading={activeClarification === `${question.id}:${draft.trim()}`} loadingText="Applying answer…">Apply answer</ActionLabel></button></div></details>; })}</div> : <div className="all-clear"><span>✓</span><div><b>No clarification question remains.</b><p>The document baseline is ready for product approval.</p></div></div>}
+        <div className="document-approval-bar"><div>{documentsApproved ? <><span className="approved-mark">✓</span><div><b>Document baseline approved</b><small>Approved at graph v{result.graphVersion}. Wireflow and architecture review are unlocked.</small></div></> : <><span className="approval-mark">◇</span><div><b>{openQuestions.length ? 'Document baseline is locked' : 'Ready to approve the document baseline?'}</b><small>{openQuestions.length ? 'Answer every clarification question before reviewing or approving these regenerated documents.' : 'Approval records the exact hashes of Requirements, SRS, NFR, and proposed HLD.'}</small></div></>}</div><div>{result.notionUrl ? <a href={result.notionUrl} target="_blank" rel="noreferrer">Review in Notion ↗</a> : null}<button type="button" className="primary-glow-button compact" aria-busy={status === 'approving-documents'} disabled={busy || documentsApproved || !result.readiness || openQuestions.length > 0} onClick={approveDocuments}><ActionLabel loading={status === 'approving-documents'} loadingText="Approving documents…">{documentsApproved ? 'Approved' : 'Approve documents'} <span>→</span></ActionLabel></button></div></div>
       </section> : null}
 
       {activeStage === 'wireflow' ? <section className="stage-surface wireflow-stage">
@@ -426,7 +434,7 @@ export function WorkspaceHome({ onOpenSample, onBackHome }: { onOpenSample: () =
         <div className="architecture-selector">{result.architectureOptions.map((option) => <button type="button" key={option.id} className={selectedOptionId === option.id ? 'selected' : ''} onClick={() => { setSelectedOptionId(option.id); setArchitectureAnswer(null); setArchitectureError(''); }} disabled={Boolean(result.approvedOptionId)}><span>{option.recommended ? 'Recommended for current evidence' : 'Viable alternative'}</span><b>{option.name}</b><small>{option.deploymentModel}</small><i>{Object.values(option.scoreBreakdown).length ? `${Math.round(Object.values(option.scoreBreakdown).reduce((total, score) => total + score, 0) / Object.values(option.scoreBreakdown).length * 20)} fit` : 'Review'}</i></button>)}</div>
         <div className="architecture-focus"><ArchitectureDiagrams option={currentOption} projectName={projectName} /><div className="architecture-reasoning"><div className="reasoning-title"><span>{currentOption.recommended ? 'Recommended' : 'Alternative'}</span><h3>{currentOption.name}</h3><p>{currentOption.summary}</p></div><div className="reasoning-grid"><article><span>WHAT</span><p>{currentOption.deploymentModel}</p></article><article><span>WHY</span><ul>{currentOption.why.map((item) => <li key={item}>{item}</li>)}</ul></article><article><span>WHY NOT</span><ul>{currentOption.whyNot.map((item) => <li key={item}>{item}</li>)}</ul></article><article><span>RECONSIDER WHEN</span><ul>{currentOption.reconsiderationTriggers.map((item) => <li key={item.metric}><b>{item.metric}:</b> {item.condition}</li>)}</ul></article></div></div></div>
         <div className="technology-direction"><div><span className="mini-kicker">Contextual technology direction</span><h3>Recommended layers for this project</h3></div><div>{result.techStack.map((item) => <article key={item.id}><span>{item.layer}</span><b>{item.recommendation}</b><p>{item.rationale}</p><small>Alternative: {item.alternatives[0]}</small></article>)}</div></div>
-        <div className="ask-axiom"><div><span className="ai-orb">✦</span><div><h3>Ask Axiom about this decision</h3><p>Ask “why not microservices?”, “what fails?”, “what will this cost?”, or anything grounded in the current graph.</p></div></div><div className="ask-composer"><textarea aria-label="Ask an architecture question" value={architectureQuestion} onChange={(event) => setArchitectureQuestion(event.target.value)} placeholder="Why is this a better fit than event-driven services for our current scope?" /><button type="button" aria-busy={askingArchitecture} disabled={askingArchitecture || !architectureQuestion.trim()} onClick={askArchitecture}><ActionLabel loading={askingArchitecture} loadingText="Grounding answer…">Ask →</ActionLabel></button></div>{architectureError ? <p className="experience-notice error" role="alert"><b>Question could not be answered.</b> {architectureError} Review the question and try again.</p> : null}{architectureAnswer ? <div className="grounded-answer"><span>AI_SUGGESTED · grounded answer</span><p>{architectureAnswer.answer}</p><small>References: {architectureAnswer.citations.join(' · ') || 'No matching entity reference'}</small></div> : null}</div>
+        <div className="ask-axiom"><div><span className="ai-orb">✦</span><div><h3>Ask Axiom about this decision</h3><p>Ask “why not microservices?”, “what fails?”, “what will this cost?”, or anything grounded in the current graph.</p></div></div><div className="ask-composer"><textarea aria-label="Ask an architecture question" value={architectureQuestion} onChange={(event) => setArchitectureQuestion(event.target.value)} aria-invalid={Boolean(architectureQuestionLimitError)} aria-describedby={architectureQuestionLimitError ? 'architecture-question-limit-error' : undefined} placeholder="Why is this a better fit than event-driven services for our current scope?" /><button type="button" aria-busy={askingArchitecture} disabled={askingArchitecture || !architectureQuestion.trim() || Boolean(architectureQuestionLimitError)} onClick={askArchitecture}><ActionLabel loading={askingArchitecture} loadingText="Grounding answer…">Ask →</ActionLabel></button></div>{architectureQuestionLimitError ? <p id="architecture-question-limit-error" className="experience-notice error" role="alert">{architectureQuestionLimitError}</p> : null}{architectureError ? <p className="experience-notice error" role="alert"><b>Question could not be answered.</b> {architectureError} Review the question and try again.</p> : null}{architectureAnswer ? <div className="grounded-answer"><span>AI_SUGGESTED · grounded answer</span><p>{architectureAnswer.answer}</p><small>References: {architectureAnswer.citations.join(' · ') || 'No matching entity reference'}</small></div> : null}</div>
         <div className="architecture-approval-bar"><div>{openBlockers.length ? <><span className="approval-mark">!</span><div><b>{openBlockers.length} blocking decision{openBlockers.length === 1 ? '' : 's'} remain</b><small>Return to Documents and answer them before final approval.</small></div></> : <><span className="approved-mark">✓</span><div><b>Architecture decision is ready</b><small>Approval generates the final HLD diagrams and ADR, then republishes Notion.</small></div></>}</div><button type="button" className="primary-glow-button compact" aria-busy={status === 'approving' || status === 'hld'} disabled={busy || openBlockers.length > 0 || Boolean(result.approvedOptionId)} onClick={approveArchitecture}><ActionLabel loading={status === 'approving' || status === 'hld'} loadingText={statusCopy[status]}>{result.approvedOptionId ? 'Architecture approved' : 'Approve architecture'} <span>→</span></ActionLabel></button></div>
       </section> : null}
 

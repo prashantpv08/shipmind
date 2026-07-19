@@ -218,8 +218,9 @@ export async function saveKnowledge(knowledge: ProjectKnowledgeType) {
     const parsed = ProjectKnowledge.parse(knowledge);
     database.knowledge = database.knowledge.filter((item) => item.projectId !== knowledge.projectId);
     database.knowledge.push(parsed);
+    database.documentApprovals = database.documentApprovals.filter((item) => item.projectId !== knowledge.projectId || item.graphVersion === parsed.graphVersion);
     project.graphVersion = parsed.graphVersion;
-    project.status = parsed.gaps.some((gap) => gap.status === 'OPEN' && gap.severity === 'BLOCKER') ? 'NEEDS_CLARIFICATION' : 'ANALYZED';
+    project.status = parsed.gaps.some((gap) => gap.status === 'OPEN') ? 'NEEDS_CLARIFICATION' : 'ANALYZED';
     project.updatedAt = new Date().toISOString();
     return parsed;
   });
@@ -239,6 +240,27 @@ export async function saveDocuments(projectId: string, documents: ProjectDocumen
       : project.status === 'NEEDS_CLARIFICATION' ? 'NEEDS_CLARIFICATION' : 'DOCUMENTED';
     project.updatedAt = new Date().toISOString();
     return parsed;
+  });
+}
+
+export async function saveKnowledgeAndDocuments(knowledge: ProjectKnowledgeType, documents: ProjectDocumentType[]) {
+  return mutate((database) => {
+    const project = database.projects.find((item) => item.id === knowledge.projectId);
+    if (!project) throw new Error('Project not found');
+    const parsedKnowledge = ProjectKnowledge.parse(knowledge);
+    const parsedDocuments = documents.map((document) => ProjectDocument.parse(document));
+    const requiredTypes = ['requirements', 'srs', 'nfr', 'hld'];
+    const missingTypes = requiredTypes.filter((type) => !parsedDocuments.some((document) => document.type === type && document.sourceGraphVersion === parsedKnowledge.graphVersion));
+    if (missingTypes.length) throw new Error(`Clarification regeneration is incomplete: ${missingTypes.join(', ')}`);
+
+    database.knowledge = database.knowledge.filter((item) => item.projectId !== knowledge.projectId);
+    database.knowledge.push(parsedKnowledge);
+    database.documents.push(...parsedDocuments);
+    database.documentApprovals = database.documentApprovals.filter((item) => item.projectId !== knowledge.projectId);
+    project.graphVersion = parsedKnowledge.graphVersion;
+    project.status = parsedKnowledge.gaps.some((gap) => gap.status === 'OPEN') ? 'NEEDS_CLARIFICATION' : 'DOCUMENTED';
+    project.updatedAt = new Date().toISOString();
+    return { knowledge: parsedKnowledge, documents: parsedDocuments };
   });
 }
 

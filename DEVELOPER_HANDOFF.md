@@ -86,10 +86,12 @@ The intelligence pass produces structured requirements, NFRs, decisions, constra
 Clarification answers:
 
 - are stored as human-confirmed graph mutations;
+- are classified into requirements, NFRs, or constraints from the originating gap instead of being stored as generic decisions;
 - record question provenance;
 - increment the graph version;
 - recalculate readiness;
-- regenerate affected documents;
+- atomically regenerate Requirements, SRS, NFR, and proposed HLD at the new graph version;
+- keep document review, revision, and approval locked until every presented clarification question is answered;
 - invalidate a stale architecture decision.
 
 ARB approval is enforced server-side and cannot bypass an unresolved P0 blocker.
@@ -624,3 +626,48 @@ Hosted Jira status                                              PASS — connect
 ```
 
 The hosted E2E exercised project creation, source persistence, analysis, documents, clarification updates, optional wireflow, architecture approval, controlled generation, real Sandbox verification evidence, traceability, exports, project deletion, and reset. The remaining work is the final demo recording, screenshots, submission narrative, and feature freeze—not implementation of the prototype link.
+
+## 15. Addendum — clarification gating and document regeneration
+
+Work continued on 2026-07-19 on branch `codex/clarification-document-regeneration-fixes`.
+
+- Document review and document-baseline approval remain disabled while any clarification question is open; the approval and revision APIs enforce the same boundary.
+- Clarification answers now become `HUMAN_CONFIRMED` requirements, NFRs, or constraints according to their originating gap category. This removes the incorrect fallback rows seen in the Interview project after answering functional, non-functional, and delivery questions.
+- Requirements, SRS, NFR, and proposed HLD are compiled and persisted atomically for every clarification graph version. A partial regeneration can no longer leave current knowledge paired with stale documents.
+- Measurable NFR choices now contain explicit load, latency, availability, recovery, and budget targets, and response-time wording is parsed into the NFR catalogue.
+- Guided clarification, document-revision, and architecture-question fields share the actionable validation message `Enter only 2,000 characters.` in both the UI and API.
+- Regression coverage verifies document locking, server-side approval rejection, the exact length error, answer classification, constraints, and all four regenerated document versions.
+- Opening a saved project calls the idempotent migration route. Legacy clarification entities stored as generic decisions are reclassified once, the graph version advances, all four documents regenerate atomically, and stale approvals remain invalidated.
+
+Verification for this continuation:
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 69 tests
+pnpm test:e2e   PASS — 5 tests
+pnpm build      PASS — Next.js production build
+```
+
+The production build still emits the existing non-blocking Turbopack NFT trace warning for the fixed verification runner.
+
+## 16. Addendum — wireflow action visibility and startup cleanup
+
+Work continued on 2026-07-19 on branch `codex/wireflow-button-abort-fix`.
+
+- The selected-template label rule is now scoped to the label itself, so it no longer overrides the white text inside the purple **Generate product flow** action.
+- Workspace startup requests now use an inactive-component guard for state updates instead of aborting fetches during React development remounts. This removes the Turbopack `AbortError: signal is aborted without reason` overlay while still preventing updates after unmount.
+- The primary browser journey asserts the action's computed white text color and records any AbortError emitted while the workspace mounts and unmounts.
+- A 1440×1000 browser capture of the exact wireflow stage confirmed the full action label is visible and no runtime error was raised.
+
+Verification for this continuation:
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 69 tests
+pnpm test:e2e   PASS — 5 tests
+pnpm build      PASS — Next.js production build
+```
+
+The production build still emits the existing non-blocking Turbopack NFT trace warning for the fixed verification runner.

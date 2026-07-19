@@ -76,7 +76,7 @@ function acceptanceCriteria(knowledge: ProjectKnowledge) {
 - [AI_SUGGESTED] Demonstrate the outcome stated in ${entity.id} using the exact source-grounded behavior.
 - [AI_SUGGESTED] Verify authorized and unauthorized actor behavior after the role clarification is resolved.
 - [AI_SUGGESTED] Verify validation, empty, loading, failure, and recovery outcomes where the workflow applies.
-- Source: ${entity.sourceId ?? 'UNKNOWN'}`).join('\n\n');
+- Source or answer: ${entity.sourceId ?? entity.clarificationQuestionId ?? 'UNKNOWN'}`).join('\n\n');
 }
 
 function answeredByCategory(knowledge: ProjectKnowledge, category: ProjectKnowledge['gaps'][number]['category']) {
@@ -87,7 +87,7 @@ function answeredByCategory(knowledge: ProjectKnowledge, category: ProjectKnowle
 
 function inferNfr(entity: KnowledgeEntity) {
   const text = entity.text;
-  const latency = /\b(p(?:95|99))?\s*latency[^\d]{0,30}(?:below|under|less than|<=?)?\s*([\d,.]+)\s*(ms|milliseconds?|s|seconds?)\b/i.exec(text);
+  const latency = /\b(p(?:95|99))?\s*(?:response(?:[- ]time)?|latency)[^\d]{0,30}(?:below|under|less than|<=?)?\s*([\d,.]+)\s*(ms|milliseconds?|s|seconds?)\b/i.exec(text);
   const availability = /\bavailability[^\d]{0,30}([\d.]+)\s*%/i.exec(text);
   const budget = /\b(?:budget|cost)[^\d$]{0,30}(?:usd|\$)?\s*([\d,.]+)\b/i.exec(text);
   if (latency) return { category: 'Performance', metric: `${latency[1]?.toLowerCase() ?? 'response'} latency`, target: `< ${latency[2]}`, unit: latency[3], verification: 'Defined load test with percentile assertion' };
@@ -285,6 +285,9 @@ ${documentControl(project, knowledge, version, generatedAt)}
 ## Quality model
 NFR recommendations and unresolved values remain AI_SUGGESTED or UNKNOWN. Runtime evidence is never inferred from this document.
 
+## Confirmed operating constraints
+${lines(knowledge.entities, 'CONSTRAINT')}
+
 ## Catalogue
 | ID | Category | Statement | Metric | Target | Unit | Rationale | Source or answer | Verification method | Truth status | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -351,10 +354,13 @@ ${option.failureModes.map((failure) => `| ${clean(failure.failure)} | ${clean(fa
 |---|---|---|---|---|
 ${knowledge.techStack.map((item) => `| ${item.layer} | ${clean(item.recommendation)} | ${clean(item.rationale)} | ${clean(item.alternatives.join('; '))} | ${item.truthStatus} |`).join('\n') || '| UNKNOWN | UNKNOWN | Awaiting analysis | UNKNOWN | UNKNOWN |'}
 
-## 11. Open design decisions
+## 11. Delivery constraints
+${answeredByCategory(knowledge, 'DELIVERY')}
+
+## 12. Open design decisions
 ${knowledge.gaps.filter((gap) => gap.status === 'OPEN').map((gap) => `- **${gap.id}** (${gap.severity}) ${gap.title}`).join('\n') || '- No open design decisions.'}
 
-## 12. Review boundary
+## 13. Review boundary
 - Product approval confirms the document baseline and may unlock an optional wireflow.
 - ARB approval remains a later explicit decision and produces the final HUMAN_APPROVED ADR and HLD.
 - Diagrams, technologies, costs, and unverified quality claims remain AI_SUGGESTED or UNKNOWN until approved or measured.
