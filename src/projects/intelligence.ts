@@ -9,7 +9,7 @@ import {
   type TechStackRecommendation,
 } from './schemas';
 
-function stableId(prefix: string, projectId: string, key: string) {
+export function stableId(prefix: string, projectId: string, key: string) {
   return `${prefix}-${createHash('sha256').update(`${projectId}:${key}`).digest('hex').slice(0, 14).toUpperCase()}`;
 }
 
@@ -42,7 +42,14 @@ export function buildProjectIntelligence(input: {
   entities: KnowledgeEntity[];
   sourceText: string;
   calculatedAt: string;
-}) {
+}, generated?: Pick<ProjectKnowledgeType, 'gaps' | 'clarificationQuestions'>) {
+  if (generated) {
+    return {
+      ...generated,
+      readiness: calculateReadiness(input.entities, generated.gaps, input.calculatedAt),
+      techStack: buildTechStack(input.projectId, input.entities, input.sourceText),
+    };
+  }
   const requirementIds = affectedIds(input.entities, ['REQUIREMENT']);
   const nfrIds = affectedIds(input.entities, ['NFR']);
   const constraintIds = affectedIds(input.entities, ['CONSTRAINT', 'DECISION']);
@@ -136,7 +143,7 @@ export function buildProjectIntelligence(input: {
 
   const missing = drafts.filter((draft) => !draft.signal.test(input.sourceText));
   const selected = [...missing, ...drafts.filter((draft) => !missing.includes(draft))].slice(0, Math.max(5, Math.min(8, missing.length || 5)));
-  const gaps: ProjectGap[] = selected.map((draft) => ({
+  const fixtureGaps: ProjectGap[] = selected.map((draft) => ({
     id: stableId('GAP', input.projectId, draft.category),
     projectId: input.projectId,
     type: draft.type,
@@ -152,7 +159,7 @@ export function buildProjectIntelligence(input: {
     truthStatus: 'UNKNOWN',
   }));
 
-  const clarificationQuestions: ClarificationQuestion[] = selected.slice(0, 5).map((draft) => {
+  const fixtureQuestions: ClarificationQuestion[] = selected.slice(0, 5).map((draft) => {
     const gapId = stableId('GAP', input.projectId, draft.category);
     const questionId = stableId('CQ', input.projectId, draft.category);
     return {
@@ -169,9 +176,9 @@ export function buildProjectIntelligence(input: {
   });
 
   return {
-    gaps,
-    clarificationQuestions,
-    readiness: calculateReadiness(input.entities, gaps, input.calculatedAt),
+    gaps: fixtureGaps,
+    clarificationQuestions: fixtureQuestions,
+    readiness: calculateReadiness(input.entities, fixtureGaps, input.calculatedAt),
     techStack: buildTechStack(input.projectId, input.entities, input.sourceText),
   };
 }
@@ -296,7 +303,9 @@ export function applyClarificationAnswer(input: {
     gaps,
     clarificationQuestions,
     readiness: calculateReadiness(entities, gaps, input.answeredAt),
-    analyzer: 'axiom-deterministic-grounded-v2',
+    analyzer: input.knowledge.analyzer === 'axiom-deterministic-grounded-v1'
+      ? 'axiom-deterministic-grounded-v2'
+      : input.knowledge.analyzer,
   });
 }
 

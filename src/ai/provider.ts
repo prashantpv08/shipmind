@@ -335,11 +335,53 @@ function materializeAnalysis(
   });
 }
 
-type GroqClient = Pick<OpenAI, 'chat'>;
+export type GroqClient = Pick<OpenAI, 'chat'>;
+
+export class StructuredOutputValidationError extends Error {}
 
 function isRetryableStructuredOutputError(cause: unknown) {
-  if (cause instanceof z.ZodError || cause instanceof SyntaxError) return true;
+  if (cause instanceof z.ZodError || cause instanceof SyntaxError || cause instanceof StructuredOutputValidationError) return true;
   return cause instanceof Error && cause.message.includes('Generated JSON does not match the expected schema');
+}
+
+export async function generateGroqStructured<T extends z.ZodType>(input: {
+  client: GroqClient;
+  model: string;
+  schema: T;
+  schemaName: string;
+  systemPrompt: string;
+  userContent: string;
+  repairInstruction: string;
+  validate?: (value: z.infer<T>) => void;
+}): Promise<z.infer<T>> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await input.client.chat.completions.create({
+        model: input.model,
+        messages: [
+          {
+            role: 'system',
+            content: attempt === 0
+              ? input.systemPrompt
+              : `${input.systemPrompt} The previous generation failed validation. ${input.repairInstruction}`,
+          },
+          { role: 'user', content: input.userContent },
+        ],
+        temperature: 0.1,
+        response_format: strictJsonSchema(input.schema, input.schemaName),
+      });
+      const content = response.choices[0]?.message.content;
+      if (!content) throw new Error(`Groq returned no ${input.schemaName} output`);
+      const parsed = input.schema.parse(JSON.parse(content));
+      input.validate?.(parsed);
+      return parsed;
+    } catch (cause) {
+      lastError = cause;
+      if (attempt === 1 || !isRetryableStructuredOutputError(cause)) throw cause;
+    }
+  }
+  throw lastError;
 }
 
 export class GroqProvider implements ModelProvider {
@@ -353,45 +395,12 @@ export class GroqProvider implements ModelProvider {
     });
   }
 
-  private async generateStructured<T extends z.ZodType>(input: {
-    schema: T;
-    schemaName: string;
-    systemPrompt: string;
-    userContent: string;
-    repairInstruction: string;
-  }): Promise<z.infer<T>> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        const response = await this.client.chat.completions.create({
-          model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: attempt === 0
-                ? input.systemPrompt
-                : `${input.systemPrompt} The previous generation failed validation. ${input.repairInstruction}`,
-            },
-            { role: 'user', content: input.userContent },
-          ],
-          temperature: 0.1,
-          response_format: strictJsonSchema(input.schema, input.schemaName),
-        });
-        const content = response.choices[0]?.message.content;
-        if (!content) throw new Error(`Groq returned no ${input.schemaName} output`);
-        return input.schema.parse(JSON.parse(content));
-      } catch (cause) {
-        lastError = cause;
-        if (attempt === 1 || !isRetryableStructuredOutputError(cause)) throw cause;
-      }
-    }
-    throw lastError;
-  }
-
   async analyze(untrustedBrief: string) {
     const startedAt = new Date().toISOString();
     if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY is required for Groq live mode');
-    const discovery = await this.generateStructured({
+    const discovery = await generateGroqStructured({
+      client: this.client,
+      model: this.model,
       schema: LiveDiscoveryOutput,
       schemaName: 'analysis_discovery',
       systemPrompt: discoverySystemPrompt,
@@ -412,7 +421,9 @@ export class GroqProvider implements ModelProvider {
       })),
     };
     const architectureOptions = await Promise.all(architectureDirections.map(async (direction) => {
-      return this.generateStructured({
+      return generateGroqStructured({
+        client: this.client,
+        model: this.model,
         schema: LiveArchitectureOption,
         schemaName: 'architecture_option',
         systemPrompt: architectureSystemPrompt,

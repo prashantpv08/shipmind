@@ -25,7 +25,11 @@ function stableEntityId(projectId: string, sourceId: string, category: Category,
   return `KN-${createHash('sha256').update(`${projectId}:${sourceId}:${category}:${startOffset}:${text}`).digest('hex').slice(0, 16).toUpperCase()}`;
 }
 
-export function analyzeProjectSources(projectId: string, graphVersion: number, sources: ProjectSource[], analyzedAt = new Date().toISOString(), projectName = 'Project') {
+export function projectSourceText(sources: ProjectSource[]) {
+  return sources.filter((source) => source.status === 'EXTRACTED').map((source) => source.extractedText).join('\n');
+}
+
+export function extractProjectEntities(projectId: string, sources: ProjectSource[]) {
   const entities: KnowledgeEntity[] = [];
   for (const source of sources.filter((item) => item.status === 'EXTRACTED')) {
     for (const segment of candidateSegments(source.extractedText)) {
@@ -61,13 +65,28 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
       truthStatus: 'UNKNOWN',
     });
   }
+  return entities;
+}
+
+export function analyzeProjectSources(
+  projectId: string,
+  graphVersion: number,
+  sources: ProjectSource[],
+  analyzedAt = new Date().toISOString(),
+  projectName = 'Project',
+  options?: {
+    generatedIntelligence?: Pick<ReturnType<typeof buildProjectIntelligence>, 'gaps' | 'clarificationQuestions'>;
+    analyzer?: 'axiom-deterministic-grounded-v2' | 'axiom-groq-grounded-v1';
+  },
+) {
+  const entities = extractProjectEntities(projectId, sources);
 
   const firstSource = sources.find((source) => source.status === 'EXTRACTED');
   const summary = firstSource
     ? candidateSegments(firstSource.extractedText).slice(0, 3).map((item) => item.text).join(' ').slice(0, 1_200)
     : 'No source text was successfully extracted. Resolve source failures before architecture review.';
 
-  const sourceText = sources.filter((source) => source.status === 'EXTRACTED').map((source) => source.extractedText).join('\n');
+  const sourceText = projectSourceText(sources);
   const eventDrivenFit = /\b(notification|queue|retry|webhook|asynchronous|background job|burst)\b/i.test(sourceText);
 
   const architectureOptions = [
@@ -178,7 +197,10 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
     },
   ];
 
-  const intelligence = buildProjectIntelligence({ projectId, projectName, entities, sourceText, calculatedAt: analyzedAt });
+  const intelligence = buildProjectIntelligence(
+    { projectId, projectName, entities, sourceText, calculatedAt: analyzedAt },
+    options?.generatedIntelligence,
+  );
 
   return ProjectKnowledge.parse({
     projectId,
@@ -188,6 +210,6 @@ export function analyzeProjectSources(projectId: string, graphVersion: number, s
     ...intelligence,
     architectureOptions,
     analyzedAt,
-    analyzer: 'axiom-deterministic-grounded-v2',
+    analyzer: options?.analyzer ?? 'axiom-deterministic-grounded-v2',
   });
 }

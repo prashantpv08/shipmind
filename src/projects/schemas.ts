@@ -181,9 +181,9 @@ export const ProjectKnowledge = z.object({
   techStack: z.array(TechStackRecommendation).max(7).default([]),
   architectureOptions: z.array(ArchitectureOption).length(3),
   analyzedAt: z.iso.datetime(),
-  analyzer: z.enum(['axiom-deterministic-grounded-v1', 'axiom-deterministic-grounded-v2']),
+  analyzer: z.enum(['axiom-deterministic-grounded-v1', 'axiom-deterministic-grounded-v2', 'axiom-groq-grounded-v1']),
 }).strict().superRefine((value, context) => {
-  if (value.analyzer !== 'axiom-deterministic-grounded-v2') return;
+  if (value.analyzer === 'axiom-deterministic-grounded-v1') return;
   if (value.gaps.length < 5) context.addIssue({ code: 'too_small', origin: 'array', minimum: 5, inclusive: true, path: ['gaps'], message: 'V2 project intelligence requires at least five gaps' });
   if (value.clarificationQuestions.length < 3) context.addIssue({ code: 'too_small', origin: 'array', minimum: 3, inclusive: true, path: ['clarificationQuestions'], message: 'V2 project intelligence requires at least three clarification questions' });
   if (value.techStack.length !== 7) context.addIssue({ code: 'custom', path: ['techStack'], message: 'V2 project intelligence requires seven technology-layer recommendations' });

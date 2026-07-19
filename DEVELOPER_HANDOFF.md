@@ -77,11 +77,12 @@ Relevant modules:
 
 - `src/projects/extract.ts` — server-side extraction.
 - `src/projects/analyze.ts` — source-to-knowledge analysis.
-- `src/projects/intelligence.ts` — gaps, clarification questions, readiness, technology recommendations, and graph updates.
+- `src/projects/intelligence.ts` — fixture gaps/questions, deterministic readiness, technology recommendations, and graph updates.
+- `src/projects/intelligence-provider.ts` — live Groq generation of document-specific gaps and clarification questions with strict schema and evidence-reference validation.
 - `src/projects/schemas.ts` — validated project structures.
 - `src/projects/store.ts` — current hackathon persistence adapter.
 
-The intelligence pass produces structured requirements, NFRs, decisions, constraints, risks, open questions, exact source traceability, at least five ranked gaps, three to five contextual clarification questions, deterministic readiness, three architecture directions, and technology-layer recommendations.
+The intelligence pass produces structured requirements, NFRs, decisions, constraints, risks, open questions, exact source traceability, five ranked gaps, five contextual clarification questions, deterministic readiness, three architecture directions, and technology-layer recommendations. Production live mode generates gaps and questions from the uploaded sources through Groq; deterministic templates are limited to explicit fixture/test mode.
 
 Clarification answers:
 
