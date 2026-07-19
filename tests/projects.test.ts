@@ -171,6 +171,37 @@ describe('project intelligence and governed design', () => {
     expect(knowledge.entities).toEqual(expect.arrayContaining([expect.objectContaining({ truthStatus: 'HUMAN_CONFIRMED', clarificationQuestionId: expect.any(String) })]));
   });
 
+  it('migrates legacy decision-shaped clarification answers exactly once', async () => {
+    const { analyzeProjectSources } = await import('../src/projects/analyze');
+    const { applyClarificationAnswer, migrateLegacyClarificationAnswers } = await import('../src/projects/intelligence');
+    const { ProjectKnowledge, ProjectSource } = await import('../src/projects/schemas');
+    const source = ProjectSource.parse({
+      id: 'SRC-LEGACY-ANSWER', workspaceId: 'WS-1', projectId: 'PROJ-LEGACY-ANSWER', name: 'brief.txt', kind: 'FILE', mimeType: 'text/plain', size: 44,
+      sha256: 'e'.repeat(64), rawPath: '/tmp/brief.txt', status: 'EXTRACTED', createdAt: '2026-07-18T10:00:00.000Z', extractedText: 'The product must support an approval workflow.',
+    });
+    const initial = analyzeProjectSources(source.projectId, 1, [source], '2026-07-18T10:01:00.000Z', 'Legacy interview project');
+    const question = initial.clarificationQuestions[0];
+    const legacyAnswer = 'Administrators approve; members create and view their own records.';
+    const answered = applyClarificationAnswer({ knowledge: initial, questionId: question.id, answer: legacyAnswer, answeredAt: '2026-07-18T10:02:00.000Z' });
+    const legacy = ProjectKnowledge.parse({
+      ...answered,
+      entities: answered.entities.map((entity) => entity.clarificationQuestionId === question.id ? { ...entity, category: 'DECISION', text: `${question.question} Answer: ${legacyAnswer}` } : entity),
+    });
+
+    const migration = migrateLegacyClarificationAnswers({ knowledge: legacy, migratedAt: '2026-07-19T10:00:00.000Z' });
+    expect(migration.migrated).toBe(true);
+    expect(migration.knowledge.graphVersion).toBe(legacy.graphVersion + 1);
+    expect(migration.knowledge.entities.find((entity) => entity.clarificationQuestionId === question.id)).toEqual(expect.objectContaining({
+      category: 'REQUIREMENT',
+      truthStatus: 'HUMAN_CONFIRMED',
+      text: expect.stringContaining('Human-confirmed answer:'),
+    }));
+
+    const repeated = migrateLegacyClarificationAnswers({ knowledge: migration.knowledge, migratedAt: '2026-07-19T10:01:00.000Z' });
+    expect(repeated.migrated).toBe(false);
+    expect(repeated.knowledge.graphVersion).toBe(migration.knowledge.graphVersion);
+  });
+
   it('classifies clarification answers and regenerates every document at each graph version', async () => {
     const { analyzeProjectSources } = await import('../src/projects/analyze');
     const { compileProjectDocuments } = await import('../src/projects/documents');

@@ -13,6 +13,17 @@ function stableId(prefix: string, projectId: string, key: string) {
   return `${prefix}-${createHash('sha256').update(`${projectId}:${key}`).digest('hex').slice(0, 14).toUpperCase()}`;
 }
 
+const categoryByGap: Record<ProjectGap['category'], KnowledgeEntity['category']> = {
+  FUNCTIONAL_SCOPE: 'REQUIREMENT',
+  NFR: 'NFR',
+  DATA: 'CONSTRAINT',
+  INTEGRATION: 'REQUIREMENT',
+  FAILURE_HANDLING: 'NFR',
+  SECURITY_PRIVACY: 'NFR',
+  TESTABILITY: 'REQUIREMENT',
+  DELIVERY: 'CONSTRAINT',
+};
+
 type GapDraft = Omit<ProjectGap, 'id' | 'projectId' | 'status' | 'truthStatus'> & {
   question: string;
   whyItMatters: string;
@@ -266,16 +277,6 @@ export function applyClarificationAnswer(input: {
     truthStatus: 'HUMAN_CONFIRMED' as const,
   } : gap);
   const answerEntityId = stableId('KN-ANSWER', input.knowledge.projectId, question.id);
-  const categoryByGap: Record<ProjectGap['category'], KnowledgeEntity['category']> = {
-    FUNCTIONAL_SCOPE: 'REQUIREMENT',
-    NFR: 'NFR',
-    DATA: 'CONSTRAINT',
-    INTEGRATION: 'REQUIREMENT',
-    FAILURE_HANDLING: 'NFR',
-    SECURITY_PRIVACY: 'NFR',
-    TESTABILITY: 'REQUIREMENT',
-    DELIVERY: 'CONSTRAINT',
-  };
   const entities = [
     ...input.knowledge.entities.filter((entity) => entity.id !== answerEntityId),
     {
@@ -297,4 +298,36 @@ export function applyClarificationAnswer(input: {
     readiness: calculateReadiness(entities, gaps, input.answeredAt),
     analyzer: 'axiom-deterministic-grounded-v2',
   });
+}
+
+export function migrateLegacyClarificationAnswers(input: {
+  knowledge: ProjectKnowledgeType;
+  migratedAt: string;
+}) {
+  const answers = new Map(input.knowledge.clarificationQuestions
+    .filter((question) => question.status === 'ANSWERED' && question.answer)
+    .map((question) => [question.id, question]));
+  let changed = false;
+  const entities = input.knowledge.entities.map((entity) => {
+    if (!entity.clarificationQuestionId || entity.category !== 'DECISION') return entity;
+    const question = answers.get(entity.clarificationQuestionId);
+    if (!question?.answer) return entity;
+    const gap = input.knowledge.gaps.find((item) => item.id === question.gapId);
+    if (!gap) return entity;
+    changed = true;
+    return {
+      ...entity,
+      category: categoryByGap[gap.category],
+      text: `${question.question} Human-confirmed answer: ${question.answer}`,
+    };
+  });
+  if (!changed) return { knowledge: input.knowledge, migrated: false };
+  const graphVersion = input.knowledge.graphVersion + 1;
+  const knowledge = ProjectKnowledge.parse({
+    ...input.knowledge,
+    graphVersion,
+    entities,
+    readiness: input.knowledge.readiness ? calculateReadiness(entities, input.knowledge.gaps, input.migratedAt) : undefined,
+  });
+  return { knowledge, migrated: true };
 }

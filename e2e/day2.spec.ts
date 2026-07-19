@@ -107,6 +107,10 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('dialog', { name: 'Your projects' })).not.toBeVisible();
   await expect(page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ })).toBeFocused();
   await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
+  await page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ }).click();
+  await page.getByRole('dialog', { name: 'Your projects' }).locator('.project-library-list article').filter({ hasText: 'Digital lending modernization' }).first().getByRole('button').first().click();
+  await expect(page.getByRole('status').filter({ hasText: 'Opened Digital lending modernization.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Architecture approved. Delivery can begin.' })).toBeVisible();
   await page.getByRole('button', { name: 'Axiom' }).click();
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
