@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { applyClarificationAnswer } from '../../../../../../src/projects/intelligence';
 import { compileProjectDocuments } from '../../../../../../src/projects/documents';
-import { getProject, saveDocuments, saveKnowledge } from '../../../../../../src/projects/store';
+import { getProject, saveKnowledgeAndDocuments } from '../../../../../../src/projects/store';
+import { GUIDED_TEXT_LIMIT_MESSAGE, MAX_GUIDED_TEXT_CHARACTERS } from '../../../../../../src/projects/validation';
 
 export const runtime = 'nodejs';
 
-const RequestBody = z.object({ answer: z.string().trim().min(1).max(2_000) }).strict();
+const RequestBody = z.object({ answer: z.string().trim().min(1).max(MAX_GUIDED_TEXT_CHARACTERS, GUIDED_TEXT_LIMIT_MESSAGE) }).strict();
 
 export async function POST(request: Request, context: { params: Promise<{ id: string; questionId: string }> }) {
   const { id, questionId } = await context.params;
@@ -24,7 +25,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const answeredAt = new Date().toISOString();
     const knowledge = applyClarificationAnswer({ knowledge: bundle.knowledge, questionId, answer: parsed.data.answer, answeredAt });
-    await saveKnowledge(knowledge);
     const documents = compileProjectDocuments({
       project: { ...bundle.project, graphVersion: knowledge.graphVersion, status: knowledge.readiness?.openBlockerIds.length ? 'NEEDS_CLARIFICATION' : 'ANALYZED', updatedAt: answeredAt },
       knowledge,
@@ -32,7 +32,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       previousDocuments: bundle.documents,
       generatedAt: answeredAt,
     });
-    await saveDocuments(id, documents);
+    await saveKnowledgeAndDocuments(knowledge, documents);
     return NextResponse.json({ knowledge, documents });
   } catch (cause) {
     return NextResponse.json({ error: cause instanceof Error ? cause.message : String(cause) }, { status: 409 });

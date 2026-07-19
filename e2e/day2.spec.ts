@@ -31,8 +31,28 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.getByRole('button', { name: /Create project system/ }).click();
   createdWorkspaceProjectId = ((await (await createResponse).json()) as { project: { id: string } }).project.id;
   await expect(page.getByRole('status').filter({ hasText: /project system is ready/i })).toBeVisible({ timeout: 30_000 });
+  const prematureApproval = await page.request.post(`/api/projects/${createdWorkspaceProjectId}/documents/approve`);
+  expect(prematureApproval.status()).toBe(409);
+  await expect(prematureApproval.json()).resolves.toEqual({ error: 'Answer all clarification questions before approving documents.' });
+  const bundle = await (await page.request.get(`/api/projects/${createdWorkspaceProjectId}`)).json() as { knowledge: { clarificationQuestions: Array<{ id: string }> } };
+  const oversizedAnswer = await page.request.post(`/api/projects/${createdWorkspaceProjectId}/clarifications/${bundle.knowledge.clarificationQuestions[0].id}`, { data: { answer: 'x'.repeat(2_001) } });
+  expect(oversizedAnswer.status()).toBe(400);
+  await expect(oversizedAnswer.json()).resolves.toEqual({ error: 'Enter only 2,000 characters.' });
   await expect(page.getByRole('heading', { name: 'Review what Axiom understood.' })).toBeVisible();
   await expect(page.locator('.review-document-grid article')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /Review & modify/ })).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /Review & modify/ }).first()).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Approve documents/ })).toBeDisabled();
+  const firstCustomAnswer = page.locator('.decision-questions details').first().getByRole('textbox');
+  await firstCustomAnswer.fill('x'.repeat(2_001));
+  await expect(page.getByRole('alert').filter({ hasText: 'Enter only 2,000 characters.' })).toBeVisible();
+  await expect(page.locator('.decision-questions details').first().getByRole('button', { name: 'Apply answer' })).toBeDisabled();
+  await firstCustomAnswer.fill('');
+  for (let index = 0; index < 5; index += 1) {
+    await page.locator('.decision-questions details').first().locator('.question-answer-area > div button').first().click();
+    await expect(page.getByRole('status').filter({ hasText: 'Decision recorded' })).toBeVisible({ timeout: 20_000 });
+  }
+  await expect(page.getByRole('button', { name: /Review & modify/ }).first()).toBeEnabled();
   await page.locator('.review-document-grid article').filter({ hasText: 'Proposed High-Level Design' }).getByRole('button', { name: /Review & modify/ }).click();
   await expect(page.getByRole('dialog', { name: 'Proposed High-Level Design' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close document review' })).toBeFocused();
@@ -45,10 +65,6 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(renderedMermaid.getByText('View Mermaid source')).toBeVisible();
   await expect(renderedMermaid.getByText('flowchart LR')).not.toBeVisible();
   await page.getByRole('button', { name: 'Close document review' }).click();
-  for (let index = 0; index < 2; index += 1) {
-    await page.locator('.decision-questions details').first().locator('.question-answer-area > div button').first().click();
-    await expect(page.getByRole('status').filter({ hasText: 'Decision recorded' })).toBeVisible({ timeout: 20_000 });
-  }
   await page.getByRole('button', { name: /Approve documents/ }).click();
   await expect(page.getByRole('heading', { name: 'See the product before choosing the stack.' })).toBeVisible();
   await expect(page.locator('.template-gallery > button')).toHaveCount(12);
@@ -91,6 +107,10 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('dialog', { name: 'Your projects' })).not.toBeVisible();
   await expect(page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ })).toBeFocused();
   await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
+  await page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ }).click();
+  await page.getByRole('dialog', { name: 'Your projects' }).locator('.project-library-list article').filter({ hasText: 'Digital lending modernization' }).first().getByRole('button').first().click();
+  await expect(page.getByRole('status').filter({ hasText: 'Opened Digital lending modernization.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Architecture approved. Delivery can begin.' })).toBeVisible();
   await page.getByRole('button', { name: 'Axiom' }).click();
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();

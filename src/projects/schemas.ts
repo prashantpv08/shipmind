@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GUIDED_TEXT_LIMIT_MESSAGE, MAX_GUIDED_TEXT_CHARACTERS } from './validation';
 
 export const ProjectStatus = z.enum(['DRAFT', 'SOURCES_READY', 'ANALYZED', 'NEEDS_CLARIFICATION', 'DOCUMENTED', 'DOCUMENTS_APPROVED', 'DESIGN_READY', 'ARB_APPROVED', 'HLD_READY', 'PUBLISHED', 'BACKLOG_READY']);
 export const SourceKind = z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']);
@@ -388,7 +389,7 @@ export const CreateProjectRequest = z.object({
 
 export const ReviseDocumentRequest = z.object({
   section: z.string().trim().min(1).max(180),
-  instruction: z.string().trim().min(3).max(2_000),
+  instruction: z.string().trim().min(3).max(MAX_GUIDED_TEXT_CHARACTERS, GUIDED_TEXT_LIMIT_MESSAGE),
 }).strict();
 
 export type Workspace = z.infer<typeof Workspace>;
