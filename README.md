@@ -5,7 +5,7 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 ## Current scope
 
 - A workspace-first project pipeline persists multiple projects and accepts bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-transcript sources.
-- Source text is extracted server-side and deterministically separated into exact source-grounded requirements, NFRs, decisions, constraints, risks, and open questions. The v2 project-intelligence pass also creates at least five ranked gaps, three to five contextual clarification questions, a deterministic readiness breakdown, and seven reviewable technology-layer recommendations.
+- Source text is extracted server-side and deterministically separated into exact source-grounded requirements, NFRs, decisions, constraints, risks, and open questions. In live mode, Groq reads those entities and the uploaded source excerpts to generate five project-specific, architecture-driving gaps and clarification questions; returned categories and evidence references are validated before persistence. Explicit fixture mode retains deterministic sample questions for offline tests. Readiness remains deterministic, and seven technology-layer recommendations remain reviewable AI suggestions.
 - Suggested or custom clarification answers are stored as `HUMAN_CONFIRMED` graph mutations with question provenance. Each answer increments the graph version, recalculates readiness, regenerates the current requirements/SRS/NFR views, and invalidates a stale architecture approval.
 - Requirements, SRS, NFR, and a proposed HLD are detailed versioned compiled views. The HLD includes system-context, component, deployment, and sequence diagrams; fenced Mermaid definitions render as SVG in the review studio while the source remains available in a collapsed fallback and in downloaded Markdown. Users can revise one section through a validated fixture/live provider; each revision records its instruction, parent version, provider, graph version, and hash. Document approval records exact current hashes. Three architecture directions include components, data flows, deployment model, technologies, assumptions, failure modes, cost estimate, score breakdown, and reconsideration triggers. ARB approval is blocked while a P0 gap remains and creates the final `HUMAN_APPROVED` ADR plus HLD.
 - The internal Notion adapter maintains one project knowledge hub under a configured parent page. It publishes a source catalogue, native Notion tables, detailed graph-versioned artifact pages, architecture comparison, readiness, blockers, technology direction, and a linked project index. Mermaid fences are rendered into deterministic SVG architecture views, uploaded to Notion-managed storage, and attached as image blocks. The SVG renderer is versioned so projects published by the earlier raw-Markdown adapter can be synchronized once. It is idempotent for an unchanged graph/document set and never returns its access token to the client.
@@ -15,7 +15,7 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 - `POST /api/analyze` validates request bodies with Zod and keeps model credentials server-side.
 - Shared `AnalysisResult` schema validates fixture results, live results, API responses, and client parsing.
 - Fixture mode is explicit, works without an API key, and is labelled `Demo fixture` / `notifyflow-day2-fixture`.
-- Live mode uses the server-side OpenAI Responses provider, structured outputs, Zod validation, and no silent fixture substitution on failure.
+- Live mode uses Groq's OpenAI-compatible API with strict structured outputs, server-side Zod validation, and no silent fixture substitution on failure.
 - Source-grounded live findings must include exact quotes; the server verifies quotes verbatim and derives offsets itself.
 - Deterministic readiness scoring stays in application code and recalculates after clarification answers.
 - Architecture approval is explicit; the ADR is `HUMAN_APPROVED` and becomes stale if clarifications change.
@@ -61,8 +61,8 @@ The permanent hackathon deployment runs the existing Next.js modular monolith on
 
 ```bash
 AXIOM_AI_MODE=fixture
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.6-sol
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
 AXIOM_DATA_DIR=
 AXIOM_STORAGE_MODE=
 NOTION_ACCESS_TOKEN=
@@ -75,7 +75,7 @@ JIRA_PROJECT_KEY=
 
 For Vercel, connect a private Blob store and set `AXIOM_STORAGE_MODE=vercel-blob`. Vercel supplies the store identity and short-lived OIDC credentials to the Functions and Sandbox SDKs. Keep `.env.local` local; transfer integration values with the Vercel environment-variable UI or CLI without committing them.
 
-Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
+Set `AXIOM_AI_MODE=live` and provide a server-only `GROQ_API_KEY` to exercise primary project-intelligence generation, brief analysis, and document revision. The default `GROQ_MODEL` is `openai/gpt-oss-120b`; that model is served and billed by Groq and does not require an OpenAI API key. If live generation fails, the UI shows the failure and does not silently fall back to template questions or fixture data. Use **Run demo fixture instead** only when you knowingly want offline fixture output.
 
 For the hackathon Notion connection, create an internal Notion integration, set `NOTION_ACCESS_TOKEN` in `.env.local`, share one parent page with that integration, and set its page ID as `NOTION_PARENT_PAGE_ID`. Tokens remain server-side. Multi-workspace OAuth is a post-hackathon hardening step; the current adapter intentionally supports one configured Notion workspace.
 
