@@ -1,7 +1,8 @@
 'use client';
 
 export function LandingExperience({ onEnter, onOpenSample }: { onEnter: () => void; onOpenSample: () => void }) {
-  return <main className="axiom-landing">
+  return <main id="main-content" className="axiom-landing" tabIndex={-1}>
+    <a className="skip-link" href="#main-content">Skip to main content</a>
     <nav className="landing-nav" aria-label="Axiom landing navigation">
       <a className="landing-brand" href="#top" aria-label="Axiom home"><span>A</span><b>Axiom</b></a>
       <div><a href="#journey">How it works</a><a href="#capabilities">Capabilities</a><button type="button" className="landing-nav-cta" onClick={onEnter}>Open workspace</button></div>

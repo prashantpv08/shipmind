@@ -436,14 +436,13 @@ It warns that dynamic filesystem operations may trace more of the project than i
 
 ### Still required for Milestone 8
 
-1. Audit every async action for idle, loading, success, empty, failure, and retry behavior.
-2. Run and document a focused accessibility review of the actual product journey.
-3. Choose and deploy to a child-process-capable host; the verification runner cannot be treated as a normal short-lived edge function.
-4. Test the deployed flow from a clean browser.
-5. Complete the final SRS Section 16 P0 acceptance audit.
-6. Finish the hackathon submission narrative.
-7. Record the demo video.
-8. Freeze features.
+1. Choose and deploy to a child-process-capable host; the verification runner cannot be treated as a normal short-lived edge function.
+2. Test install and the deployed flow from a clean browser.
+3. Finish the hackathon submission narrative.
+4. Record the demo video.
+5. Freeze features.
+
+The async-state review, focused accessibility review, and Section 16 evidence map were completed on 2026-07-19. Read `docs/P0_ACCEPTANCE_AUDIT.md` before changing release status.
 
 ZIP export is optional/P1 and should not displace the remaining P0 release work.
 
@@ -455,21 +454,15 @@ ZIP export is optional/P1 and should not displace the remaining P0 release work.
 
 The safest next sequence is:
 
-1. **P0 acceptance audit**
-   - Map every SRS Section 16 acceptance criterion to one visible action and one test/evidence source.
-   - Record real gaps; do not mark criteria complete from inference.
-2. **Async-state and accessibility hardening**
-   - Review project intake, extraction failure, analysis/revision, Notion publishing, wireframe save/export, architecture question/approval, artifact generation, verification, Why, export, and reset.
-   - Ensure keyboard focus, accessible names, status announcements, non-color-only states, and useful retry actions.
-3. **Deployment selection and proof**
+1. **Deployment selection and proof**
    - Use a host that supports Node.js child processes, writable bounded workspace storage, execution timeouts, and the fixed pnpm toolchain.
    - Keep the modular monolith for the hackathon.
    - Verify secrets remain server-side.
-4. **Clean-browser deployed E2E**
+2. **Clean-browser deployed E2E**
    - Run the main fixture journey end-to-end.
    - Verify real sandbox commands execute on the host.
    - Verify reset restores the sample without deleting projects.
-5. **Submission package**
+3. **Submission package**
    - Final narrative, architecture diagram, screenshots/video, demo reset instructions, and a concise explanation of what is real versus AI-suggested.
 
 Do not start generic whiteboard features, microservices, authentication, live meeting ingestion, arbitrary repository ingestion, multi-model routing, or cloud provisioning before these release items pass.
@@ -577,3 +570,28 @@ pnpm test       PASS — 10 files, 66 tests
 pnpm test:e2e   PASS — 4 tests
 pnpm build      PASS — Next.js production build
 ```
+
+## 13. Addendum — P0 acceptance and accessibility hardening
+
+Work continued on 2026-07-19 after commit `7220db4`.
+
+- Added `docs/P0_ACCEPTANCE_AUDIT.md`, mapping all Section 16 core criteria to visible behavior and automated evidence.
+- Added one modal-focus boundary used by the project library, document review, and Wireframe Studio: initial focus, trapped Tab navigation, Escape close, scroll lock, and opener focus restoration.
+- Added skip links and a polite workspace pipeline live region.
+- Added a truthful integration bootstrap state instead of briefly showing false disconnected labels.
+- Added an explicit recoverable project-creation failure state that preserves the selected sources.
+- Changed architecture-question failures into alerts so they cannot be presented as grounded AI answers.
+- Added retry feedback inside the project-delete confirmation.
+
+Current verification:
+
+```text
+pnpm lint       PASS
+pnpm typecheck  PASS
+pnpm test       PASS — 10 files, 66 tests
+pnpm test:e2e   PASS — 5 tests
+pnpm build      PASS — Next.js production build
+pnpm demo:reset PASS — 1 ms, saved project data preserved
+```
+
+The remaining release blockers are deployment to a child-process-capable host, clean-environment and clean-browser proof, the final submission narrative, demo recording, and feature freeze. The known Turbopack NFT trace warning remains unchanged.

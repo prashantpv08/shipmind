@@ -1,11 +1,12 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from '@excalidraw/excalidraw/types';
 import type { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 import type { WireframeHandoff, WireframeNode, WireframeScreen } from '../../src/projects/schemas';
+import { useModalDialog } from '../_hooks/use-modal-dialog';
 import { ActionLabel } from './action-label';
 
 const Excalidraw = dynamic(async () => (await import('@excalidraw/excalidraw')).Excalidraw, { ssr: false });
@@ -81,14 +82,7 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
   const baseName = `${handoff.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${active.slug}`;
   const activeGaps = handoff.gaps.filter((gap) => active.unresolvedGapIds.includes(gap.id));
   const outgoingFlows = handoff.flows.filter((flow) => flow.fromScreenId === active.id);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  const dialogRef = useModalDialog(onClose);
 
   async function exportSvg() {
     if (!api) return;
@@ -149,7 +143,7 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
     if (nextMode === 'prototype') setApi(null);
   }
 
-  return <div className="wireframe-overlay" role="dialog" aria-modal="true" aria-labelledby="wireframe-studio-title">
+  return <div ref={dialogRef} className="wireframe-overlay" role="dialog" aria-modal="true" aria-labelledby="wireframe-studio-title" tabIndex={-1}>
     <header className="wireframe-toolbar">
       <div><span className="wireframe-brand">A</span><div><h2 id="wireframe-studio-title">Axiom Wireframe Studio</h2><p>{handoff.projectName} · {handoff.templateName} · graph v{handoff.sourceGraphVersion}</p></div></div>
       <div className="wireframe-toolbar-actions">
@@ -157,7 +151,7 @@ export function WireframeStudio({ handoff, onClose }: { handoff: WireframeHandof
         <button type="button" className="btn btn-secondary" aria-busy={pendingSaveStatus === 'DRAFT'} disabled={!api || saveState === 'saving'} onClick={() => saveRevision('DRAFT')}><ActionLabel loading={pendingSaveStatus === 'DRAFT'} loadingText="Saving revision…">Save revision</ActionLabel></button>
         <button type="button" className="btn btn-secondary" aria-busy={exporting === 'scene'} disabled={!api || Boolean(exporting)} onClick={exportScene}><ActionLabel loading={exporting === 'scene'} loadingText="Preparing scene…">Download scene</ActionLabel></button>
         <button type="button" className="btn btn-secondary" aria-busy={exporting === 'svg'} disabled={!api || Boolean(exporting)} onClick={exportSvg}><ActionLabel loading={exporting === 'svg'} loadingText="Rendering SVG…">Export SVG</ActionLabel></button>
-        <button type="button" className="icon-button" aria-label="Close Wireframe Studio" onClick={onClose}>×</button>
+        <button type="button" className="icon-button" aria-label="Close Wireframe Studio" data-modal-initial-focus onClick={onClose}>×</button>
       </div>
     </header>
     <div className={`wireframe-layout ${inspectorOpen ? '' : 'inspector-closed'}`}>

@@ -217,8 +217,8 @@ Deliver a polished, resettable, reliable demo.
 - [ ] Add ZIP export if time.
 - [x] Complete main E2E test.
 - [x] Complete failure E2E test.
-- [ ] Add all loading, empty, failure, and retry states.
-- [ ] Run accessibility review.
+- [x] Add all loading, empty, failure, and retry states. Evidence: `docs/P0_ACCEPTANCE_AUDIT.md`.
+- [x] Run accessibility review. Evidence: `docs/P0_ACCEPTANCE_AUDIT.md` and Playwright keyboard checks.
 - [ ] Deploy on child-process-capable host.
 - [ ] Test deployment from a clean browser.
 - [ ] Record demo video.

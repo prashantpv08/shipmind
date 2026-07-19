@@ -32,6 +32,7 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 - `POST /api/why` validates the current graph, artifact, generation, and verification versions before resolving predefined or free-text Why, Why Not, Proof, and Reconsider questions. Decision answers cite approved graph entities; proof answers cite executed evidence or return `UNKNOWN`.
 - `POST /api/export` compiles the current approved graph, ADR, nine artifacts, controlled generation, executed verification, traceability graph, and optional latest grounded answer into downloadable JSON or Markdown. Every included file has a SHA-256 hash and the machine-readable manifest records the source versions plus one deterministic root hash.
 - `POST /api/demo/reset` and `pnpm demo:reset` remove only generated NotifyFlow sandbox workspaces, staged backups, and sample verification evidence. Repository code, fixed templates, environment configuration, and saved workspace projects are explicitly preserved; the reset is serialized and idempotent.
+- The release-hardening pass adds skip links, polite live status announcements, honest integration bootstrap copy, recoverable intake errors, and shared keyboard-safe modal behavior across the project library, document review, and Wireframe Studio. The current Section 16 evidence and remaining deployment blockers are recorded in `docs/P0_ACCEPTANCE_AUDIT.md`.
 
 ## Commands
 
@@ -105,6 +106,7 @@ For the hackathon Jira Cloud connection, set the HTTPS Atlassian site URL, accou
 - Project-intelligence mutation and readiness logic lives under `src/projects/intelligence.ts`; route handlers and React components do not calculate truth transitions or scores.
 - Delivery planning lives under `src/projects/delivery.ts`; the Jira Cloud adapter is isolated in `src/integrations/jira.ts`. Route handlers validate confirmation hashes and the React delivery stage only renders typed plans/publications.
 - `src/integrations/jira.ts` exposes a read-only live connection check; `app/_components/coding-studio.tsx` owns the governed coding surface; `app/_components/action-label.tsx` provides consistent visible and accessible loading feedback for async controls.
+- `app/_hooks/use-modal-dialog.ts` owns modal focus entry, focus containment, Escape close, background-scroll locking, and opener focus restoration.
 - Wireframe compilation lives under `src/projects/wireframes.ts`, with its fixed registry in `src/projects/wireframe-templates.ts`. It consumes only the current graph, human-approved ARB decision, and current HLD; the embedded Excalidraw editor and bounded revision store are replaceable adapters, not sources of product truth.
 - The hackathon deployable is a modular monolith in the pnpm workspace. Module interfaces are explicit so model execution, collaborative scene storage, or a future Rust/WASM renderer can be extracted only when scale or isolation requires it.
 - The app does not fabricate verification evidence. A proof claim is available only after its fixed command actually executes and produces validated evidence.

@@ -35,6 +35,8 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.locator('.review-document-grid article')).toHaveCount(4);
   await page.locator('.review-document-grid article').filter({ hasText: 'Proposed High-Level Design' }).getByRole('button', { name: /Review & modify/ }).click();
   await expect(page.getByRole('dialog', { name: 'Proposed High-Level Design' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close document review' })).toBeFocused();
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
   await expect(page.getByRole('heading', { name: 'Architecture diagrams' })).toBeVisible();
   await page.getByRole('button', { name: 'System context diagram', exact: true }).click();
   const renderedMermaid = page.getByTestId('mermaid-diagram');
@@ -52,9 +54,12 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.locator('.template-gallery > button')).toHaveCount(12);
   await page.locator('.template-gallery > button').filter({ hasText: 'AI copilot' }).click();
   await page.getByRole('button', { name: /Generate product flow/ }).click();
-  await expect(page.locator('.flow-map article')).toHaveCount(4);
+  await expect(page.getByRole('status').filter({ hasText: 'produced 4 requirement-linked screens' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.flow-map article')).toHaveCount(4, { timeout: 20_000 });
   await page.getByRole('button', { name: 'Open editable studio' }).click();
   await expect(page.getByRole('dialog', { name: 'Axiom Wireframe Studio' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close Wireframe Studio' })).toBeFocused();
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
   await expect(page.getByLabel('Wireframe screens').getByRole('button')).toHaveCount(4);
   await expect(page.getByLabel('Copilot home editable wireframe canvas')).toBeVisible();
   await expect(page.locator('.wireframe-excalidraw .excalidraw')).toBeVisible();
@@ -76,7 +81,16 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.locator('.handoff-documents article')).toHaveCount(2);
   await page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ }).click();
   await expect(page.getByRole('dialog', { name: 'Your projects' })).toContainText('Digital lending modernization');
-  await page.getByRole('button', { name: 'Close project library' }).click();
+  await expect(page.getByRole('button', { name: 'Close project library' })).toBeFocused();
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: /NotifyFlow demo/ })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Close project library' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Your projects' })).not.toBeVisible();
+  await expect(page.locator('.experience-topbar').getByRole('button', { name: /^Projects/ })).toBeFocused();
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
   await page.getByRole('button', { name: 'Axiom' }).click();
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await expect(page.getByRole('heading', { name: 'Axiom', exact: true })).toBeVisible();
@@ -191,6 +205,30 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await expect(page.getByRole('status').filter({ hasText: 'NotifyFlow sample reset' })).toContainText('saved workspace projects were preserved');
   await expect(page.getByRole('button', { name: 'Run demo fixture instead' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Package the reasoning. Reset with confidence.' })).not.toBeVisible();
+});
+
+test('project intake reports a recoverable failure without losing the prepared sources', async ({ page }) => {
+  await page.route('**/api/integrations/notion/status', async (route) => route.fulfill({ json: { configured: false, mode: 'internal-connection', missing: ['E2E_NOTION_DISABLED'] } }));
+  await page.route('**/api/integrations/jira/status', async (route) => route.fulfill({ json: { configured: false, connected: false, mode: 'jira-cloud-api-token', missing: ['E2E_JIRA_DISABLED'] } }));
+  await page.route('**/api/projects', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'Mock project validation failure' }) });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Experience Axiom/ }).click();
+  await page.getByLabel('Project name').fill('Recoverable project');
+  await page.getByRole('button', { name: 'Paste transcript' }).click();
+  await page.getByLabel('Paste meeting transcript').fill('A source that must remain available after a failed create request.');
+  await page.getByRole('button', { name: 'Add transcript' }).click();
+  await page.getByRole('button', { name: /Create project system/ }).click();
+
+  await expect(page.getByRole('alert').filter({ hasText: 'Mock project validation failure' })).toContainText('Mock project validation failure');
+  await expect(page.getByRole('button', { name: /Try project creation again/ })).toBeEnabled();
+  await expect(page.getByLabel('Added sources')).toContainText('Meeting transcript 1');
 });
 
 test('invalidates approved downstream work when a clarification changes', async ({ page }) => {

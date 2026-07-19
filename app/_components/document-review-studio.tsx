@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ArchitectureOption } from '../../src/projects/schemas';
+import { useModalDialog } from '../_hooks/use-modal-dialog';
 import { ActionLabel } from './action-label';
 import { ArchitectureDiagrams } from './architecture-diagrams';
 import { MermaidDocumentBody } from './mermaid-document-body';
@@ -48,12 +49,7 @@ export function DocumentReviewStudio({
   const [revisionState, setRevisionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [revisionError, setRevisionError] = useState('');
   const active = documentSections.find((section) => section.heading === activeSection) ?? documentSections[0];
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) { if (event.key === 'Escape') onClose(); }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  const dialogRef = useModalDialog(onClose);
 
   async function revise() {
     if (!active || !instruction.trim()) return;
@@ -69,9 +65,9 @@ export function DocumentReviewStudio({
     }
   }
 
-  return <div className="document-studio-overlay" role="dialog" aria-modal="true" aria-labelledby="document-studio-title">
+  return <div ref={dialogRef} className="document-studio-overlay" role="dialog" aria-modal="true" aria-labelledby="document-studio-title" tabIndex={-1}>
     <div className="document-studio-shell">
-      <header className="document-studio-header"><div><span className="document-type-mark">{document.type.toUpperCase().slice(0, 3)}</span><div><span className="mini-kicker">Document review</span><h2 id="document-studio-title">{document.title}</h2><p>{projectName} · v{document.version} · graph v{document.sourceGraphVersion ?? 1}</p></div></div><div>{notionUrl ? <a className="notion-jump" href={notionUrl} target="_blank" rel="noreferrer"><span>N</span> Review in Notion ↗</a> : null}<button type="button" className="close-round" aria-label="Close document review" onClick={onClose}>×</button></div></header>
+      <header className="document-studio-header"><div><span className="document-type-mark">{document.type.toUpperCase().slice(0, 3)}</span><div><span className="mini-kicker">Document review</span><h2 id="document-studio-title">{document.title}</h2><p>{projectName} · v{document.version} · graph v{document.sourceGraphVersion ?? 1}</p></div></div><div>{notionUrl ? <a className="notion-jump" href={notionUrl} target="_blank" rel="noreferrer"><span>N</span> Review in Notion ↗</a> : null}<button type="button" className="close-round" aria-label="Close document review" data-modal-initial-focus onClick={onClose}>×</button></div></header>
       <div className="document-studio-layout">
         <aside className="document-outline" aria-label="Document outline"><span className="mini-kicker">Contents</span>{documentSections.map((section) => <button type="button" key={section.heading} className={active?.heading === section.heading ? 'active' : ''} onClick={() => setActiveSection(section.heading)}><i />{section.heading}</button>)}</aside>
         <main className="document-reader">

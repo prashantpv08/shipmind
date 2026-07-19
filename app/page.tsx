@@ -321,7 +321,8 @@ export default function Page() {
   }
 
   return (
-    <main className="mx-auto max-w-[1400px] space-y-5 p-6">
+    <main id="main-content" className="mx-auto max-w-[1400px] space-y-5 p-6" tabIndex={-1}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <Header run={displayedRun ?? analysis?.run} onBack={() => setScreen('workspace')} />
       <StageNav
         loaded={Boolean(analysis)}
