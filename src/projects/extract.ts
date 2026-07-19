@@ -1,10 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, extname, join, relative, resolve } from 'node:path';
+import { put } from '@vercel/blob';
 import mammoth from 'mammoth';
 import { extractText as extractPdfText, getDocumentProxy } from 'unpdf';
 import { ProjectSource, type ProjectSource as ProjectSourceType } from './schemas';
-import { projectDataRoot } from './store';
+import { projectDataRoot, projectUsesBlobStorage } from './store';
 
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 export const MAX_PROJECT_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -46,11 +47,25 @@ export async function persistUploadedSource(input: {
   if (input.file.size > MAX_SOURCE_BYTES) throw new Error(`${input.file.name} exceeds the 10 MB source limit`);
   const buffer = Buffer.from(await input.file.arrayBuffer());
   const id = `SRC-${randomUUID()}`;
-  const uploadRoot = resolve(projectDataRoot(), 'uploads', input.workspaceId, input.projectId, id);
-  const rawPath = join(uploadRoot, safeName(input.file.name));
-  if (relative(projectDataRoot(), rawPath).startsWith('..')) throw new Error('Source path escaped the project data root');
-  await mkdir(uploadRoot, { recursive: true, mode: 0o700 });
-  await writeFile(rawPath, buffer, { flag: 'wx', mode: 0o600 });
+  let rawPath: string;
+  if (projectUsesBlobStorage()) {
+    const blobPath = `axiom/uploads/${input.workspaceId}/${input.projectId}/${id}/${safeName(input.file.name)}`;
+    const blob = await put(blobPath, buffer, {
+      access: 'private',
+      addRandomSuffix: false,
+      allowOverwrite: false,
+      cacheControlMaxAge: 60,
+      contentType: input.file.type || 'application/octet-stream',
+    });
+    rawPath = blob.pathname;
+  } else {
+    const uploadRoot = resolve(projectDataRoot(), 'uploads', input.workspaceId, input.projectId, id);
+    const localPath = join(uploadRoot, safeName(input.file.name));
+    if (relative(projectDataRoot(), localPath).startsWith('..')) throw new Error('Source path escaped the project data root');
+    await mkdir(uploadRoot, { recursive: true, mode: 0o700 });
+    await writeFile(localPath, buffer, { flag: 'wx', mode: 0o600 });
+    rawPath = relative(projectDataRoot(), localPath);
+  }
 
   let extractedText = '';
   let status: 'EXTRACTED' | 'FAILED' = 'EXTRACTED';
@@ -75,7 +90,7 @@ export async function persistUploadedSource(input: {
     size: buffer.byteLength,
     sha256: createHash('sha256').update(buffer).digest('hex'),
     extractedText,
-    rawPath: relative(projectDataRoot(), rawPath),
+    rawPath,
     status,
     extractionError,
     createdAt: new Date().toISOString(),

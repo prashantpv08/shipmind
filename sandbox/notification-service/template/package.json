@@ -5,13 +5,15 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test:unit": "vitest run tests/notification-service.unit.test.ts",
-    "test:api": "vitest run tests/notification-service.api.test.ts"
+    "test:api": "vitest run tests/notification-service.api.test.ts",
+    "coverage": "vitest run tests --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=json-summary --coverage.reporter=text --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "26.1.1",
+    "@vitest/coverage-v8": "4.1.10",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   }

@@ -2,12 +2,12 @@
 
 **Audit date:** 2026-07-19 (Asia/Kolkata)  
 **Branch:** `main`  
-**Baseline commit:** `7220db4` (`Add Jira delivery flow and Notion SVG publishing`)  
+**Baseline commit:** `80ff6f3` (`Add acceptance audit and accessibility hardening`) plus the reviewed hosted-release working tree
 **Contract:** `SRS.md`, Section 16
 
 ## Outcome
 
-The complete local P0 product journey is implemented and passes the current automated gate. The repository is not yet submission-ready because clean-environment deployment proof, a clean-browser hosted run, the demo recording, and the final submission narrative remain open.
+The complete P0 product journey is implemented and passes both the local quality gate and the clean-browser hosted gate. The permanent Vercel deployment uses private durable Blob storage and isolated Vercel Sandbox verification; it does not depend on the developer laptop or ngrok. No implementation blocker remains for the working prototype link. The demo recording and final submission narrative remain release activities.
 
 Do not interpret this audit as accessibility certification. The P0 review covers semantic structure, accessible names, keyboard focus, modal behavior, non-color status text, and the primary Playwright journey. The SRS places a dedicated automated accessibility adapter in P1.
 
@@ -41,11 +41,11 @@ Do not interpret this audit as accessibility certification. The P0 review covers
 | `pnpm lint` | PASS | Exit code 0 |
 | `pnpm typecheck` | PASS | Exit code 0 |
 | `pnpm test` | PASS | 10 files, 66 tests |
-| `pnpm test:e2e` | PASS | 5 Playwright journeys |
+| `pnpm test:e2e` | PASS | 5 Playwright journeys locally and 5/5 against `https://axiom-buildweek.vercel.app` |
 | `pnpm build` | PASS | Next.js 16.2.10 production build; existing NFT trace warning remains non-fatal |
 | No repository/browser-bundle secrets | PASS, scoped | `.env.local` is ignored; only `.env.example` is tracked; credential environment variable names were absent from `.next/static`; credentials remain server-side |
 | No serious issue in the implemented accessibility review | PASS, scoped | Semantic DOM audit found no unnamed visible controls, unlabeled visible fields, duplicate IDs, or images missing `alt`; modal and keyboard regression checks pass |
-| README setup works from a clean environment | OPEN | Current checkout works; repeat install/start on the selected clean deployment host before submission |
+| README setup works from a clean environment | PASS | Vercel performed a clean pnpm install and Next.js production build before the hosted E2E run |
 | Demo resets in under 30 seconds | PASS | `pnpm demo:reset` returned `RESET` in 1 ms and preserved project data |
 
 ## Async-state audit
@@ -74,11 +74,19 @@ Do not interpret this audit as accessibility certification. The P0 review covers
 - Prevented architecture request failures from appearing as `AI_SUGGESTED` grounded answers.
 - Added Playwright coverage for keyboard behavior and a recoverable intake failure.
 
-## Remaining release blockers
+## Hosted release proof
 
-1. Select and configure a child-process-capable host with Node 22, pnpm 10.28.1, writable bounded workspace storage, and fixed runner timeouts.
-2. Run install, start, complete fixture journey, fixed verification, export, and reset from a clean browser against that host.
-3. Confirm production secrets are server-only and persistent project/evidence storage survives the chosen deployment topology.
-4. Finish the submission narrative, screenshots/demo recording, and feature freeze.
+- Permanent production URL: `https://axiom-buildweek.vercel.app`
+- Vercel project: `axiom-buildweek`; production deployment `dpl_2y4QwQi3sSZS7ftx31GTGKfStnNZ` established the hosted Sandbox path, followed by the same stable alias for the verified release.
+- Private Vercel Blob stores the canonical project database, uploaded source objects, and verification reports. The hosted project-intake journey exercised multiple independent Function invocations and deleted its test project successfully.
+- Vercel Sandbox ran the fixed build, unit, API, and V8 coverage commands. The primary browser journey accepted the result only after all four produced validated `TOOL_VERIFIED` evidence.
+- Hosted status requests confirmed the configured Notion internal connection and a live Jira Cloud connection with Epic and Story issue types.
+- `PLAYWRIGHT_BASE_URL=https://axiom-buildweek.vercel.app pnpm test:e2e` passed all five journeys in 1.5 minutes.
+
+## Remaining release activities
+
+1. Record the final demo against the permanent Vercel URL.
+2. Finish the submission narrative and screenshots.
+3. Freeze the verified release before the submission deadline.
 
 ZIP export and the dedicated automated accessibility adapter remain optional/P1 and must not displace these blockers.

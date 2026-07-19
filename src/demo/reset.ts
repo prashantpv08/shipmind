@@ -1,6 +1,7 @@
 import 'server-only';
 import { lstat, readdir, rm } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
+import { del, list } from '@vercel/blob';
 import { DemoResetResult, type DemoResetResult as DemoResetResultType } from '../export/schemas';
 
 type DemoResetOptions = {
@@ -25,8 +26,36 @@ async function exists(path: string) {
 
 async function resetOnce(options: DemoResetOptions = {}): Promise<DemoResetResultType> {
   const startedAt = Date.now();
-  const repositoryRoot = resolve(options.repositoryRoot ?? process.cwd());
-  const dataRoot = resolve(options.dataRoot ?? process.env.AXIOM_DATA_DIR ?? join(repositoryRoot, '.axiom-data'));
+  if (process.env.VERCEL) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN && !(process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID)) {
+      throw new Error('Vercel Blob is not connected; hosted verification evidence cannot be reset safely.');
+    }
+    const removedTargets: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await list({ prefix: 'axiom/verification/', cursor, limit: 1000 });
+      const pathnames = page.blobs.map((blob) => blob.pathname);
+      if (pathnames.length) {
+        await del(pathnames);
+        removedTargets.push(...pathnames);
+      }
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return DemoResetResult.parse({
+      resetAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+      removedTargets,
+      preservedProjectData: true,
+      status: 'RESET',
+    });
+  }
+
+  const repositoryRoot = options.repositoryRoot
+    ? resolve(/* turbopackIgnore: true */ options.repositoryRoot)
+    : process.cwd();
+  const dataRoot = options.dataRoot
+    ? resolve(/* turbopackIgnore: true */ options.dataRoot)
+    : resolve(process.env.AXIOM_DATA_DIR ?? join(repositoryRoot, '.axiom-data'));
   const sandboxRoot = join(repositoryRoot, 'sandbox/notification-service');
   const verificationRoot = join(dataRoot, 'verification');
   assertInside(repositoryRoot, sandboxRoot);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { FixtureCodeGenerator } from '../../../../src/codegen/provider';
-import { writeControlledWorkspace } from '../../../../src/codegen/workspace';
+import { validateCodeGeneration, writeControlledWorkspace } from '../../../../src/codegen/workspace';
 import { CodeGenerationOutput, CodeGenerationRequest } from '../../../../src/codegen/schemas';
 
 export const runtime = 'nodejs';
@@ -22,7 +22,9 @@ export async function POST(request: Request) {
 
   try {
     const draft = await new FixtureCodeGenerator().generate(parsed.data);
-    const output = CodeGenerationOutput.parse(await writeControlledWorkspace(draft));
+    const output = CodeGenerationOutput.parse(process.env.VERCEL
+      ? validateCodeGeneration(draft)
+      : await writeControlledWorkspace(draft));
     return NextResponse.json(output);
   } catch (cause) {
     return NextResponse.json({

@@ -595,3 +595,31 @@ pnpm demo:reset PASS — 1 ms, saved project data preserved
 ```
 
 The remaining release blockers are deployment to a child-process-capable host, clean-environment and clean-browser proof, the final submission narrative, demo recording, and feature freeze. The known Turbopack NFT trace warning remains unchanged.
+
+## 14. Addendum — permanent Vercel release
+
+Work continued on 2026-07-19 after commit `80ff6f3`.
+
+- Permanent production URL: `https://axiom-buildweek.vercel.app`.
+- The Vercel project is `axiom-buildweek` under `prashantpv08s-projects`.
+- Local filesystem adapters remain the development path. On Vercel, `src/projects/store.ts` uses a private Blob object for the validated project database with strong-ETag optimistic concurrency, and `src/projects/extract.ts` stores raw uploads as private Blob objects.
+- Verification reports are private Blob objects. Hosted controlled verification creates an ephemeral Vercel Sandbox, installs only the committed fixed template dependencies, changes network policy to deny-all, and executes only the registered build/unit/API/coverage commands.
+- Notion and Jira values were transferred from `.env.local` into sensitive server-only Vercel environment variables. No credential value was printed or committed.
+- `docs/decisions/0007-vercel-hosted-runtime-and-durable-storage.md` records the deployment boundary and free-plan tradeoffs.
+- The ngrok tunnel and local production server were stopped after the permanent deployment passed.
+
+Verified release evidence:
+
+```text
+pnpm lint                                                       PASS
+pnpm typecheck                                                  PASS
+pnpm test                                                       PASS — 10 files, 66 tests
+PLAYWRIGHT_BASE_URL=https://axiom-buildweek.vercel.app pnpm test:e2e
+                                                                PASS — 5 tests in 1.5 minutes
+Vercel production build                                         PASS
+Hosted /api/projects                                            PASS — durable Blob-backed response
+Hosted Notion status                                            PASS — configured
+Hosted Jira status                                              PASS — connected, Epic and Story available
+```
+
+The hosted E2E exercised project creation, source persistence, analysis, documents, clarification updates, optional wireflow, architecture approval, controlled generation, real Sandbox verification evidence, traceability, exports, project deletion, and reset. The remaining work is the final demo recording, screenshots, submission narrative, and feature freeze—not implementation of the prototype link.

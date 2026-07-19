@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
+import { BlobPreconditionFailedError, del, get, put } from '@vercel/blob';
 import {
   ArbDecision,
   DocumentApproval,
@@ -25,12 +27,32 @@ import {
 } from './schemas';
 
 const DEFAULT_WORKSPACE_ID = 'WS-PRODUCT-ENGINEERING';
-const dataRoot = process.env.AXIOM_DATA_DIR
+const isVercelRuntime = Boolean(process.env.VERCEL);
+const blobStorageConfigured = Boolean(
+  process.env.BLOB_READ_WRITE_TOKEN || (process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID),
+);
+const useBlobStorage = process.env.AXIOM_STORAGE_MODE === 'vercel-blob' || (isVercelRuntime && blobStorageConfigured);
+const databaseBlobPath = 'axiom/projects.json';
+const dataRoot = isVercelRuntime
+  ? join(tmpdir(), 'axiom-data')
+  : process.env.AXIOM_DATA_DIR
   ? resolve(process.env.AXIOM_DATA_DIR)
   : join(/* turbopackIgnore: true */ process.cwd(), '.axiom-data');
 const databasePath = join(dataRoot, 'projects.json');
 
 let writeQueue = Promise.resolve();
+
+function isBlobPreconditionFailure(cause: unknown) {
+  return cause instanceof BlobPreconditionFailedError
+    || (cause instanceof Error && (
+      cause.name === 'BlobPreconditionFailedError'
+      || /precondition failed.*etag mismatch/i.test(cause.message)
+    ));
+}
+
+function waitForBlobConsistency(attempt: number) {
+  return new Promise((resolveWait) => setTimeout(resolveWait, 50 * (2 ** attempt)));
+}
 
 function emptyDatabase(): ProjectDatabaseType {
   const now = new Date().toISOString();
@@ -49,17 +71,53 @@ function emptyDatabase(): ProjectDatabaseType {
   });
 }
 
-async function readDatabase() {
+function strongBlobEtag(etag: string) {
+  return etag.startsWith('W/') ? etag.slice(2) : etag;
+}
+
+async function readBlobDatabase() {
+  if (!blobStorageConfigured) {
+    throw new Error('Vercel Blob is not connected. Configure BLOB_STORE_ID with Vercel OIDC or BLOB_READ_WRITE_TOKEN.');
+  }
+  const result = await get(databaseBlobPath, { access: 'private', useCache: false });
+  if (!result || result.statusCode !== 200) return { database: emptyDatabase(), etag: undefined };
+  const content = await new Response(result.stream).text();
+  return { database: ProjectDatabase.parse(JSON.parse(content)), etag: strongBlobEtag(result.blob.etag) };
+}
+
+async function readLocalDatabase() {
   try {
-    return ProjectDatabase.parse(JSON.parse(await readFile(databasePath, 'utf8')));
+    return { database: ProjectDatabase.parse(JSON.parse(await readFile(databasePath, 'utf8'))), etag: undefined };
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return emptyDatabase();
+    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return { database: emptyDatabase(), etag: undefined };
     throw cause;
   }
 }
 
-async function writeDatabase(database: ProjectDatabaseType) {
+async function readDatabaseVersion() {
+  if (isVercelRuntime && !useBlobStorage) {
+    throw new Error('Axiom requires a connected Vercel Blob store for durable hosted project data.');
+  }
+  return useBlobStorage ? readBlobDatabase() : readLocalDatabase();
+}
+
+async function readDatabase() {
+  return (await readDatabaseVersion()).database;
+}
+
+async function writeDatabase(database: ProjectDatabaseType, etag?: string) {
   const parsed = ProjectDatabase.parse(database);
+  if (useBlobStorage) {
+    await put(databaseBlobPath, JSON.stringify(parsed), {
+      access: 'private',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      cacheControlMaxAge: 60,
+      contentType: 'application/json',
+      ...(etag ? { ifMatch: etag } : {}),
+    });
+    return;
+  }
   await mkdir(dirname(databasePath), { recursive: true });
   const temporary = `${databasePath}.${randomUUID()}.tmp`;
   await writeFile(temporary, JSON.stringify(parsed, null, 2), { encoding: 'utf8', flag: 'wx', mode: 0o600 });
@@ -69,9 +127,17 @@ async function writeDatabase(database: ProjectDatabaseType) {
 async function mutate<T>(operation: (database: ProjectDatabaseType) => T | Promise<T>): Promise<T> {
   let result!: T;
   const next = writeQueue.then(async () => {
-    const database = await readDatabase();
-    result = await operation(database);
-    await writeDatabase(database);
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const { database, etag } = await readDatabaseVersion();
+      result = await operation(database);
+      try {
+        await writeDatabase(database, etag);
+        return;
+      } catch (cause) {
+        if (!isBlobPreconditionFailure(cause) || attempt === 5) throw cause;
+        await waitForBlobConsistency(attempt);
+      }
+    }
   });
   writeQueue = next.then(() => undefined, () => undefined);
   await next;
@@ -80,6 +146,10 @@ async function mutate<T>(operation: (database: ProjectDatabaseType) => T | Promi
 
 export function projectDataRoot() {
   return dataRoot;
+}
+
+export function projectUsesBlobStorage() {
+  return useBlobStorage;
 }
 
 export async function listWorkspaces() {
@@ -190,7 +260,7 @@ export async function deleteProject(projectId: string) {
   const database = await readDatabase();
   const project = database.projects.find((item) => item.id === projectId);
   if (!project) return false;
-  const sourcePaths = database.sources.filter((item) => item.projectId === projectId).map((item) => resolve(item.rawPath));
+  const storedSourcePaths = database.sources.filter((item) => item.projectId === projectId).map((item) => item.rawPath);
   await mutate((nextDatabase) => {
     nextDatabase.projects = nextDatabase.projects.filter((item) => item.id !== projectId);
     nextDatabase.sources = nextDatabase.sources.filter((item) => item.projectId !== projectId);
@@ -202,8 +272,13 @@ export async function deleteProject(projectId: string) {
     nextDatabase.jiraPublications = nextDatabase.jiraPublications.filter((item) => item.projectId !== projectId);
     nextDatabase.wireframeRevisions = nextDatabase.wireframeRevisions.filter((item) => item.projectId !== projectId);
   });
-  const root = resolve(dataRoot);
-  await Promise.all(sourcePaths.filter((path) => path.startsWith(`${root}${sep}`)).map((path) => unlink(path).catch(() => undefined)));
+  if (useBlobStorage) {
+    if (storedSourcePaths.length) await del(storedSourcePaths);
+  } else {
+    const root = resolve(dataRoot);
+    const sourcePaths = storedSourcePaths.map((path) => resolve(dataRoot, path));
+    await Promise.all(sourcePaths.filter((path) => path.startsWith(`${root}${sep}`)).map((path) => unlink(path).catch(() => undefined)));
+  }
   return true;
 }
 

@@ -1,3 +1,18 @@
 
 import { defineConfig, devices } from '@playwright/test';
-export default defineConfig({testDir:'./e2e',webServer:{command:'pnpm dev',url:'http://127.0.0.1:3000',reuseExistingServer:true,timeout:120000},use:{baseURL:'http://127.0.0.1:3000',...devices['Desktop Chrome']}});
+
+const localBaseUrl = 'http://127.0.0.1:3000';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? localBaseUrl;
+
+export default defineConfig({
+  testDir: './e2e',
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'pnpm dev',
+        url: localBaseUrl,
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
+  use: { baseURL, ...devices['Desktop Chrome'] },
+});

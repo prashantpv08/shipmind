@@ -14,6 +14,7 @@ export type FixedCommandDefinition = {
 
 const workspace = 'sandbox/notification-service/workspace';
 const vitestConfig = `${workspace}/vitest.config.ts`;
+export const HOSTED_WORKSPACE_ROOT = '/vercel/sandbox/workspace';
 
 function repositoryRoot() {
   return /* turbopackIgnore: true */ process.cwd();
@@ -77,6 +78,30 @@ export function fixedCommandRegistry(): Record<VerificationCommandId, FixedComma
       cwd: root,
       timeoutMs: 90_000,
     },
+  };
+}
+
+export function fixedHostedCommandRegistry(): Record<VerificationCommandId, FixedCommandDefinition> {
+  const command = (
+    id: VerificationCommandId,
+    label: string,
+    script: string,
+    timeoutMs: number,
+  ): FixedCommandDefinition => ({
+    id,
+    label,
+    displayCommand: `npm run ${script}`,
+    program: 'npm',
+    args: ['run', script],
+    cwd: HOSTED_WORKSPACE_ROOT,
+    timeoutMs,
+  });
+
+  return {
+    build: command('build', 'TypeScript build', 'build', 20_000),
+    unit: command('unit', 'Unit tests', 'test:unit', 20_000),
+    api: command('api', 'API tests', 'test:api', 20_000),
+    coverage: command('coverage', 'Coverage', 'coverage', 30_000),
   };
 }
 

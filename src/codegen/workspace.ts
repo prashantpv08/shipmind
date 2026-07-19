@@ -2,16 +2,10 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 import { copyFile, lstat, mkdir, mkdtemp, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
+import { ALLOWED_GENERATED_PATHS, FIXED_TEMPLATE_FILES } from './contract';
 import { CodeGenerationDraft, CodeGenerationOutput, type CodeGenerationOutput as CodeGenerationOutputType, type TraceLink } from './schemas';
 
-export const ALLOWED_GENERATED_PATHS = [
-  'src/contracts.ts',
-  'src/provider.ts',
-  'src/notification-service.ts',
-  'tests/notification-service.unit.test.ts',
-  'tests/notification-service.api.test.ts',
-] as const;
-export const FIXED_TEMPLATE_FILES = ['package.json', 'tsconfig.json', 'vitest.config.ts'] as const;
+export { ALLOWED_GENERATED_PATHS, FIXED_TEMPLATE_FILES } from './contract';
 const MAX_TOTAL_BYTES = 256 * 1024;
 
 export type WorkspaceOptions = {
@@ -29,11 +23,13 @@ function unifiedCreateDiff(path: string, content: string) {
   return `--- /dev/null\n+++ b/${path}\n@@ -0,0 +1,${lines.length} @@\n${lines.map((line) => `+${line}`).join('\n')}\n`;
 }
 
-function assertWithin(root: string, target: string) {
+function isWithin(root: string, target: string) {
   const child = relative(root, target);
-  if (!child || child.startsWith('..') || child.includes('..' + requireSeparator())) {
-    throw new Error('Generated target escapes the controlled workspace root');
-  }
+  return Boolean(child) && !child.startsWith('..') && !child.includes('..' + requireSeparator());
+}
+
+function assertWithin(root: string, target: string) {
+  if (!isWithin(root, target)) throw new Error('Generated target escapes the controlled workspace root');
 }
 
 function requireSeparator() {
@@ -107,7 +103,12 @@ async function writeOnce(draft: unknown, options: WorkspaceOptions = {}) {
   const sandboxRoot = options.sandboxRoot ? resolve(/* turbopackIgnore: true */ options.sandboxRoot) : join(/*turbopackIgnore: true*/ process.cwd(), 'sandbox/notification-service');
   const templateRoot = options.templateRoot ? resolve(/* turbopackIgnore: true */ options.templateRoot) : join(sandboxRoot, 'template');
   const workspaceRoot = options.workspaceRoot ? resolve(/* turbopackIgnore: true */ options.workspaceRoot) : join(sandboxRoot, 'workspace');
-  assertWithin(sandboxRoot, templateRoot);
+  if (options.templateRoot) {
+    const repositoryRoot = resolve(/* turbopackIgnore: true */ process.cwd());
+    if (!isWithin(repositoryRoot, templateRoot) && !isWithin(sandboxRoot, templateRoot)) {
+      throw new Error('Generated target escapes the controlled workspace root');
+    }
+  } else assertWithin(sandboxRoot, templateRoot);
   assertWithin(sandboxRoot, workspaceRoot);
   await assertNoSymlinks(templateRoot);
   try { await assertNoSymlinks(workspaceRoot); } catch (cause) {

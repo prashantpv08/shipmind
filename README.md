@@ -39,6 +39,7 @@ Axiom turns scattered project knowledge into grounded requirements, governed eng
 ```bash
 pnpm install
 pnpm dev
+pnpm start
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -52,6 +53,10 @@ pnpm sandbox:coverage
 
 > E2E remains a local/release command. CI runs install, lint, typecheck, unit tests, and production build only.
 
+After `pnpm build`, `pnpm start` serves the production build. To validate a hosted release with the same Playwright journey, run `PLAYWRIGHT_BASE_URL=https://your-release.example pnpm test:e2e`.
+
+The permanent hackathon deployment runs the existing Next.js modular monolith on Vercel. Local development uses `.axiom-data` and the committed sandbox workspace; Vercel uses private Blob storage for durable projects/uploads/evidence and Vercel Sandbox for the same fixed controlled-verification commands. The hosted app fails visibly when Blob is not connected and never presents an ephemeral filesystem write as durable state. See `docs/decisions/0007-vercel-hosted-runtime-and-durable-storage.md`.
+
 ## Environment
 
 ```bash
@@ -59,6 +64,7 @@ AXIOM_AI_MODE=fixture
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-sol
 AXIOM_DATA_DIR=
+AXIOM_STORAGE_MODE=
 NOTION_ACCESS_TOKEN=
 NOTION_PARENT_PAGE_ID=
 JIRA_BASE_URL=
@@ -66,6 +72,8 @@ JIRA_EMAIL=
 JIRA_API_TOKEN=
 JIRA_PROJECT_KEY=
 ```
+
+For Vercel, connect a private Blob store and set `AXIOM_STORAGE_MODE=vercel-blob`. Vercel supplies the store identity and short-lived OIDC credentials to the Functions and Sandbox SDKs. Keep `.env.local` local; transfer integration values with the Vercel environment-variable UI or CLI without committing them.
 
 Set `AXIOM_AI_MODE=live` and provide `OPENAI_API_KEY` to exercise live AI. If live analysis fails, the UI shows the failure and preserves the last valid analysis; it does not silently fall back to fixture data. Use **Run demo fixture instead** to knowingly switch to fixture output.
 

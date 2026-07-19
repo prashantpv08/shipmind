@@ -3,7 +3,7 @@ import { runControlledVerification } from '../../../../src/runner/execute';
 import { VerificationRequest } from '../../../../src/runner/schemas';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   let json: unknown;
