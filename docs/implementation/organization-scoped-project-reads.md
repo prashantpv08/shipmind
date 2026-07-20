@@ -52,4 +52,4 @@ Web:
 
 ## Next slice
 
-Migrate project creation behind the same membership and repository boundary, including workspace validation, optimistic concurrency, immutable audit evidence, and an explicit commercial UI. Project deletion remains separate because it requires archive, retention, dependency checks, confirmation, and recoverability.
+Project creation has now migrated with evidence in `docs/implementation/organization-scoped-project-creation.md`. The next project-lifecycle slice is archive and restore with `If-Match` preconditions, immutable audit evidence, retention rules, and recoverability. Permanent deletion remains separate because it also requires dependency checks and explicit confirmation.

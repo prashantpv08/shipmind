@@ -45,4 +45,49 @@ test.describe('commercial web session boundary', () => {
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page.getByRole('heading', { name: 'Authentication required' })).toBeVisible();
   });
+
+  test('preserves the project creation retry key after a network failure', async ({ page }) => {
+    await page.goto('/account');
+    await page.getByRole('button', { name: 'Connect local session' }).click();
+    await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
+    await page.getByRole('link', { name: 'View projects' }).click();
+    await expect(page.getByRole('heading', { name: 'Create project' })).toBeVisible();
+
+    const idempotencyKeys: string[] = [];
+    let attempts = 0;
+    await page.route('**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      attempts += 1;
+      idempotencyKeys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (attempts === 1) return route.abort('failed');
+
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        headers: { etag: '"PROJ-UI-RETRY:1"', 'idempotency-replayed': 'false' },
+        body: JSON.stringify({
+          id: 'PROJ-UI-RETRY',
+          workspaceId: 'WS-PRODUCT-ENGINEERING',
+          name: 'Retry-safe UI project',
+          status: 'DRAFT',
+          graphVersion: 0,
+          rowVersion: 1,
+          createdAt: '2026-07-21T00:00:00.000Z',
+          updatedAt: '2026-07-21T00:00:00.000Z',
+        }),
+      });
+    });
+
+    await page.getByLabel('Project name').fill('Retry-safe UI project');
+    await page.getByRole('button', { name: 'Create project' }).click();
+    await expect(
+      page.getByText('The platform could not be reached. Your input and retry key were preserved.'),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Create project' }).click();
+    await expect(page.getByText('Created Retry-safe UI project.')).toBeVisible();
+
+    expect(idempotencyKeys).toHaveLength(2);
+    expect(idempotencyKeys[0]).toBeTruthy();
+    expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
+  });
 });

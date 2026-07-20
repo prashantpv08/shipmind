@@ -37,6 +37,7 @@ export const PlatformProjectSchema = z.object({
     'BACKLOG_READY',
   ]),
   graphVersion: z.number().int().nonnegative(),
+  rowVersion: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 }).strict();
@@ -53,3 +54,25 @@ export const PlatformProjectListQuerySchema = z.object({
 }).strict();
 
 export type PlatformProject = z.infer<typeof PlatformProjectSchema>;
+
+export const PlatformCreateProjectRequestSchema = z.object({
+  workspaceId: PlatformWorkspaceIdSchema,
+  name: z.string().trim().min(2).max(160),
+}).strict();
+
+export const PlatformIdempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/);
+
+export const PlatformWorkspaceSchema = z.object({
+  id: PlatformWorkspaceIdSchema,
+  name: z.string().min(1).max(120),
+  rowVersion: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+
+export const PlatformWorkspaceListSchema = z.object({
+  workspaces: z.array(PlatformWorkspaceSchema).max(100),
+  nextCursor: z.string().min(1).max(512).nullable(),
+}).strict();
+
+export type PlatformWorkspace = z.infer<typeof PlatformWorkspaceSchema>;

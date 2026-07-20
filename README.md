@@ -95,7 +95,7 @@ The current Jira credentials are prototype-only. The commercial connector will u
 
 For the commercial identity slice, start the local platform on `127.0.0.1:4100`, generate its private local session fixture, and set `AXIOM_LOCAL_AUTH_ENABLED=true` only in local development. The `/account` route installs that fixture into an HTTP-only, same-site cookie and reads organization access through the Next.js BFF. Production ignores the local cookie and the local installer returns 404; a real identity-provider adapter is still required before deployment.
 
-Authenticated organization members can continue from `/account` to the commercial project metadata view. The web validates and forwards list/detail requests through `/api/platform/organizations/:organizationId/projects`; the platform re-authorizes membership and every PostgreSQL project query requires organization scope. The legacy `/api/projects` read/write route remains only for prototype journey parity until full project-aggregate reads and writes have migrated.
+Authenticated organization members can continue from `/account` to the commercial project view. The web validates and forwards list, detail, workspace-discovery, and create requests through its thin BFF; the platform re-authorizes membership and every PostgreSQL query requires organization scope. Owners, administrators, product analysts, and architects can create a project with a retry-safe idempotency key. The platform validates workspace ownership and commits the project, immutable audit event, and idempotency result in one transaction. The legacy `/api/projects` route remains only for prototype journey parity until full project-aggregate reads and the remaining mutations have migrated.
 
 ## Architecture boundaries during migration
 

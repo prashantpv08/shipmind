@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { getOrganizationProjects } from '@/src/platform/projects';
 
+import { CreateProjectForm } from './create-project-form';
+
 export const dynamic = 'force-dynamic';
 
 export default async function OrganizationProjectsPage({
@@ -66,6 +68,25 @@ export default async function OrganizationProjectsPage({
               <div><h2>Authorized project metadata</h2><p>{organizationId}</p></div>
               <Link className="account-text-link" href="/account">Change organization</Link>
             </div>
+            {state.canCreate ? (
+              state.workspaces.length > 0 ? (
+                <div className="project-create-panel">
+                  <div><h3>Create project</h3><p>The platform validates workspace ownership and records an immutable audit event.</p></div>
+                  <CreateProjectForm organizationId={organizationId} workspaces={state.workspaces} />
+                  {state.moreWorkspaces ? <p>Only the first 100 workspaces are available in this initial creation view.</p> : null}
+                </div>
+              ) : (
+                <div className="project-create-panel">
+                  <h3>Project creation unavailable</h3>
+                  <p>This organization has no available workspace.</p>
+                </div>
+              )
+            ) : (
+              <div className="project-create-panel">
+                <h3>Read-only access</h3>
+                <p>Your current organization role can view projects but cannot create them.</p>
+              </div>
+            )}
             {state.projects.length === 0 ? (
               <p>No projects are available in this organization.</p>
             ) : (

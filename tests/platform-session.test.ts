@@ -7,16 +7,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST as installLocalSession } from '../app/api/auth/local-session/route';
 import {
   CurrentUserOrganizationsSchema,
+  PlatformCreateProjectRequestSchema,
   PlatformProjectListQuerySchema,
   PlatformProjectListSchema,
+  PlatformWorkspaceListSchema,
 } from '../src/platform/contracts';
-import { safeRequestId } from '../src/platform/request';
+import { requestPlatform, safeRequestId } from '../src/platform/request';
 import { validatedSessionToken } from '../src/platform/session';
 
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true })));
 });
 
@@ -65,12 +68,57 @@ describe('platform session boundary', () => {
         name: 'Commercial project',
         status: 'ANALYZED',
         graphVersion: 2,
+        rowVersion: 1,
         createdAt: '2026-07-20T00:00:00.000Z',
         updatedAt: '2026-07-21T00:00:00.000Z',
       }],
       nextCursor: null,
     }).success).toBe(true);
     expect(PlatformProjectListQuerySchema.safeParse({ limit: '25', unscoped: 'true' }).success).toBe(false);
+    expect(PlatformCreateProjectRequestSchema.safeParse({ name: ' New project ', workspaceId: 'WS-TEAM' }).success).toBe(true);
+    expect(PlatformWorkspaceListSchema.safeParse({
+      workspaces: [{
+        id: 'WS-TEAM',
+        name: 'Team',
+        rowVersion: 1,
+        createdAt: '2026-07-20T00:00:00.000Z',
+        updatedAt: '2026-07-21T00:00:00.000Z',
+      }],
+      nextCursor: null,
+    }).success).toBe(true);
+  });
+
+  it('forwards a bounded project creation request with server-side credentials and idempotency', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ created: true }), {
+      status: 201,
+      headers: { 'content-type': 'application/json', etag: '"PROJ-ONE:1"', 'idempotency-replayed': 'false' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubEnv('AXIOM_PLATFORM_URL', 'http://127.0.0.1:4100');
+
+    const response = await requestPlatform(
+      '/api/v1/organizations/ORG-ONE/projects',
+      'A'.repeat(43),
+      'project-request-001',
+      {
+        method: 'POST',
+        body: { name: 'New project', workspaceId: 'WS-TEAM' },
+        idempotencyKey: 'project-create-001',
+      },
+    );
+
+    expect(response).toMatchObject({ status: 201, etag: '"PROJ-ONE:1"', idempotencyReplayed: 'false' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'New project', workspaceId: 'WS-TEAM' }),
+        headers: expect.objectContaining({
+          authorization: `Bearer ${'A'.repeat(43)}`,
+          'idempotency-key': 'project-create-001',
+        }),
+      }),
+    );
   });
 
   it('preserves a safe request ID and replaces untrusted values', () => {
