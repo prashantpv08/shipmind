@@ -52,7 +52,10 @@ export default async function AccountPage() {
                 {user.organizations.map((organization) => (
                   <li key={organization.id}>
                     <div><b>{organization.name}</b><small>{organization.id}</small></div>
-                    <span>{organization.role}</span>
+                    <div className="account-org-actions">
+                      <span>{organization.role}</span>
+                      <Link href={`/account/organizations/${organization.id}/projects`}>View projects</Link>
+                    </div>
                   </li>
                 ))}
               </ul>

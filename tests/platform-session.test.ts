@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { POST as installLocalSession } from '../app/api/auth/local-session/route';
-import { CurrentUserOrganizationsSchema } from '../src/platform/contracts';
+import {
+  CurrentUserOrganizationsSchema,
+  PlatformProjectListQuerySchema,
+  PlatformProjectListSchema,
+} from '../src/platform/contracts';
 import { safeRequestId } from '../src/platform/request';
 import { validatedSessionToken } from '../src/platform/session';
 
@@ -42,6 +46,31 @@ describe('platform session boundary', () => {
         role: 'OWNER',
       }],
     }).success).toBe(true);
+    expect(CurrentUserOrganizationsSchema.safeParse({
+      organizations: [{
+        id: 'ORG-ENTERPRISE',
+        slug: 'enterprise',
+        name: 'Enterprise',
+        status: 'ACTIVE',
+        role: 'ADMINISTRATOR',
+      }],
+    }).success).toBe(true);
+  });
+
+  it('validates bounded project pages and rejects unknown query fields', () => {
+    expect(PlatformProjectListSchema.safeParse({
+      projects: [{
+        id: 'PROJ-LOCAL-1',
+        workspaceId: 'WS-PRODUCT-ENGINEERING',
+        name: 'Commercial project',
+        status: 'ANALYZED',
+        graphVersion: 2,
+        createdAt: '2026-07-20T00:00:00.000Z',
+        updatedAt: '2026-07-21T00:00:00.000Z',
+      }],
+      nextCursor: null,
+    }).success).toBe(true);
+    expect(PlatformProjectListQuerySchema.safeParse({ limit: '25', unscoped: 'true' }).success).toBe(false);
   });
 
   it('preserves a safe request ID and replaces untrusted values', () => {

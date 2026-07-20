@@ -70,6 +70,7 @@ The commercial web, platform, and infrastructure responsibilities have independe
 - [x] Add lint, typecheck, contract, build, and local start commands to the platform repository.
 - [x] Document the current route-to-platform migration order and rollback checkpoints. Evidence: `docs/implementation/repository-split-foundation.md`.
 - [ ] Move one bounded vertical slice at a time and replace frontend domain imports with reviewed API contracts.
+- [x] Move organization-scoped project metadata list/detail reads behind the platform API and thin web BFF. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
 - [x] Add ignore rules and a repository policy check preventing Terraform state, plans, credentials, keys, and environment secrets from version control.
 - [ ] Remove each migrated Next.js business route only after replacement contract and end-to-end tests pass.
 
@@ -94,6 +95,7 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 - [ ] Implement Organization, Membership, Role, and invitation flows.
 - [ ] Add server-side authorization policies and deny-by-default behavior.
 - [ ] Require organization scope in shared repositories and application services.
+- [x] Require organization scope in the migrated project metadata repository and service, with repository-level and API-level tenant-isolation tests. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
 - [ ] Add owner, administrator, contributor, reviewer, and viewer permissions.
 - [x] Implement database-enforced immutable audit events for the current platform security-sensitive actions; extend action coverage with each new workflow.
 - [ ] Add organization/project archive, restore, retention, and deletion workflows.
