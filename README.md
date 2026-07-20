@@ -82,6 +82,9 @@ JIRA_BASE_URL=
 JIRA_EMAIL=
 JIRA_API_TOKEN=
 JIRA_PROJECT_KEY=
+AXIOM_PLATFORM_URL=http://127.0.0.1:4100
+AXIOM_LOCAL_AUTH_ENABLED=false
+AXIOM_LOCAL_SESSION_TOKEN_FILE=../axiom-platform/.local/session-token
 ```
 
 `AXIOM_AI_MODE=fixture` is the deterministic offline mode. Set it to `live` with a server-only Groq key only when intentionally testing the existing live adapter. A live failure is shown honestly and does not silently fall back to fixture output.
@@ -89,6 +92,8 @@ JIRA_PROJECT_KEY=
 `AXIOM_PROJECT_STORE=postgres` selects the commercial local store. `json` exists only as the prototype migration and rollback adapter. Start and migrate PostgreSQL before switching the local application. Source binary files remain local until the S3 adapter milestone; PostgreSQL owns their metadata and references.
 
 The current Jira credentials are prototype-only. The commercial connector will use organization-scoped authorization, idempotent publication, field mapping, reconciliation, and audit. Trello will use the same normalized work-item contract.
+
+For the commercial identity slice, start the local platform on `127.0.0.1:4100`, generate its private local session fixture, and set `AXIOM_LOCAL_AUTH_ENABLED=true` only in local development. The `/account` route installs that fixture into an HTTP-only, same-site cookie and reads organization access through the Next.js BFF. Production ignores the local cookie and the local installer returns 404; a real identity-provider adapter is still required before deployment.
 
 ## Architecture boundaries during migration
 

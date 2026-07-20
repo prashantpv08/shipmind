@@ -88,6 +88,7 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 
 - [ ] Implement the isolated authentication adapter and secure sessions.
 - [x] Add the PostgreSQL user, membership, opaque-session, and immutable-audit foundation. Evidence: `docs/decisions/0013-opaque-sessions-authorization-and-audit.md` and `docs/implementation/identity-organization-audit-foundation.md`.
+- [x] Add the local-only web/BFF session handoff and current-user organization bootstrap without exposing the opaque credential to browser JavaScript. Evidence: `docs/implementation/web-bff-session-foundation.md`.
 - [x] Add a global deny-by-default platform guard with explicit public and permission metadata.
 - [x] Prove one organization-scoped API permits an active member and rejects anonymous, expired, revoked, and cross-tenant access.
 - [ ] Implement Organization, Membership, Role, and invitation flows.

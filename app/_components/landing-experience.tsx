@@ -5,7 +5,7 @@ export function LandingExperience({ onEnter, onOpenSample }: { onEnter: () => vo
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <nav className="landing-nav" aria-label="Axiom landing navigation">
       <a className="landing-brand" href="#top" aria-label="Axiom home"><span>A</span><b>Axiom</b></a>
-      <div><a href="#journey">How it works</a><a href="#capabilities">Capabilities</a><button type="button" className="landing-nav-cta" onClick={onEnter}>Open workspace</button></div>
+      <div><a href="#journey">How it works</a><a href="#capabilities">Capabilities</a><a href="/account">Account</a><button type="button" className="landing-nav-cta" onClick={onEnter}>Open workspace</button></div>
     </nav>
 
     <section className="landing-hero" id="top">
