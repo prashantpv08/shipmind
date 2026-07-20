@@ -1,6 +1,6 @@
 # ADR 0008: Groq live AI provider for the hackathon prototype
 
-- Status: Accepted
+- Status: Superseded by `0010-commercial-platform-boundaries.md`; Groq remains a launch candidate but is no longer the only provider
 - Date: 2026-07-19
 
 ## Context

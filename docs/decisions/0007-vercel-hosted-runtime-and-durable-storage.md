@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the hackathon release on 2026-07-19.
+Superseded by `0010-commercial-platform-boundaries.md` on 2026-07-20. This file is retained only as historical context and does not authorize a Vercel deployment.
 
 ## Context
 

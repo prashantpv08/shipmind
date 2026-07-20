@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the hackathon product journey on 2026-07-18.
+Partially superseded by `0010-commercial-platform-boundaries.md` on 2026-07-20. The approval, idempotency, and controlled-coding boundaries remain accepted; Jira is no longer the only work-management connector.
 
 ## Context
 

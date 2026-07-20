@@ -1,2121 +1,660 @@
-# Axiom: AI Engineering Operating System
+# Axiom — Commercial Software Requirements Specification
 
-## Software Requirements Specification
+**Document ID:** AX-SRS-COM-001
 
-**Document ID:** AX-SRS-MVP-001  
-**Version:** 1.0  
-**Date:** 2026-07-16  
-**Status:** Approved for hackathon implementation  
-**Classification:** Internal / Hackathon  
-**Authors:** Prashant Verma and Kshitij Sharma  
-**Working product name:** Axiom (provisional)
+**Version:** 2.0
 
----
+**Date:** 2026-07-20
 
-## Document Control
+**Status:** Approved product contract
 
-| Field | Value |
+**Classification:** Internal / Commercial product
+
+**Supersedes:** Axiom Hackathon MVP SRS 1.0
+
+## 1. Document control
+
+| Field | Decision |
 |---|---|
-| Product | Axiom: AI Engineering Operating System |
-| Product thesis | A living reasoning and evidence layer for software engineering |
-| Hackathon objective | Demonstrate one complete journey from ambiguous business intent to approved engineering decisions, enterprise artifacts, generated code, real verification evidence, and explainable traceability |
-| Primary audience | Codex, product owners, architects, developers, QA engineers, hackathon judges |
-| Build window | Four days |
-| MVP priority convention | P0 = mandatory, P1 = stretch, P2 = future |
-| Source of truth | Structured project graph stored by the application, not generated Markdown documents |
+| Product | Axiom, an AI Engineering Operating System |
+| Product thesis | Convert ambiguous intent into grounded engineering decisions, high-quality delivery work, controlled execution, and verifiable evidence |
+| Initial customers | SMEs, product teams, engineering organizations, and enterprise pilots |
+| Source of truth | The canonical project graph in PostgreSQL |
+| Delivery architecture | TypeScript modular monolith with independently extractable modules |
+| Production cloud | AWS |
+| Local development | Docker Compose; no cloud deployment required |
+| Work management | Jira and Trello connectors; Axiom does not replace either product |
+| AI strategy | Axiom-owned agent workflows using hosted model providers; no Axiom-trained foundation model or owned GPU fleet at launch |
+| Change control | Material scope or architecture changes require an ADR and an SRS version change |
 
----
+### 1.1 Priority convention
 
-# 0. Codex Build Directive
+- **Launch:** required before accepting general commercial customers.
+- **Next:** planned after the launch gates are stable.
+- **Later:** explicitly outside the first commercial release.
 
-Codex shall treat this SRS as the product contract.
+### 1.2 Requirement language
 
-1. Implement **P0 requirements first**. Do not begin P1 work until all P0 acceptance criteria pass.
-2. Build one complete vertical journey. Do not create empty modules, decorative agents, fake test results, or non-functional integrations.
-3. All AI outputs must be schema-validated before being persisted or rendered.
-4. Any claim about code quality, test coverage, performance, security, or accessibility must originate from a real tool execution. The model may explain a result but may not invent it.
-5. Every important recommendation must expose:
-   - why it was suggested;
-   - why alternatives were not selected;
-   - assumptions;
-   - risks;
-   - conditions that should trigger reconsideration.
-6. Use one TypeScript monorepo and the approved stack in Section 12 unless a blocking issue is documented.
-7. Generated code shall be limited to a controlled starter workspace and fixed dependencies during the MVP.
-8. A feature is complete only when its acceptance criteria and relevant automated tests pass.
+“Shall” is mandatory. “Should” is a recommendation. Measured claims are not satisfied by generated prose; they require stored evidence.
 
----
+## 2. Product definition
 
-# 1. Introduction
+### 2.1 Purpose
 
-## 1.1 Purpose
+Axiom helps teams convert source material such as product briefs, documents, decisions, and meeting notes into:
 
-This document defines the requirements for Axiom, an AI-powered engineering operating system that converts business intent into structured requirements, architecture decisions, enterprise documentation, implementation tasks, generated code, verified engineering evidence, and a traceable explanation of why each decision was made.
+- grounded requirements and non-functional requirements;
+- explicit gaps and clarification questions;
+- architecture alternatives and approved decisions;
+- implementation-ready work items;
+- Jira issues or Trello cards after human approval;
+- controlled task packets for Axiom or external coding agents;
+- real verification evidence;
+- traceable Why, Why Not, Proof, and Reconsider answers.
 
-The document has two purposes:
+### 2.2 Differentiator
 
-1. Provide Codex with an implementation-ready specification for a four-day hackathon MVP.
-2. Preserve the architecture and domain concepts needed to evolve the MVP into a scalable enterprise platform.
-
-## 1.2 Product Vision
-
-Axiom shall become a living engineering twin of a software product. It should understand:
-
-- what the business requested;
-- why the request exists;
-- which requirements were derived;
-- which gaps remain unresolved;
-- which architecture options were considered;
-- why one option was selected and others rejected;
-- which engineering rules govern implementation;
-- which code implements each requirement;
-- which tests and scans verify the implementation;
-- which deployment and runtime observations confirm or contradict earlier assumptions.
-
-The long-term platform covers the full software delivery lifecycle. The hackathon MVP proves the central product thesis through one end-to-end flow.
-
-## 1.3 Product Thesis
-
-Existing tools often automate a single stage of delivery. Axiom shall own the reasoning and evidence that connect stages.
-
-The product's core differentiator is:
-
-> **Why, Why Not, and Proof**
-
-For every important engineering outcome, the platform should answer:
-
-- **What:** What was requested, decided, built, tested, or deployed?
-- **Why:** Why was this decision or implementation selected?
-- **Why not:** Why were reasonable alternatives rejected?
-- **Proof:** What deterministic evidence confirms the claim?
-- **When to reconsider:** Which changed assumption or threshold should reopen the decision?
-
-## 1.4 Business Problem
-
-Software teams lose time and quality because intent, requirements, decisions, tasks, code, tests, and operational evidence are stored in separate systems and interpreted independently.
-
-Common consequences include:
-
-- incomplete or conflicting requirements;
-- missing non-functional requirements;
-- architecture choices without documented trade-offs;
-- coding agents inventing unspecified behavior;
-- enterprise documents becoming stale;
-- test results disconnected from requirements;
-- unverified AI claims;
-- duplicated discussions about old decisions;
-- production behavior invalidating assumptions without triggering review;
-- compliance evidence being assembled manually after the work is complete.
-
-## 1.5 Product Goals
-
-The MVP shall demonstrate that Axiom can:
-
-1. Turn an ambiguous product brief into a structured engineering model.
-2. Identify material gaps and ask high-impact clarification questions.
-3. Generate functional requirements and NFRs grounded in the input and answers.
-4. Compare architecture options using explicit trade-offs and assumptions.
-5. Record the selected option as an explainable Architecture Decision Record.
-6. Generate enterprise-style artifacts from one canonical project graph.
-7. Create a controlled implementation plan and generated code for one vertical feature.
-8. Execute real unit, API, coverage, security, and performance checks where implemented.
-9. Normalize results into evidence with explicit truth status.
-10. Answer "why" questions by traversing traceable project relationships.
-
-## 1.6 Non-Goals for the Hackathon
-
-The MVP shall not attempt to:
-
-- join live meetings;
-- transcribe audio or identify speakers;
-- replace Jira, GitHub, GitLab, cloud providers, or monitoring platforms;
-- generate an entire production application from scratch;
-- support arbitrary repositories or arbitrary shell commands;
-- execute real payments, email, SMS, or production deployment;
-- claim legal, security, accessibility, or regulatory certification;
-- support multi-tenant enterprise administration;
-- implement full GRC control libraries;
-- implement all cloud providers;
-- use several models merely to create an appearance of complexity.
-
-## 1.7 Intended Audience
-
-- Product owners and business analysts
-- Solution and software architects
-- Engineering managers
-- Developers using Codex or other coding agents
-- QA and performance engineers
-- Security and compliance stakeholders
-- Hackathon reviewers
-
-## 1.8 Definitions
-
-| Term | Definition |
-|---|---|
-| Engineering Twin | A structured, evolving representation of intent, requirements, decisions, code, verification, and runtime evidence |
-| Project Graph | The canonical graph of artifacts and relationships used as the source of truth |
-| Artifact | A generated or imported engineering object such as SRS, HLD, ADR, test strategy, OpenAPI contract, or task |
-| Decision Record | A versioned record of a technical decision, alternatives, reasoning, assumptions, risks, and reconsideration triggers |
-| Engineering Constitution | A machine-readable set of project rules that coding and verification workflows must follow |
-| Evidence | A deterministic result produced by an executed tool, human approval, or observed runtime system |
-| Trace Link | A typed relationship between two project entities |
-| Gap | Missing, conflicting, ambiguous, or untestable information that affects delivery |
-| Truth Status | The provenance and reliability state assigned to a claim or result |
-| Vertical Slice | One end-to-end product capability that includes requirements, code, tests, and evidence |
-
----
-
-# 2. Product Scope
-
-## 2.1 Long-Term Product Scope
-
-The full product vision includes:
-
-1. Meeting and business-intent ingestion
-2. Requirement and NFR intelligence
-3. Clarification and conflict resolution
-4. Enterprise document compilation
-5. Architecture decision support
-6. Engineering standards and policy enforcement
-7. Backlog and dependency planning
-8. AI-assisted implementation
-9. Unit, integration, API, E2E, performance, security, and accessibility verification
-10. Cloud architecture, deployment, and cost optimization
-11. Monitoring, incident feedback, and architecture drift detection
-12. Engineering GRC and audit evidence
-13. Cross-tool and cross-project institutional memory
-
-## 2.2 Hackathon MVP Scope
-
-The MVP shall implement one controlled workflow:
+Axiom is not a generic chatbot and is not another project-management board. Its differentiator is a governed reasoning and evidence layer:
 
 ```text
-Product brief
-   -> requirement and NFR extraction
-   -> gap detection
-   -> clarification answers
-   -> architecture comparison
-   -> approved decision
-   -> enterprise artifact generation
-   -> engineering constitution
-   -> one generated API vertical slice
-   -> real verification runs
-   -> evidence graph
-   -> Why / Why Not / Proof explorer
+Source evidence
+  -> canonical requirements
+  -> clarified decisions
+  -> approved architecture
+  -> verified work items
+  -> Jira or Trello
+  -> coding-agent handoff
+  -> real evidence and traceability
 ```
 
-## 2.3 P0 Mandatory Capabilities
+### 2.3 Launch goals
 
-- Project creation from a supplied sample or pasted product brief
-- Structured requirement and NFR extraction
-- Source-backed gap detection
-- Three to five prioritized clarification questions
-- Architecture comparison with at least three options
-- Decision approval and ADR creation
-- Engineering Constitution generation
-- SRS, NFR, HLD, ADR, OpenAPI, test strategy, and backlog artifacts
-- Controlled code generation for one API feature
-- Real unit and API test execution
-- Real coverage collection
-- Evidence normalization and display
-- Requirement-to-decision-to-code-to-test traceability
-- Why / Why Not / Proof queries
-- Export of project artifacts as Markdown and JSON
+1. Produce materially better engineering tickets than a single free-form prompt.
+2. Prevent unsupported assumptions and fabricated evidence.
+3. Make every important ticket traceable to approved source material.
+4. Let each organization control models, budgets, connectors, and approvals.
+5. Support economical hosted inference without purchasing or operating GPUs.
+6. Provide a secure multi-tenant SaaS foundation that can grow without an immediate microservice rewrite.
+7. Measure quality, cost, latency, and human acceptance for every AI workflow version.
 
-## 2.4 P1 Stretch Capabilities
+### 2.4 Non-goals for launch
 
-- Dependency and security scan
-- Performance test execution and parsed metrics
-- Mermaid architecture diagram
-- Readiness score animation
-- Cost estimate for a single AWS architecture using a maintained local price snapshot
-- Accessibility scan for a generated admin page
-- ZIP download of all artifacts
-- Rerun after a clarification or implementation change
+Axiom shall not:
 
-## 2.5 P2 Future Capabilities
+- provide a Jira-, Trello-, Linear-, or Notion-style work-management interface;
+- train a proprietary foundation model;
+- operate a GPU cluster;
+- promise autonomous end-to-end software delivery without review;
+- silently create external tickets, cards, code changes, deployments, or purchases;
+- execute arbitrary model-generated shell commands;
+- support arbitrary third-party models before they pass Axiom evaluations;
+- deploy on Vercel;
+- require Kubernetes for the first commercial release;
+- claim legal, regulatory, security, or accessibility certification from automated checks alone.
 
-- Live meeting integrations
-- Jira, Linear, GitHub, GitLab, Notion, and Confluence integrations
-- Bring-your-own enterprise templates
-- Multi-model routing
-- Mobile app generation and testing
-- Real AWS, Azure, and GCP provisioning
-- Cloud billing ingestion and optimization
-- Production monitoring and architecture drift
-- On-premises runner and private VPC deployment
-- GRC control packs and evidence mapping
-- Organization-level analytics
+## 3. Users, organizations, and access
 
-## 2.6 MVP Success Definition
+### 3.1 Roles
 
-The MVP is successful when a user can complete the primary demo journey without editing database records, changing source code, or relying on pre-rendered results, and the platform can answer at least these questions with traceable evidence:
+| Role | Primary permissions |
+|---|---|
+| Organization Owner | Billing, retention, providers, connectors, organization deletion |
+| Administrator | Members, roles, model policies, budgets, integrations |
+| Product/Business Analyst | Sources, requirements, clarifications, work-item review |
+| Architect/Engineering Lead | Architecture review, approval, engineering policies |
+| Developer | Approved tasks, coding-agent handoff, implementation evidence |
+| QA/Reviewer | Evaluation, verification, evidence review |
+| Viewer/Auditor | Read-only approved artifacts, history, traceability, evidence |
 
-1. Why was the selected architecture recommended?
-2. Why was a more complex architecture rejected?
-3. Which requirement caused a particular code module to be created?
-4. Which executed test proves a behavior?
-5. Which claims are still unverified?
+### 3.2 Tenancy requirements
 
----
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-TEN-001 | Every persisted customer object shall belong to exactly one organization. | Launch |
+| FR-TEN-002 | Authorization shall be enforced server-side on every organization-scoped operation. | Launch |
+| FR-TEN-003 | Database queries shall require organization scope through shared repository boundaries. | Launch |
+| FR-TEN-004 | Organization roles shall follow least privilege and deny by default. | Launch |
+| FR-TEN-005 | Enterprise customers shall be able to configure retention and model-provider policies. | Next |
+| FR-TEN-006 | SSO/SAML and SCIM shall be supported for eligible enterprise plans. | Next |
 
-# 3. Users and Roles
+### 3.3 Authentication
 
-## 3.1 Product Owner / Business Analyst
+Launch authentication shall support secure email-based or standards-based login through an isolated authentication adapter. Session cookies shall be secure, HTTP-only, same-site protected, rotated where appropriate, and revocable. Multi-factor authentication is required for organization owners before general enterprise availability.
 
-Needs to:
+## 4. Product principles and truth model
 
-- provide business intent;
-- review extracted requirements;
-- answer gaps and ambiguities;
-- approve scope and business rules;
-- export enterprise documents.
+### 4.1 Canonical graph
 
-## 3.2 Architect / Engineering Lead
+PostgreSQL-backed structured entities are authoritative. Markdown, diagrams, Jira issues, Trello cards, Notion pages, and agent task packets are compiled or synchronized views. Stable entity IDs shall survive regeneration and external synchronization.
 
-Needs to:
-
-- compare architecture options;
-- inspect trade-offs, costs, assumptions, and failure modes;
-- approve or reject a recommendation;
-- define engineering rules;
-- understand when a decision should be reconsidered.
-
-## 3.3 Developer
-
-Needs to:
-
-- receive implementation-ready requirements;
-- understand why code exists;
-- follow the Engineering Constitution;
-- generate or modify code;
-- see verification failures linked to affected requirements.
-
-## 3.4 QA / Reliability Engineer
-
-Needs to:
-
-- derive test scenarios from requirements and risks;
-- run real checks;
-- distinguish model suggestions from executed evidence;
-- inspect coverage, API results, performance results, and unresolved gaps.
-
-## 3.5 Reviewer / Judge
-
-Needs to:
-
-- experience the entire product journey quickly;
-- inspect a coherent project graph;
-- distinguish real execution from generated text;
-- understand future enterprise value.
-
-## 3.6 MVP Access Model
-
-Authentication is not required for the hackathon MVP. The application shall support one anonymous browser session and one preloaded sample project. Enterprise roles and permissions are P2.
-
----
-
-# 4. Product Principles
-
-## 4.1 Canonical Structured Data
-
-The project graph is the source of truth. Documents are compiled views of that graph. The MVP shall avoid treating generated Markdown as the primary editable database.
-
-## 4.2 Evidence Before Assertion
-
-The platform shall never display an engineering claim as verified unless an approved deterministic source produced it.
-
-## 4.3 Human Approval at Decision Boundaries
-
-AI may recommend an architecture or policy. A human user shall approve the architecture decision before code generation begins.
-
-## 4.4 Explicit Uncertainty
-
-Missing information shall be represented as `UNKNOWN`, not silently completed by the model.
-
-## 4.5 Reproducibility
-
-Verification runs shall store command, timestamp, exit code, parsed metrics, and a bounded raw-output excerpt.
-
-## 4.6 Practical Integration Strategy
-
-The platform shall orchestrate existing tools rather than reimplement every engineering discipline.
-
-## 4.7 Progressive Enterprise Adoption
-
-The future architecture shall allow sensitive code and execution to remain in a customer-controlled runner while the hosted control plane stores approved metadata and evidence.
-
----
-
-# 5. Truth and Evidence Model
-
-## 5.1 Truth Status Enumeration
-
-All meaningful claims shall use one of the following states:
+### 4.2 Truth statuses
 
 | Status | Meaning |
 |---|---|
-| `AI_SUGGESTED` | Generated by a model and not approved or independently verified |
-| `HUMAN_APPROVED` | Accepted by an authorized user |
+| `SOURCE_GROUNDED` | Supported by immutable stored source spans |
+| `HUMAN_CONFIRMED` | Confirmed by an authorized user |
+| `AI_SUGGESTED` | Generated but not independently confirmed |
 | `TOOL_EXECUTED` | A real tool ran and returned a result |
-| `TOOL_VERIFIED` | Tool output satisfied a deterministic threshold or assertion |
-| `RUNTIME_OBSERVED` | Confirmed through runtime telemetry |
-| `UNKNOWN` | Evidence is absent or insufficient |
+| `TOOL_VERIFIED` | Executed evidence met a deterministic assertion |
+| `RUNTIME_OBSERVED` | Supported by production telemetry |
+| `UNKNOWN` | Evidence is missing or insufficient |
 | `CONTRADICTED` | Available evidence conflicts with the claim |
-| `FAILED` | Execution failed and no valid conclusion can be drawn |
-
-## 5.2 Evidence Requirements
-
-Each Evidence record shall include:
-
-- unique ID;
-- project ID;
-- evidence type;
-- producer type and name;
-- truth status;
-- timestamp;
-- command or operation;
-- exit code where applicable;
-- parsed measurements;
-- bounded raw output;
-- linked requirements, risks, decisions, code files, and tests;
-- optional artifact hash;
-- optional reviewer note.
-
-## 5.3 Prohibited Behaviors
-
-The system shall not:
-
-- invent coverage percentages;
-- invent passing tests;
-- present an architecture estimate as runtime-observed fact;
-- mark accessibility as fully compliant based only on an automated scan;
-- rewrite failed tool output into a success narrative;
-- create a source quotation that does not exist in the submitted input;
-- hide unknowns to increase a readiness score.
-
----
-
-# 6. Functional Requirements
-
-Priority meanings:
-
-- **P0:** Mandatory for hackathon completion
-- **P1:** Implement only after P0 is stable
-- **P2:** Future roadmap
-
-## 6.1 Project Workspace
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-PROJ-001 | The system shall allow a user to create a project with name, summary, target domain, and optional constraints. | P0 | A project is created and assigned a stable ID. |
-| FR-PROJ-002 | The system shall provide a preloaded sample project named `NotifyFlow`. | P0 | The sample can be launched in one click and contains the approved demo brief. |
-| FR-PROJ-003 | The system shall persist the project state for the active demo environment. | P0 | Refreshing the browser does not lose the current project during the demo. |
-| FR-PROJ-004 | The system shall display the project lifecycle status. | P0 | Status shows one of `Draft`, `Analyzing`, `Needs Clarification`, `Architecture Review`, `Ready to Build`, `Verifying`, `Complete`, or `Failed`. |
-| FR-PROJ-005 | The system shall allow the user to reset the sample project. | P0 | Reset returns the sample to its initial state. |
-
-## 6.2 Intent Ingestion
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-ING-001 | The system shall accept a pasted product brief of at least 50 and at most 15,000 characters. | P0 | Valid input can be submitted; invalid size is rejected with a clear message. |
-| FR-ING-002 | The system shall support `.txt` and `.md` upload. | P1 | Uploaded text is previewed before analysis. |
-| FR-ING-003 | The system shall preserve the original input as an immutable source artifact. | P0 | Source content has an ID, creation time, and content hash. |
-| FR-ING-004 | The system shall split source text into addressable spans. | P0 | Extracted requirements can link to exact source excerpts. |
-| FR-ING-005 | The system shall reject empty, binary, or unsupported input. | P0 | User receives an actionable validation message. |
-
-## 6.3 Requirement Intelligence
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-REQ-001 | The system shall extract business goals. | P0 | At least one goal is produced for the sample brief. |
-| FR-REQ-002 | The system shall extract functional requirements with stable IDs such as `FR-001`. | P0 | Requirements are rendered and persisted with unique IDs. |
-| FR-REQ-003 | The system shall extract non-functional requirements with category, metric, target, and status. | P0 | NFRs include measurable values when present and `UNKNOWN` when absent. |
-| FR-REQ-004 | The system shall extract actors, roles, and permissions. | P0 | Actor list is visible and linked to related requirements. |
-| FR-REQ-005 | The system shall extract business rules, constraints, assumptions, dependencies, and risks. | P0 | Each category appears in structured output. |
-| FR-REQ-006 | The system shall attach one or more source excerpts to every grounded requirement. | P0 | Clicking a requirement displays its exact source excerpt. |
-| FR-REQ-007 | The system shall label inferred items as assumptions rather than source-backed requirements. | P0 | Inferred items have `AI_SUGGESTED` status and no fabricated quote. |
-| FR-REQ-008 | The system shall detect duplicate or near-duplicate requirements. | P1 | Duplicate candidates are grouped for review. |
-| FR-REQ-009 | The system shall detect contradictions between requirements or constraints. | P0 | At least one seeded contradiction can be surfaced in a test fixture. |
-| FR-REQ-010 | The system shall classify requirements by priority and implementation readiness. | P0 | Each requirement displays priority and readiness. |
-| FR-REQ-011 | The system shall calculate a deterministic requirement-readiness score. | P0 | Score is derived from a documented rubric and changes after clarification. |
-| FR-REQ-012 | The system shall allow a user to approve or reject an extracted requirement. | P1 | Approval state persists and affects artifact generation. |
-
-## 6.4 Gap Detection and Clarification
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-GAP-001 | The system shall identify missing decisions that materially affect architecture, implementation, testing, security, performance, cost, or operations. | P0 | The sample project produces at least five gaps. |
-| FR-GAP-002 | Each gap shall include severity, affected artifacts, rationale, and source context. | P0 | Gap details are visible in the UI. |
-| FR-GAP-003 | The system shall rank gaps by estimated implementation impact. | P0 | Blocking gaps appear before informational gaps. |
-| FR-GAP-004 | The system shall generate three to five clarification questions for the MVP. | P0 | Questions are context-specific and not generic checklists. |
-| FR-GAP-005 | Each clarification question shall explain why it matters and which items it affects. | P0 | Affected requirement or NFR IDs are shown. |
-| FR-GAP-006 | Questions shall support suggested options and custom text. | P0 | User can select an option or provide a custom answer. |
-| FR-GAP-007 | An answer shall update the canonical project graph. | P0 | Requirements, business rules, assumptions, or NFRs update after answer submission. |
-| FR-GAP-008 | The system shall recalculate readiness after each accepted answer. | P0 | Score changes are deterministic and visible. |
-| FR-GAP-009 | The system shall prevent architecture approval while a P0 blocking gap remains unresolved. | P0 | Build action remains disabled and explains the blocker. |
-
-## 6.5 Architecture Decision Lab
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-ARC-001 | The system shall generate at least three architecture options for the sample project. | P0 | Three distinct and plausible options are displayed. |
-| FR-ARC-002 | Each option shall include components, data flow, deployment model, and key technologies. | P0 | Option detail contains all required fields. |
-| FR-ARC-003 | Each option shall explain suitability, delivery effort, scalability, reliability, security, operational burden, team-skill fit, vendor lock-in, and cost range. | P0 | Comparison matrix is populated. |
-| FR-ARC-004 | Each option shall state why it should be selected and why it may be rejected. | P0 | Both `why` and `whyNot` fields are present and non-empty. |
-| FR-ARC-005 | Each option shall include explicit assumptions. | P0 | Assumptions are linked to relevant NFRs and risks. |
-| FR-ARC-006 | Each option shall include failure modes and mitigations. | P0 | At least two failure modes are listed for each sample option. |
-| FR-ARC-007 | Each option shall include reconsideration triggers. | P0 | At least one measurable trigger is present. |
-| FR-ARC-008 | The system shall recommend one option while clearly labeling the recommendation as `AI_SUGGESTED`. | P0 | Recommendation is visible and not marked approved. |
-| FR-ARC-009 | The user shall be able to approve an option or select a different option. | P0 | Selected option becomes `HUMAN_APPROVED`. |
-| FR-ARC-010 | Approval shall create a versioned Architecture Decision Record. | P0 | ADR includes question, decision, alternatives, why, why not, assumptions, risks, and triggers. |
-| FR-ARC-011 | The system shall generate a Mermaid architecture diagram from structured option data. | P1 | Diagram renders without syntax error for the sample project. |
-| FR-ARC-012 | The system shall show the origin of each architecture constraint. | P1 | Constraint links back to requirement, NFR, user answer, or policy. |
-
-## 6.6 Engineering Constitution
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-CON-001 | The system shall generate a machine-readable Engineering Constitution after architecture approval. | P0 | A valid YAML or JSON constitution is created. |
-| FR-CON-002 | The constitution shall cover architecture boundaries, code quality, security, testing, performance, accessibility, deployment, and cost. | P0 | All categories exist, with `UNKNOWN` allowed where unresolved. |
-| FR-CON-003 | Each constitution rule shall have an ID, severity, rationale, and verification method. | P0 | Rules are structured and visible. |
-| FR-CON-004 | The user shall be able to approve or disable a generated rule. | P1 | Rule state persists and affects verification. |
-| FR-CON-005 | Code generation prompts shall include the approved constitution. | P0 | Generated task context contains the constitution. |
-| FR-CON-006 | Verification shall link failures to violated constitution rules where applicable. | P1 | Failed evidence displays the corresponding rule ID. |
-
-## 6.7 Enterprise Artifact Compiler
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-DOC-001 | The system shall generate an SRS from the canonical graph. | P0 | Generated SRS contains scope, actors, FRs, NFRs, assumptions, constraints, and acceptance criteria. |
-| FR-DOC-002 | The system shall generate an NFR specification. | P0 | NFR document contains metric, target, rationale, source, and verification method. |
-| FR-DOC-003 | The system shall generate an HLD. | P0 | HLD contains context, components, flows, data stores, external dependencies, failure handling, security, and deployment view. |
-| FR-DOC-004 | The system shall generate the approved ADR. | P0 | ADR faithfully represents the selected decision and rejected alternatives. |
-| FR-DOC-005 | The system shall generate an OpenAPI contract for the demo vertical slice. | P0 | OpenAPI document parses successfully. |
-| FR-DOC-006 | The system shall generate a test strategy. | P0 | Strategy maps test levels to requirements, risks, and NFRs. |
-| FR-DOC-007 | The system shall generate an implementation backlog with epic, stories, acceptance criteria, dependencies, and priority. | P0 | Backlog contains at least one implementable vertical slice. |
-| FR-DOC-008 | Generated documents shall include version, date, project ID, and source graph version. | P0 | Metadata is present in every artifact. |
-| FR-DOC-009 | Regeneration shall replace stale generated content while preserving stable entity IDs. | P0 | Requirement and decision IDs remain stable after regeneration. |
-| FR-DOC-010 | The UI shall mark generated artifacts as views of the canonical graph. | P0 | User is informed that direct document edits are not authoritative in MVP. |
-| FR-DOC-011 | The system shall export artifacts as Markdown and JSON. | P0 | User can download or copy each artifact. |
-| FR-DOC-012 | The system shall support enterprise template customization. | P2 | Future requirement only. |
-
-## 6.8 Backlog and Plan Generation
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-PLAN-001 | The system shall create an epic for the selected sample capability. | P0 | Epic is linked to business goals and requirements. |
-| FR-PLAN-002 | The system shall create stories with acceptance criteria and dependencies. | P0 | At least three stories are generated for the sample. |
-| FR-PLAN-003 | The system shall identify a first vertical slice suitable for code generation. | P0 | One slice is marked `Selected for Build`. |
-| FR-PLAN-004 | The system shall create a Codex task packet containing scope, files, constitution, acceptance criteria, and definition of done. | P0 | Packet can be copied as Markdown. |
-| FR-PLAN-005 | The system shall show which requirements are deferred from the selected slice. | P0 | Deferred items are listed and remain traceable. |
-
-## 6.9 Controlled Code Generation
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-CODE-001 | The system shall generate code only inside an approved starter workspace. | P0 | Model cannot write outside allowlisted paths. |
-| FR-CODE-002 | The starter workspace shall use fixed dependencies and fixed execution commands. | P0 | No model-generated package installation is executed. |
-| FR-CODE-003 | Code generation shall use approved requirements, OpenAPI contract, ADR, and Engineering Constitution. | P0 | Prompt provenance is recorded. |
-| FR-CODE-004 | The system shall generate one vertical slice for `POST /notifications` and `GET /notifications/{id}` in the sample project. | P0 | Generated code compiles or returns a clearly reported failure. |
-| FR-CODE-005 | The system shall display generated files and a unified diff. | P0 | User can inspect changed files before verification. |
-| FR-CODE-006 | Generated code shall include unit and API tests derived from acceptance criteria. | P0 | Test files exist and reference requirement or test IDs. |
-| FR-CODE-007 | The user shall be able to approve generated code for verification. | P0 | Verification cannot start before approval. |
-| FR-CODE-008 | If code generation fails schema, path, or safety validation, the system shall reject the output. | P0 | Failure is shown without writing invalid files. |
-| FR-CODE-009 | The system shall support arbitrary customer repositories. | P2 | Future requirement only. |
-
-## 6.10 Verification and Evidence
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-VER-001 | The system shall run a TypeScript compile or build check against the generated workspace. | P0 | Exit code and output are captured. |
-| FR-VER-002 | The system shall run unit tests. | P0 | Actual pass/fail counts are displayed. |
-| FR-VER-003 | The system shall run API tests against the generated service using an in-process or local test harness. | P0 | At least one success and one validation/error scenario execute. |
-| FR-VER-004 | The system shall collect real code coverage. | P0 | Line, branch, function, and statement coverage are parsed from tool output. |
-| FR-VER-005 | The system shall compare coverage against constitution thresholds. | P0 | Threshold result is deterministic. |
-| FR-VER-006 | The system shall run a dependency or static security scan. | P1 | Findings and severity are parsed from a real scanner. |
-| FR-VER-007 | The system shall run a performance test against the generated endpoint. | P1 | Throughput, p50, p95, p99, and error rate are captured. |
-| FR-VER-008 | The system shall run an accessibility scan if a UI slice exists. | P1 | Automated findings are reported without claiming full compliance. |
-| FR-VER-009 | Each verification run shall record command, start time, duration, exit code, parsed metrics, and bounded raw output. | P0 | Evidence record is complete. |
-| FR-VER-010 | The model may summarize evidence but shall not change measured values. | P0 | Displayed metrics exactly match stored parsed metrics. |
-| FR-VER-011 | The system shall map each test to one or more requirements or NFRs. | P0 | Traceability view shows test-to-requirement links. |
-| FR-VER-012 | The system shall mark untested requirements as `UNKNOWN`, not passed. | P0 | Uncovered items are visible. |
-| FR-VER-013 | Failed commands shall produce `FAILED` evidence and actionable diagnostics. | P0 | Failure is not converted into a pass. |
-| FR-VER-014 | The user shall be able to rerun verification after a code regeneration. | P1 | A second run creates a new evidence version. |
-
-## 6.11 Traceability Graph
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-TRACE-001 | The system shall maintain typed links among source spans, requirements, NFRs, gaps, answers, decisions, artifacts, tasks, code files, tests, and evidence. | P0 | Links persist and can be queried. |
-| FR-TRACE-002 | The system shall provide a visual traceability view. | P0 | User can navigate from a requirement to decision, code, test, and evidence. |
-| FR-TRACE-003 | The system shall display orphaned requirements and unlinked tests. | P0 | Orphans are shown as gaps. |
-| FR-TRACE-004 | The system shall preserve stable IDs across document regeneration. | P0 | Existing trace links remain valid. |
-| FR-TRACE-005 | The system shall provide a list view fallback for accessibility and small screens. | P0 | Traceability remains usable without the graph. |
-| FR-TRACE-006 | The system shall export traceability as JSON. | P0 | Export contains nodes and typed edges. |
-
-## 6.12 Why / Why Not / Proof Explorer
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-WHY-001 | The system shall answer predefined and free-text questions about the current project. | P0 | Sample questions return grounded responses. |
-| FR-WHY-002 | Answers shall be generated from project graph entities and links, not from general model memory alone. | P0 | Each answer cites internal entity IDs. |
-| FR-WHY-003 | The system shall support `Why was X selected?` queries. | P0 | Answer includes decision rationale and supporting constraints. |
-| FR-WHY-004 | The system shall support `Why not Y?` queries. | P0 | Answer includes rejected alternative reasoning. |
-| FR-WHY-005 | The system shall support `What proves Z?` queries. | P0 | Answer includes executed evidence or explicitly states `UNKNOWN`. |
-| FR-WHY-006 | The system shall support `What would make us reconsider?` queries. | P0 | Answer lists decision triggers and linked assumptions. |
-| FR-WHY-007 | The system shall not claim proof when only AI suggestions exist. | P0 | Response distinguishes recommendation from evidence. |
-| FR-WHY-008 | The system shall show the traversal path used to construct the answer. | P1 | User can inspect linked nodes and edges. |
-
-## 6.13 History and Export
-
-| ID | Requirement | Priority | Acceptance Condition |
-|---|---|---:|---|
-| FR-EXP-001 | The system shall version major analysis, decision, artifact, code, and verification events. | P0 | Timeline displays at least one version per stage. |
-| FR-EXP-002 | The system shall export the artifact pack as individual Markdown and JSON files. | P0 | Files are downloadable. |
-| FR-EXP-003 | The system shall export the complete pack as a ZIP. | P1 | ZIP contains documents, constitution, OpenAPI, traceability, and evidence summary. |
-| FR-EXP-004 | The system shall include a machine-readable manifest. | P0 | Manifest lists artifact IDs, types, versions, and hashes. |
-| FR-EXP-005 | The system shall allow sample reset without affecting application code. | P0 | Reset works from the UI. |
-
----
-
-# 7. Primary User Journey
-
-## 7.1 End-to-End Flow
-
-1. User opens Axiom.
-2. User selects `Try NotifyFlow Sample` or creates a project.
-3. User reviews the product brief and starts analysis.
-4. System extracts goals, requirements, NFRs, constraints, risks, and gaps.
-5. System displays a deterministic readiness score and prioritized blockers.
-6. User answers three to five high-impact clarification questions.
-7. System updates the project graph and readiness score.
-8. System generates three architecture options.
-9. User compares why, why not, assumptions, risks, cost range, and triggers.
-10. User approves one option.
-11. System creates an ADR, Engineering Constitution, and enterprise artifacts.
-12. User selects the first vertical slice and generates the Codex task packet.
-13. System generates code in the controlled workspace.
-14. User inspects the diff and approves verification.
-15. System runs real build, unit, API, and coverage commands.
-16. System displays evidence and unverified items.
-17. User opens the traceability view.
-18. User asks why the architecture was chosen and what proves retry behavior.
-19. System answers with entity links and real evidence.
-20. User exports the artifact pack.
-
-## 7.2 Required Demo Outcome
-
-For the NotifyFlow sample, the demo shall end with:
-
-- one human-approved architecture decision;
-- one generated and valid OpenAPI contract;
-- generated code for create and get notification endpoints;
-- passing or honestly failing test results;
-- real coverage metrics;
-- a requirement-to-code-to-test-to-evidence path;
-- at least one intentionally unresolved item shown as `UNKNOWN`;
-- a clear why-not explanation for Kafka or an equivalent over-complex option.
-
----
-
-# 8. User Interface Requirements
-
-## 8.1 Navigation
-
-The MVP shall use a project workspace with these primary sections:
-
-1. **Intent**
-2. **Requirements**
-3. **Architecture**
-4. **Artifacts**
-5. **Build**
-6. **Verify**
-7. **Traceability**
-8. **Why**
-
-A horizontal lifecycle indicator may be used on desktop. A compact step list shall be available on smaller screens.
-
-## 8.2 Screen: Landing / Project Start
-
-Required elements:
-
-- Product title and one-sentence value proposition
-- `Try NotifyFlow Sample` primary action
-- `Create Project` secondary action
-- Brief privacy statement
-- No authentication wall
-
-## 8.3 Screen: Intent
-
-Required elements:
-
-- Project metadata
-- Source input editor or sample preview
-- Character count
-- Start-analysis action
-- Validation and error state
-- Immutable source identifier after submission
-
-## 8.4 Screen: Requirements
-
-Required elements:
-
-- Readiness score
-- Tabs or filters for FR, NFR, gaps, assumptions, risks, and dependencies
-- Requirement cards with source evidence
-- Gap severity and impact
-- Clarification question panel
-- Before-and-after score change
-
-## 8.5 Screen: Architecture
-
-Required elements:
-
-- Three-option comparison
-- Recommended option indicator
-- Why, Why Not, assumptions, failure modes, and triggers
-- Cost range marked as estimate
-- Approve decision action
-- ADR preview
-
-## 8.6 Screen: Artifacts
-
-Required elements:
-
-- Artifact list with type and version
-- SRS, NFR, HLD, ADR, OpenAPI, test strategy, backlog, constitution
-- Markdown preview
-- Copy and download actions
-- Regenerate action
-
-## 8.7 Screen: Build
-
-Required elements:
-
-- Selected vertical slice
-- Codex task packet
-- Generated file tree
-- Unified diff
-- Generation status and errors
-- Approve for verification action
-
-## 8.8 Screen: Verify
-
-Required elements:
-
-- Verification cards for build, unit, API, coverage, security, performance, and accessibility
-- Actual command status
-- Metrics and thresholds
-- Bounded raw output viewer
-- Truth status badge
-- Requirement coverage matrix
-- Rerun action if implemented
-
-## 8.9 Screen: Traceability
-
-Required elements:
-
-- Graph view for desktop
-- List/tree fallback
-- Node filters
-- Orphan and unknown indicators
-- Click-through detail drawer
-
-## 8.10 Screen: Why
-
-Required elements:
-
-- Suggested questions
-- Free-text input
-- Answer with entity citations
-- Distinct sections for `Why`, `Why Not`, `Proof`, and `Reconsider When`
-- Explicit unknown statement when proof is unavailable
-
-## 8.11 UI State Requirements
-
-Every asynchronous feature shall implement:
-
-- idle state;
-- loading state;
-- success state;
-- empty state;
-- validation error state;
-- tool/model failure state;
-- retry where safe.
-
-The application shall not display fake streaming progress. If progress is shown, it shall represent real completed stages.
-
----
-
-# 9. Domain Model
-
-## 9.1 Core Entities
-
-### Project
-
-| Field | Type | Notes |
-|---|---|---|
-| id | UUID/string | Stable project ID |
-| name | string | Required |
-| summary | string | Required |
-| domain | string | Example: SaaS, e-commerce, healthcare |
-| status | enum | Lifecycle status |
-| graphVersion | integer | Incremented after canonical changes |
-| createdAt | timestamp | Required |
-| updatedAt | timestamp | Required |
-
-### SourceArtifact
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| projectId | string | Foreign key |
-| type | enum | brief, transcript, document |
-| content | text | Immutable for MVP |
-| hash | string | Content hash |
-| createdAt | timestamp | Required |
-
-### SourceSpan
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| sourceArtifactId | string | Foreign key |
-| startOffset | integer | Inclusive |
-| endOffset | integer | Exclusive |
-| quote | string | Exact source text |
-
-### Requirement
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Example `FR-001` |
-| projectId | string | Foreign key |
-| type | enum | functional, non-functional, business-rule, constraint |
-| title | string | Short label |
-| statement | text | Testable requirement |
-| priority | enum | must, should, could |
-| readiness | enum | ready, needs-clarification, blocked |
-| truthStatus | enum | See Section 5 |
-| confidence | number | 0 to 1 for model extraction |
-| sourceSpanIds | string[] | Empty only for explicit assumptions |
-| acceptanceCriteria | string[] | Structured statements |
-| version | integer | Required |
-
-### NFRDetail
-
-| Field | Type | Notes |
-|---|---|---|
-| requirementId | string | Requirement foreign key |
-| category | enum | performance, availability, security, accessibility, privacy, cost, maintainability, scalability, observability |
-| metric | string | Example: p95 latency |
-| target | string/number | May be `UNKNOWN` |
-| unit | string | ms, percent, USD/month, etc. |
-| verificationMethod | string | Tool or review approach |
-
-### Gap
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| type | enum | missing, ambiguous, conflicting, untestable |
-| title | string | Required |
-| description | text | Required |
-| severity | enum | blocker, high, medium, low |
-| impactAreas | string[] | architecture, security, testing, etc. |
-| affectedEntityIds | string[] | Trace targets |
-| status | enum | open, answered, accepted-risk, deferred |
-
-### ClarificationQuestion
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| gapId | string | Foreign key |
-| question | string | Required |
-| whyItMatters | text | Required |
-| options | array | Label and value |
-| answer | string/null | User answer |
-| answeredAt | timestamp/null | Optional |
-
-### ArchitectureOption
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| name | string | Required |
-| summary | text | Required |
-| components | array | Structured components |
-| dataFlows | array | Structured flows |
-| technologies | string[] | Required |
-| why | string[] | Reasons to select |
-| whyNot | string[] | Reasons to reject |
-| assumptions | string[] | Required |
-| failureModes | array | Failure and mitigation |
-| reconsiderationTriggers | array | Metric and threshold |
-| scoreBreakdown | object | Deterministic or explained scoring |
-| estimatedCost | object | Marked estimate |
-| truthStatus | enum | Initially AI_SUGGESTED |
-
-### ArchitectureDecision
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Example `ADR-001` |
-| question | string | Decision being made |
-| selectedOptionId | string | Approved option |
-| rejectedOptionIds | string[] | Alternatives |
-| rationale | string[] | Why selected |
-| rejectedRationale | object | Why not per alternative |
-| assumptions | string[] | Approved assumptions |
-| risks | string[] | Known risks |
-| reconsiderationTriggers | array | Required |
-| status | enum | proposed, approved, superseded |
-| truthStatus | enum | HUMAN_APPROVED after approval |
-| approvedAt | timestamp | Required after approval |
-
-### ConstitutionRule
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Example `SEC-001` |
-| category | enum | architecture, quality, security, accessibility, performance, cloud, delivery |
-| statement | string | Machine-readable intent |
-| severity | enum | blocker, high, medium, low |
-| rationale | text | Required |
-| verificationMethod | string | Command/tool/manual |
-| threshold | object/null | Optional |
-| status | enum | proposed, approved, disabled |
-
-### Artifact
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| type | enum | srs, nfr, hld, adr, openapi, test-strategy, backlog, constitution, codex-task |
-| version | integer | Required |
-| content | text/json | Generated view |
-| sourceGraphVersion | integer | Required |
-| hash | string | Required |
-| truthStatus | enum | AI_SUGGESTED or HUMAN_APPROVED |
-| generatedAt | timestamp | Required |
-
-### WorkItem
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Epic/story/task ID |
-| type | enum | epic, story, task |
-| title | string | Required |
-| description | text | Required |
-| acceptanceCriteria | string[] | Required |
-| priority | enum | Required |
-| dependencyIds | string[] | Optional |
-| linkedRequirementIds | string[] | Required |
-| selectedForBuild | boolean | Required |
-
-### CodeFile
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| path | string | Allowlisted path |
-| content | text | Current generated content |
-| hash | string | Required |
-| linkedEntityIds | string[] | Requirements, rules, tasks |
-| generationId | string | Provenance |
-
-### VerificationRun
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| type | enum | build, unit, api, coverage, security, performance, accessibility |
-| command | string | Fixed allowlisted command |
-| startedAt | timestamp | Required |
-| durationMs | integer | Required |
-| exitCode | integer/null | Required when process starts |
-| status | enum | queued, running, passed, failed, error |
-| rawOutputExcerpt | text | Bounded length |
-| metrics | object | Parsed values |
-
-### Evidence
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| verificationRunId | string/null | Optional |
-| type | string | coverage, test-result, scan-finding, approval, etc. |
-| truthStatus | enum | Required |
-| claim | text | What the evidence supports |
-| measurements | object | Immutable parsed values |
-| linkedEntityIds | string[] | Required |
-| createdAt | timestamp | Required |
-
-### TraceLink
-
-| Field | Type | Notes |
-|---|---|---|
-| id | string | Stable ID |
-| fromType | string | Entity type |
-| fromId | string | Source entity |
-| relation | enum | derives, clarifies, constrains, selects, rejects, implements, tests, verifies, contradicts, supersedes |
-| toType | string | Entity type |
-| toId | string | Target entity |
-| metadata | object | Optional |
-
-## 9.2 Relationship Model
-
-```mermaid
-graph LR
-  S[Source Span] -->|derives| R[Requirement]
-  R -->|has gap| G[Gap]
-  G -->|clarified by| Q[Clarification Answer]
-  Q -->|updates| R
-  R -->|constrains| O[Architecture Option]
-  O -->|selected as| D[Architecture Decision]
-  D -->|defines| C[Engineering Constitution]
-  R -->|compiled into| A[Enterprise Artifact]
-  D -->|compiled into| A
-  C -->|governs| W[Work Item]
-  W -->|implemented by| F[Code File]
-  F -->|tested by| T[Test]
-  T -->|produces| E[Evidence]
-  E -->|verifies| R
-  E -->|verifies| C
-```
-
-## 9.3 Readiness Score Rubric
-
-The readiness score shall be deterministic. Suggested MVP rubric:
-
-| Category | Weight | Full-credit condition |
-|---|---:|---|
-| Functional scope | 20 | Actors, major flows, and acceptance criteria defined |
-| NFRs | 20 | Performance, security, reliability, observability, and cost targets defined or accepted as deferred |
-| Data and integrations | 15 | Entities, external providers, contracts, and ownership defined |
-| Error and edge cases | 15 | Failure handling and retries defined |
-| Security and privacy | 10 | Authentication, authorization, secrets, and sensitive data defined |
-| Testability | 10 | Each P0 requirement has a verification method |
-| Delivery constraints | 10 | budget, cloud, timeline, and deployment constraints defined |
-
-Rules:
-
-- A blocker caps overall readiness at 69.
-- Any `UNKNOWN` P0 security decision caps readiness at 79.
-- A category receives partial credit based on completed checklist items.
-- The UI shall expose the category calculation.
-
----
-
-# 10. AI System Requirements
-
-## 10.1 AI Responsibilities
-
-The MVP may use one model through role-specific prompts. Logical roles are:
-
-1. Requirement Analyst
-2. Gap and Clarification Analyst
-3. Architecture Analyst
-4. Artifact Compiler
-5. Planning and Code Context Builder
-6. Code Generator
-7. Evidence Explainer
-8. Why Query Resolver
-
-These roles are logical boundaries, not a requirement to deploy separate autonomous agents.
-
-## 10.2 Deterministic Responsibilities
-
-The model shall not own:
-
-- readiness score calculation;
-- stable ID generation;
-- truth status transitions;
-- architecture approval;
-- allowed file paths;
-- shell command selection;
-- test pass/fail determination;
-- coverage threshold evaluation;
-- security severity thresholds;
-- evidence metric values;
-- artifact hashes;
-- trace-link integrity.
-
-## 10.3 Structured Output
-
-Every model call shall return a predefined schema. The application shall validate the response before persistence.
-
-Minimum schema behaviors:
-
-- reject additional unknown top-level fields where practical;
-- require stable references to existing entity IDs when updating data;
-- constrain enums;
-- limit array sizes;
-- require source span references for grounded claims;
-- require `assumption: true` when no source span exists;
-- validate identifiers and prohibited paths for generated code.
-
-## 10.4 Source Grounding
-
-For extraction tasks:
-
-- A requirement with a source basis shall include one or more source span IDs.
-- The exact quote shall be read from stored source data, not returned as trusted free text by the model.
-- If the model references an invalid span, the item shall be rejected or labeled `UNKNOWN`.
-
-## 10.5 Prompt Injection Handling
-
-The submitted product brief is untrusted data.
-
-The system prompt shall state that instructions inside the product brief are content to analyze, not commands to follow. The application shall:
-
-- keep system and user instructions separate;
-- avoid giving the model secrets or shell access;
-- validate generated paths and code payloads;
-- prevent source content from changing tool allowlists;
-- log rejected unsafe output.
-
-## 10.6 Model Failure Handling
-
-The system shall handle:
-
-- timeout;
-- rate limit;
-- malformed structured output;
-- incomplete response;
-- invalid entity references;
-- unsupported code paths;
-- provider error.
-
-A failed model call shall not corrupt the existing project graph. Retry shall be explicit.
-
-## 10.7 Confidence
-
-Confidence may be displayed for extraction and classification, but it shall not substitute for truth status. Confidence values shall be treated as model metadata, not factual probability.
-
-## 10.8 Model Adapter
-
-Model access shall be behind an interface such as:
-
-```ts
-interface ModelProvider {
-  analyzeRequirements(input: RequirementAnalysisInput): Promise<RequirementAnalysisOutput>;
-  generateClarifications(input: ClarificationInput): Promise<ClarificationOutput>;
-  compareArchitectures(input: ArchitectureInput): Promise<ArchitectureOutput>;
-  compileArtifact(input: ArtifactInput): Promise<ArtifactOutput>;
-  generateCode(input: CodeGenerationInput): Promise<CodeGenerationOutput>;
-  explainEvidence(input: EvidenceExplanationInput): Promise<EvidenceExplanationOutput>;
-  answerWhy(input: WhyQueryInput): Promise<WhyQueryOutput>;
-}
-```
-
-The MVP shall implement one provider. Multi-model routing is P2.
-
-## 10.9 AI Evaluation Fixtures
-
-The repository shall include fixed fixtures for:
-
-- complete requirement brief;
-- ambiguous brief;
-- contradictory brief;
-- prompt-injection text embedded in a brief;
-- malformed model response;
-- architecture output missing why-not reasons;
-- code output attempting an invalid path.
-
-At least one automated test shall cover each validation path.
-
----
-
-# 11. Enterprise Artifact Specifications
-
-## 11.1 SRS Template
-
-Required sections:
-
-1. Document control
-2. Purpose and scope
-3. Product overview
-4. Actors and assumptions
-5. Functional requirements
-6. Non-functional requirements
-7. External interfaces
-8. Business rules and constraints
-9. Risks and dependencies
-10. Acceptance criteria
-11. Traceability references
-12. Open items
-
-## 11.2 NFR Specification
-
-Each NFR shall include:
-
-- ID;
-- category;
-- statement;
-- metric;
-- target;
-- unit;
-- rationale;
-- source or clarification answer;
-- verification method;
-- current truth status;
-- evidence link when available.
-
-## 11.3 HLD Template
-
-Required sections:
-
-- system context;
-- selected architecture;
-- component responsibilities;
-- data flow;
-- external integrations;
-- data stores;
-- tenant isolation;
-- security boundaries;
-- failure handling;
-- scalability;
-- observability;
-- deployment view;
-- assumptions;
-- risks;
-- rejected alternatives;
-- reconsideration triggers.
-
-## 11.4 ADR Template
-
-Required sections:
-
-- title and ID;
-- status;
-- date;
-- context;
-- decision question;
-- selected option;
-- rationale;
-- alternatives considered;
-- why not per alternative;
-- consequences;
-- risks;
-- assumptions;
-- verification expectations;
-- reconsideration triggers;
-- approval.
-
-## 11.5 OpenAPI Contract
-
-The sample contract shall include:
-
-- `POST /notifications`;
-- `GET /notifications/{id}`;
-- request and response schemas;
-- validation errors;
-- tenant identifier behavior;
-- idempotency behavior if approved;
-- status enumeration;
-- correlation ID;
-- examples.
-
-## 11.6 Test Strategy
-
-Required sections:
-
-- scope;
-- risk-based priorities;
-- unit tests;
-- API tests;
-- contract tests;
-- performance tests;
-- security checks;
-- accessibility checks if UI exists;
-- test data;
-- environment;
-- entry and exit criteria;
-- requirement-to-test mapping;
-- known manual checks.
-
-## 11.7 Engineering Constitution Example
-
-```yaml
-version: 1
-project: NotifyFlow
-architecture:
-  style: serverless-event-driven
-  rules:
-    - id: ARCH-001
-      severity: blocker
-      statement: domain logic must not depend directly on provider SDKs
-      verification: static-review
-quality:
-  rules:
-    - id: QUAL-001
-      severity: high
-      statement: line coverage must be at least 80 percent
-      threshold:
-        metric: lineCoverage
-        operator: gte
-        value: 80
-      verification: vitest-coverage
-security:
-  rules:
-    - id: SEC-001
-      severity: blocker
-      statement: secrets must not be committed to the repository
-      verification: secret-scan
-performance:
-  rules:
-    - id: PERF-001
-      severity: high
-      statement: POST /notifications p95 latency must be below 250 ms in the local benchmark
-      threshold:
-        metric: p95Ms
-        operator: lt
-        value: 250
-      verification: autocannon
-accessibility:
-  rules:
-    - id: A11Y-001
-      severity: medium
-      statement: generated admin UI must have no serious automated axe findings
-      verification: axe-playwright
-cloud:
-  rules:
-    - id: COST-001
-      severity: high
-      statement: estimated steady-state monthly cost must remain below 1000 USD for the approved load assumption
-      verification: estimate-review
-```
-
----
-
-# 12. Technical Architecture
-
-## 12.1 Approved MVP Stack
-
-| Layer | Technology |
-|---|---|
-| Monorepo | pnpm workspaces |
-| Web application | Next.js with App Router and TypeScript |
-| UI | Tailwind CSS and shadcn-style components |
-| Validation | Zod |
-| Persistence | SQLite through Prisma or a comparably simple typed ORM |
-| AI access | Provider adapter using the configured OpenAI-compatible API |
-| Diagram rendering | Mermaid |
-| Unit and integration tests | Vitest |
-| Browser E2E | Playwright |
-| API testing | Fastify injection or Supertest-style harness inside the generated workspace |
-| Coverage | Vitest V8 coverage |
-| Performance | Autocannon for P1 |
-| Accessibility | axe-core with Playwright for P1 |
-| Security | npm audit plus an allowlisted static scan for P1 |
-| Deployment | One Node-compatible container or host that permits controlled child processes |
-
-## 12.2 Repository Structure
+| `FAILED` | The operation failed; no success claim is allowed |
+
+Truth transitions shall be centralized domain logic and shall record actor, time, reason, and previous state.
+
+### 4.3 Non-fabrication rules
+
+The system shall never fabricate source quotations, test results, coverage, scan findings, cost measurements, performance metrics, external ticket IDs, or coding-agent outcomes. A model may summarize immutable measurements but may not alter them.
+
+## 5. Primary commercial journeys
+
+### 5.1 Source to approved backlog
+
+1. User creates or opens an organization project.
+2. User uploads supported sources or pastes business intent.
+3. Axiom stores immutable source versions and extracts addressable spans.
+4. The agent workflow extracts requirements, NFRs, risks, constraints, and gaps.
+5. Deterministic validation rejects invalid references and incomplete output.
+6. Axiom asks prioritized clarification questions instead of inventing critical facts.
+7. Authorized users confirm answers and approve the requirement baseline.
+8. Axiom generates architecture options where architecture decisions are required.
+9. An authorized user approves the relevant decision.
+10. Axiom generates implementation-ready work items.
+11. Quality gates score coverage, grounding, testability, duplication, and completeness.
+12. A human reviews the exact publication preview.
+13. Axiom publishes the approved version to Jira or Trello.
+
+### 5.2 Approved work to implementation evidence
+
+1. User selects an approved work item.
+2. Axiom compiles a versioned task packet from approved graph entities.
+3. User chooses Axiom Native, Codex, GitHub Copilot, Devin, or export-only when that adapter is enabled.
+4. External execution requires explicit authorization and uses the customer’s account where applicable.
+5. Returned patches, pull requests, logs, and claims remain unverified.
+6. Axiom runs only repository-approved, allowlisted verification commands.
+7. Real results become evidence linked to the original requirements.
+
+## 6. Functional requirements
+
+### 6.1 Projects and source ingestion
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-PROJ-001 | Users shall create, archive, restore, and explicitly delete organization-scoped projects. | Launch |
+| FR-PROJ-002 | A project shall expose lifecycle status, current graph version, approvals, connector state, and budget usage. | Launch |
+| FR-SRC-001 | The system shall accept bounded text, Markdown, PDF, DOCX, CSV, JSON, YAML, and pasted notes. | Launch |
+| FR-SRC-002 | Each source version shall store type, hash, size, uploader, extraction status, and immutable content reference. | Launch |
+| FR-SRC-003 | Grounded claims shall reference valid stored source spans. | Launch |
+| FR-SRC-004 | Failed extraction shall remain visible and shall not be analyzed as successful content. | Launch |
+| FR-SRC-005 | Uploaded content shall be scanned and validated before downstream processing. | Launch |
+| FR-SRC-006 | Source deletion shall respect retention, legal-hold, traceability, and audit policies. | Next |
+
+### 6.2 Requirement intelligence
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-REQ-001 | Axiom shall extract goals, actors, functional requirements, NFRs, rules, constraints, dependencies, assumptions, and risks. | Launch |
+| FR-REQ-002 | Each grounded requirement shall cite one or more exact source spans. | Launch |
+| FR-REQ-003 | Unsupported inference shall be represented as `AI_SUGGESTED` or `UNKNOWN`, never as source-grounded. | Launch |
+| FR-REQ-004 | Axiom shall detect missing, ambiguous, conflicting, duplicate, and untestable statements. | Launch |
+| FR-REQ-005 | Clarification questions shall state why they matter and which entities they affect. | Launch |
+| FR-REQ-006 | Human answers shall create versioned graph mutations and provenance links. | Launch |
+| FR-REQ-007 | Readiness shall be deterministic and shall expose its calculation. | Launch |
+| FR-REQ-008 | Material source or clarification changes shall invalidate stale downstream approvals. | Launch |
+
+### 6.3 Work-item and ticket generation
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-WORK-001 | Axiom shall generate a normalized hierarchy of initiative/epic, story, task, and defect work items as applicable. | Launch |
+| FR-WORK-002 | Every implementable work item shall contain outcome, context, scope, out-of-scope, testable acceptance criteria, dependencies, risks, open questions, evidence expectations, and source links. | Launch |
+| FR-WORK-003 | Work items shall use stable IDs independent of Jira keys or Trello card IDs. | Launch |
+| FR-WORK-004 | Axiom shall reject publication when required fields, grounding, or testability gates fail. | Launch |
+| FR-WORK-005 | Axiom shall detect duplicate or materially overlapping work items before publication. | Launch |
+| FR-WORK-006 | Axiom shall identify uncovered approved requirements and unjustified work items. | Launch |
+| FR-WORK-007 | Ticket generation shall ask for clarification when a critical implementation decision is unknown. | Launch |
+| FR-WORK-008 | Users shall review an exact, immutable publication preview and explicitly approve it. | Launch |
+| FR-WORK-009 | Regeneration shall create a new version and preserve the previously approved version and publication history. | Launch |
+| FR-WORK-010 | Organization templates may add validated fields and policies without bypassing core quality gates. | Next |
+
+### 6.4 Ticket quality verification
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-QUAL-001 | Deterministic validation shall check schema, required fields, valid entity IDs, grounding, length bounds, and prohibited claims. | Launch |
+| FR-QUAL-002 | Coverage validation shall compare approved requirements against generated work items. | Launch |
+| FR-QUAL-003 | Acceptance-criteria validation shall flag subjective or non-verifiable outcomes. | Launch |
+| FR-QUAL-004 | A separate review stage may use a different approved model but shall not override deterministic failures. | Launch |
+| FR-QUAL-005 | Human reviewers shall record accept, accept-with-edits, reject, and categorized reasons. | Launch |
+| FR-QUAL-006 | Every prompt, schema, model, policy, and evaluator version shall be stored with the generation. | Launch |
+| FR-QUAL-007 | Axiom shall maintain a versioned evaluation dataset containing representative good, bad, contradictory, incomplete, and adversarial examples. | Launch |
+| FR-QUAL-008 | Model promotion shall require evaluation evidence against the current dataset. | Launch |
+
+### 6.5 Architecture and artifacts
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-ARC-001 | When architecture decisions are required, Axiom shall compare credible options with why, why-not, assumptions, risks, failure modes, cost range, and reconsideration triggers. | Launch |
+| FR-ARC-002 | Architecture recommendations shall remain `AI_SUGGESTED` until an authorized user approves one. | Launch |
+| FR-ARC-003 | Approval shall create a versioned ADR and invalidate incompatible downstream outputs. | Launch |
+| FR-DOC-001 | Axiom shall compile SRS, NFR, HLD, ADR, test strategy, API contract, backlog, and task-packet views from the graph. | Launch |
+| FR-DOC-002 | Generated artifacts shall include graph version, content hash, generation provenance, and truth status. | Launch |
+| FR-DOC-003 | Axiom may publish documents to Notion or Confluence through optional connectors; those copies are not authoritative. | Next |
+
+### 6.6 Jira and Trello connectors
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-CONN-001 | An organization shall choose Jira, Trello, both, or neither per project. | Launch |
+| FR-CONN-002 | Connectors shall use OAuth or an approved enterprise authorization mechanism; personal static credentials are not a commercial default. | Launch |
+| FR-CONN-003 | Axiom shall map normalized work items into provider-specific fields through a versioned mapping. | Launch |
+| FR-CONN-004 | Jira publication shall support configured issue types, hierarchy, project, labels, and custom-field mappings. | Launch |
+| FR-CONN-005 | Trello publication shall support board, list, labels, checklists, members, and approved custom-field mappings. | Launch |
+| FR-CONN-006 | Publication shall be idempotent and retry-safe and shall store external ID, URL, version, request ID, and response status. | Launch |
+| FR-CONN-007 | Partial failure shall identify exactly which items succeeded, failed, or require reconciliation. | Launch |
+| FR-CONN-008 | Axiom shall never claim publication success without a confirmed provider response. | Launch |
+| FR-CONN-009 | Launch synchronization shall be controlled publish plus read-only status refresh; unrestricted two-way field synchronization is deferred. | Launch |
+| FR-CONN-010 | Webhook updates shall be authenticated, deduplicated, replay-safe, and audited. | Next |
+| FR-CONN-011 | Axiom shall not implement a general-purpose board or sprint-management interface. | Launch |
+
+### 6.7 Axiom Agent Kernel and model catalog
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-AI-001 | Logical agents shall be versioned workflows sharing one Agent Kernel, not separate autonomous services by default. | Launch |
+| FR-AI-002 | The kernel shall provide context assembly, policy enforcement, model routing, tool permissions, structured validation, budget checks, tracing, and evidence writing. | Launch |
+| FR-AI-003 | Model-provider SDKs shall remain behind provider-neutral interfaces. | Launch |
+| FR-AI-004 | Launch providers shall include Groq and OpenAI after each configured model passes the current evaluation suite. | Launch |
+| FR-AI-005 | The catalog shall record provider, immutable model ID, lifecycle status, capabilities, price metadata, context limits, data policy, allowed regions, and evaluation scores. | Launch |
+| FR-AI-006 | End users shall choose Economy, Balanced, or Best; raw model selection shall be an administrator capability. | Launch |
+| FR-AI-007 | Routing shall consider task type, evaluation score, sensitivity, tenant policy, latency, and remaining budget. | Launch |
+| FR-AI-008 | Low-cost models shall be tried first only where evaluations show they meet the task threshold. | Launch |
+| FR-AI-009 | Expensive fallback shall be bounded, auditable, and disabled when a budget cap is reached. | Launch |
+| FR-AI-010 | Preview or deprecated models shall not be enabled for production tenants without an explicit policy and replacement plan. | Launch |
+| FR-AI-011 | Customer-provided model keys shall be supported for eligible plans through encrypted secret storage. | Next |
+| FR-AI-012 | Additional providers such as AWS Bedrock, Google, Anthropic, Azure OpenAI, or compatible private endpoints shall use the same qualification process. | Next |
+| FR-AI-013 | Axiom shall not require owned GPUs or a self-hosted foundation model for launch. | Launch |
+
+### 6.8 Coding-agent adapters and controlled execution
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-AGENT-001 | Axiom shall define an adapter contract for native execution, Codex, GitHub Copilot, Devin, and export-only handoff. | Next |
+| FR-AGENT-002 | External agents shall use customer-owned accounts or separately priced entitlements by default. | Next |
+| FR-AGENT-003 | Task packets shall contain only approved scope, constraints, acceptance criteria, trace links, and verification expectations. | Launch |
+| FR-AGENT-004 | Repository writes shall require explicit repository authorization and path boundaries. | Next |
+| FR-AGENT-005 | External-agent output shall remain unverified until approved commands produce evidence. | Launch |
+| FR-AGENT-006 | Axiom shall not expose provider secrets or unrelated organization context to an agent. | Launch |
+
+### 6.9 Verification, traceability, and explanation
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-VER-001 | Verification commands shall be repository-defined and allowlisted; the model shall not choose arbitrary commands. | Launch |
+| FR-VER-002 | Runs shall enforce workspace boundaries, timeouts, concurrency limits, secret stripping, and bounded output. | Launch |
+| FR-VER-003 | Evidence shall record command/tool, start time, duration, exit status, parsed metrics, immutable raw-output reference, and linked entities. | Launch |
+| FR-VER-004 | Failed and unexecuted checks shall remain `FAILED` or `UNKNOWN`. | Launch |
+| FR-TRACE-001 | Typed trace links shall connect sources, requirements, gaps, answers, decisions, work items, external publications, code, tests, and evidence. | Launch |
+| FR-TRACE-002 | Why, Why Not, Proof, and Reconsider answers shall cite graph entities and shall distinguish suggestion from evidence. | Launch |
+| FR-TRACE-003 | Traceability shall have accessible non-graph presentation. | Launch |
+
+### 6.10 Subscriptions, quotas, and cost governance
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-BILL-001 | Axiom shall support plan, subscription, entitlement, credit balance, and billing-period records. | Launch |
+| FR-BILL-002 | Commercial billing shall use product credits while internally retaining raw provider tokens, tool charges, currency, and effective cost. | Launch |
+| FR-BILL-003 | Usage shall be attributed to organization, project, user, workflow, provider, model, and generation ID. | Launch |
+| FR-BILL-004 | Axiom shall enforce request, daily, monthly, and organization hard limits before starting work. | Launch |
+| FR-BILL-005 | Long-running workflows shall reserve an estimated budget and reconcile actual cost after completion or failure. | Launch |
+| FR-BILL-006 | Retry, fallback, cached, failed, and cancelled usage shall remain visible in the ledger. | Launch |
+| FR-BILL-007 | Approaching and exhausted limits shall produce alerts and actionable UI states. | Launch |
+| FR-BILL-008 | No background agent loop may spend beyond its approved reservation. | Launch |
+| FR-BILL-009 | Subscription webhooks shall be authenticated, idempotent, replay-safe, and auditable. | Launch |
+
+### 6.11 Audit, export, and deletion
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-AUD-001 | Security-sensitive, approval, billing, model-policy, connector, and deletion events shall create immutable audit records. | Launch |
+| FR-AUD-002 | Administrators shall search and export audit history subject to retention policy. | Launch |
+| FR-EXP-001 | Projects shall export structured graph data, artifacts, work items, publications, and evidence with a manifest and hashes. | Launch |
+| FR-DEL-001 | Destructive deletion shall require confirmation, authorization, dependency checks, and an auditable retention workflow. | Launch |
+
+## 7. AI quality and evaluation contract
+
+### 7.1 Workflow design
+
+Ticket generation shall use bounded stages rather than an unconstrained agent conversation:
 
 ```text
-axiom/
-├── AGENTS.md
-├── README.md
-├── package.json
-├── pnpm-workspace.yaml
-├── apps/
-│   └── web/
-│       ├── app/
-│       ├── components/
-│       ├── lib/
-│       └── tests/
-├── packages/
-│   ├── domain/
-│   │   ├── entities/
-│   │   ├── schemas/
-│   │   ├── scoring/
-│   │   └── traceability/
-│   ├── ai/
-│   │   ├── provider.ts
-│   │   ├── prompts/
-│   │   └── validators/
-│   ├── artifacts/
-│   │   ├── compilers/
-│   │   └── templates/
-│   ├── runner/
-│   │   ├── commands/
-│   │   ├── parsers/
-│   │   └── safety/
-│   └── ui/
-├── sandbox/
-│   └── notification-service/
-│       ├── template/
-│       ├── workspace/
-│       ├── src/
-│       └── tests/
-├── prisma/
-│   └── schema.prisma
-├── fixtures/
-│   ├── notifyflow-brief.md
-│   ├── ambiguous-brief.md
-│   └── model-responses/
-└── scripts/
-    ├── reset-demo.ts
-    └── verify-workspace.ts
+Context selection
+  -> requirement/gap analysis
+  -> clarification gate
+  -> normalized work-item generation
+  -> deterministic validation
+  -> semantic review when required
+  -> human approval
+  -> connector publication
 ```
 
-## 12.3 Component Responsibilities
+The application, not the model, owns IDs, truth transitions, authorization, budgets, approval state, connector side effects, evidence metrics, and retry limits.
 
-### Web Application
+### 7.2 Launch evaluation set
 
-- user experience;
-- project lifecycle;
-- artifact preview;
-- traceability navigation;
-- Why explorer;
-- server routes for orchestration.
+The evaluation set shall include:
 
-### Domain Package
+- representative SME and enterprise briefs;
+- short and long source collections;
+- missing critical decisions;
+- contradictions and duplicate statements;
+- prompt injection inside source documents;
+- vague acceptance criteria;
+- cross-ticket dependencies;
+- Jira and Trello field-mapping cases;
+- malformed and incomplete model responses;
+- known good and known bad tickets reviewed by humans.
 
-- entity schemas;
-- stable ID generation;
-- readiness scoring;
-- truth status transitions;
-- trace-link validation;
-- thresholds.
+Production customer content shall not enter a shared evaluation set without a lawful basis, explicit policy, de-identification, and access controls.
 
-### AI Package
+### 7.3 Launch quality gates
 
-- provider adapter;
-- prompts;
-- structured output schemas;
-- source grounding validation;
-- response normalization.
+These are release targets, not claims about the current prototype:
 
-### Artifact Package
+| Metric | Launch target |
+|---|---:|
+| Schema-valid persisted AI output | 100% |
+| Valid source references for grounded claims | 100% |
+| Fabricated source quotations in evaluation set | 0 |
+| Required work-item field completeness | at least 98% |
+| Duplicate external creation under retry tests | 0 |
+| Critical deterministic validation bypasses | 0 |
+| Human acceptance without material rewrite | at least 90% on the approved launch dataset |
+| Approved-requirement coverage by backlog | at least 95%, with every omission explicitly identified |
 
-- deterministic compilation from canonical graph;
-- Markdown rendering;
-- OpenAPI generation and validation;
-- manifest creation.
+No model is promoted solely because it is cheaper, faster, or scores well on public benchmarks. It must satisfy Axiom’s task-specific evaluation thresholds.
 
-### Runner Package
+## 8. Data requirements
 
-- fixed command registry;
-- child-process timeouts;
-- output capture;
-- metric parsing;
-- evidence creation;
-- path and workspace safety.
+### 8.1 Database decision
 
-### Sandbox Workspace
+- Local development and tests shall use PostgreSQL in Docker.
+- AWS production shall use Amazon RDS for PostgreSQL.
+- Neon or another standards-compatible managed PostgreSQL service may be used for isolated development or a future deployment profile, but application semantics shall not depend on proprietary database behavior without an ADR.
+- SQLite and filesystem JSON stores are migration sources only and shall not remain the commercial source of truth.
 
-- fixed project template;
-- fixed dependencies;
-- generated files in allowlisted paths;
-- executable tests;
-- no production credentials.
+### 8.2 Core entities
 
-## 12.4 Data Flow
+The schema shall include at least:
+
+- User, Organization, Membership, Role, Session
+- Plan, Subscription, Entitlement, UsageReservation, UsageLedgerEntry
+- Project, SourceArtifact, SourceVersion, SourceSpan
+- Requirement, NFRDetail, Gap, ClarificationQuestion, ClarificationAnswer
+- ArchitectureOption, ArchitectureDecision, ConstitutionRule
+- Artifact, WorkItem, WorkItemVersion, Approval
+- ConnectorInstallation, FieldMapping, Publication, PublicationItem, WebhookEvent
+- ModelProvider, ModelDefinition, ModelPolicy, PromptVersion, AgentWorkflowVersion
+- AgentRun, ModelCall, ToolCall, EvaluationDataset, EvaluationCase, EvaluationRun
+- RepositoryAuthorization, ExternalAgentRun, VerificationRun, Evidence
+- TraceLink and AuditEvent
+
+### 8.3 Data integrity
+
+- Customer-scoped tables shall include organization ownership.
+- Referential integrity shall be enforced in PostgreSQL where practical.
+- External side effects shall use idempotency keys and transactional outbox records.
+- Optimistic concurrency or row locking shall protect approvals and graph mutations.
+- Schema migrations shall be versioned, reviewed, reversible where practical, and tested against production-like data volume.
+- Sensitive secrets shall never be stored in ordinary application columns or logs.
+
+## 9. Technical architecture
+
+### 9.1 Launch topology
 
 ```text
 Browser
-  -> Next.js route handler
-  -> Domain validation
-  -> Model provider
-  -> Structured response validation
-  -> Project graph persistence
-  -> Artifact compiler
-  -> Controlled workspace writer
-  -> Fixed verification commands
-  -> Evidence parser
-  -> Trace graph
-  -> UI and export
+  -> AWS edge/load balancer
+  -> Next.js TypeScript application on ECS Fargate
+       -> PostgreSQL repositories -> RDS PostgreSQL
+       -> object storage adapter -> S3
+       -> durable job adapter -> SQS
+       -> Agent Kernel -> Groq / OpenAI
+       -> Connector adapters -> Jira / Trello
+       -> verification worker -> approved workspace
+  -> CloudWatch / OpenTelemetry-compatible telemetry
 ```
 
-## 12.5 Controlled Runner Security
+### 9.2 Application structure
 
-The MVP runner shall:
+The first commercial release shall remain one modular monolith with independently testable modules:
 
-- run only fixed commands defined in code;
-- use a dedicated workspace root;
-- reject path traversal;
-- reject symlinks leaving the workspace;
-- enforce file-size limits;
-- enforce process timeouts;
-- truncate stored raw output;
-- strip environment secrets from child processes;
-- prevent arbitrary package installation;
-- prevent arbitrary user-submitted code execution;
-- kill child processes on timeout;
-- serialize or limit concurrent runs.
+- identity and organizations;
+- projects and canonical graph;
+- requirements and clarification;
+- architecture and artifacts;
+- work-item quality;
+- agent kernel and model providers;
+- connectors;
+- billing and usage;
+- execution and verification;
+- traceability and audit.
 
-The MVP is not a general-purpose secure code sandbox. This limitation shall be documented.
+Domain modules shall not depend on React components, Next.js route handlers, provider SDKs, or infrastructure implementations. Cross-module access shall use explicit application services and contracts, not direct table access from arbitrary routes.
 
-## 12.6 Persistence Strategy
+### 9.3 API
 
-For the MVP:
+- The commercial API shall be versioned under `/api/v1` and documented with OpenAPI 3.1.
+- Request and response boundaries shall be validated with Zod.
+- Errors shall expose stable machine codes, safe messages, request IDs, and retryability.
+- Mutating APIs shall support idempotency where retries can duplicate side effects.
+- Pagination shall be cursor-based for unbounded collections.
+- Long operations shall return a durable job/run ID and shall not depend on one browser request remaining open.
+- Webhooks shall be signed or authenticated, deduplicated, and safely replayable.
 
-- SQLite may store projects, graph entities, artifacts, versions, and evidence.
-- Generated workspace files may live on local persistent disk.
-- The sample project may be reset through a script and UI action.
-- If deployment storage is ephemeral, the demo shall provide an automatic re-seed action.
+### 9.4 Containers and orchestration
 
-Future enterprise deployments shall separate hosted control-plane metadata from customer-side code and execution.
+- Docker images shall be reproducible, minimally privileged, scanned, and immutable per release.
+- Docker Compose shall run the local app, PostgreSQL, and required local dependencies.
+- AWS ECS Fargate is the launch orchestrator.
+- Kubernetes manifests and EKS are Later scope, triggered by measured needs such as independent service scaling, advanced scheduling, isolation, or platform-team readiness.
+- No local or production workflow shall deploy to Vercel.
 
-## 12.7 Deployment Model
+### 9.5 Microservice extraction triggers
 
-The MVP should run on a Node-compatible host that allows child processes. A single container is preferred.
+A module may become a service only when measured evidence demonstrates at least one of:
 
-Required environment variables:
+- materially different scaling or availability requirements;
+- a stronger security or customer-network isolation boundary;
+- independent deployment cadence with clear ownership;
+- unacceptable queueing or latency inside the monolith;
+- a distinct data-consistency model that cannot be safely contained.
 
-```text
-DATABASE_URL
-AI_API_KEY
-AI_MODEL
-APP_BASE_URL
-RUNNER_WORKSPACE_ROOT
-RUNNER_TIMEOUT_MS
-DEMO_MODE=true
-```
+Extraction requires an ADR, an owned API/event contract, timeouts, retries, idempotency, observability, and failure-mode tests.
 
-No secrets shall be exposed to the browser.
+## 10. Non-functional requirements
 
----
-
-# 13. API Requirements
-
-The internal API may use route handlers or server actions. The following logical endpoints shall exist.
-
-| Method | Path | Purpose | Priority |
-|---|---|---|---:|
-| POST | `/api/projects` | Create project | P0 |
-| GET | `/api/projects/{id}` | Load project summary | P0 |
-| POST | `/api/projects/{id}/analyze` | Run requirement analysis | P0 |
-| GET | `/api/projects/{id}/requirements` | Retrieve requirement model | P0 |
-| POST | `/api/projects/{id}/clarifications/{questionId}` | Submit answer | P0 |
-| POST | `/api/projects/{id}/architectures/generate` | Generate options | P0 |
-| POST | `/api/projects/{id}/architectures/{optionId}/approve` | Approve option | P0 |
-| POST | `/api/projects/{id}/artifacts/generate` | Compile artifacts | P0 |
-| GET | `/api/projects/{id}/artifacts/{artifactId}` | Retrieve artifact | P0 |
-| POST | `/api/projects/{id}/build/generate` | Generate controlled code slice | P0 |
-| GET | `/api/projects/{id}/build/diff` | Retrieve generated diff | P0 |
-| POST | `/api/projects/{id}/verify` | Execute selected verification suite | P0 |
-| GET | `/api/projects/{id}/verification-runs` | Retrieve runs and evidence | P0 |
-| GET | `/api/projects/{id}/traceability` | Retrieve nodes and edges | P0 |
-| POST | `/api/projects/{id}/why` | Answer a grounded why query | P0 |
-| GET | `/api/projects/{id}/export` | Export artifacts and manifest | P0 |
-| POST | `/api/demo/reset` | Reset sample project | P0 |
-
-API responses shall use a consistent envelope:
-
-```json
-{
-  "data": {},
-  "error": null,
-  "meta": {
-    "requestId": "req_123",
-    "timestamp": "2026-07-16T10:00:00Z"
-  }
-}
-```
-
-Errors shall include a stable code, human-readable message, and retryability flag.
-
----
-
-# 14. Non-Functional Requirements
-
-## 14.1 Performance
+### 10.1 Security and privacy
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-PERF-001 | Initial page shell shall render within 2 seconds on a typical broadband connection after deployment warm-up. | P1 |
-| NFR-PERF-002 | Local project reads shall complete within 500 ms at p95 for the demo dataset. | P0 |
-| NFR-PERF-003 | The UI shall display an active state within 300 ms after a long-running action starts. | P0 |
-| NFR-PERF-004 | Model and verification operations may exceed 10 seconds but shall show real stage status and timeout safely. | P0 |
-| NFR-PERF-005 | Graph rendering shall remain interactive for at least 250 nodes and 500 edges. | P1 |
+| NFR-SEC-001 | The launch security baseline shall be mapped to OWASP ASVS and relevant OWASP API Security risks. | Launch |
+| NFR-SEC-002 | All transport shall use TLS and managed data stores shall use encryption at rest. | Launch |
+| NFR-SEC-003 | Secrets shall use an approved secrets manager and shall be redacted from logs, model context, exports, and child processes. | Launch |
+| NFR-SEC-004 | Tenant-isolation tests shall cover every repository and API boundary containing customer data. | Launch |
+| NFR-SEC-005 | Source content and connector payloads shall be treated as untrusted and potentially prompt-injecting. | Launch |
+| NFR-SEC-006 | Dependency, container, secret, and static analysis shall run in CI with an owned remediation policy. | Launch |
+| NFR-SEC-007 | Production access and security-sensitive changes shall be audited. | Launch |
+| NFR-PRIV-001 | Customers shall be told which provider receives their data and under which retention policy. | Launch |
+| NFR-PRIV-002 | Provider selection shall respect organization data-region and data-processing policy. | Next |
+| NFR-PRIV-003 | Retention and deletion jobs shall be testable and produce auditable evidence. | Launch |
 
-## 14.2 Reliability
-
-| ID | Requirement | Priority |
-|---|---|---:|
-| NFR-REL-001 | A failed model call shall not overwrite the last valid graph version. | P0 |
-| NFR-REL-002 | A failed verification command shall create a failure record and leave the application usable. | P0 |
-| NFR-REL-003 | Sample reset shall restore a deterministic initial state. | P0 |
-| NFR-REL-004 | Long-running commands shall have enforced timeouts. | P0 |
-| NFR-REL-005 | The application shall recover from browser refresh during completed stages. | P0 |
-
-## 14.3 Security
+### 10.2 Reliability
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-SEC-001 | API keys and runner secrets shall remain server-side. | P0 |
-| NFR-SEC-002 | User text shall be treated as untrusted content. | P0 |
-| NFR-SEC-003 | Generated file paths shall be validated against an allowlist. | P0 |
-| NFR-SEC-004 | The runner shall not execute model-generated commands. | P0 |
-| NFR-SEC-005 | The system shall prevent path traversal and workspace escape. | P0 |
-| NFR-SEC-006 | Logs shall redact configured secret patterns. | P0 |
-| NFR-SEC-007 | The public demo shall use synthetic data only. | P0 |
-| NFR-SEC-008 | General arbitrary-code sandboxing is explicitly out of scope. | P0 |
+| NFR-REL-001 | A failed model, connector, or tool operation shall not overwrite the last valid graph or approval. | Launch |
+| NFR-REL-002 | External side effects shall use bounded retries, exponential backoff, idempotency, and dead-letter handling. | Launch |
+| NFR-REL-003 | Database backups and restore procedures shall be configured and restore-tested before general availability. | Launch |
+| NFR-REL-004 | Customer-visible operations shall expose honest queued, running, succeeded, partially failed, failed, and cancelled states. | Launch |
+| NFR-REL-005 | Production availability targets and recovery objectives shall be published per commercial plan before sale. | Launch |
 
-## 14.4 Privacy
+### 10.3 Performance and scale
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-PRIV-001 | The UI shall state that submitted text is sent to the configured model provider. | P0 |
-| NFR-PRIV-002 | No user account or personal profile shall be required. | P0 |
-| NFR-PRIV-003 | The sample data shall contain no real customer or company secrets. | P0 |
-| NFR-PRIV-004 | Future design shall support a customer-side runner and configurable retention. | P2 |
+| NFR-PERF-001 | Non-AI API reads shall target p95 below 500 ms under the documented launch load profile. | Launch |
+| NFR-PERF-002 | Long AI and connector operations shall acknowledge with a durable run ID within 2 seconds. | Launch |
+| NFR-PERF-003 | Every performance claim shall identify environment, dataset, concurrency, duration, and measured evidence. | Launch |
+| NFR-PERF-004 | Load limits shall be established through repeatable tests before general availability. | Launch |
 
-## 14.5 Accessibility
-
-| ID | Requirement | Priority |
-|---|---|---:|
-| NFR-A11Y-001 | Primary actions shall be keyboard accessible. | P0 |
-| NFR-A11Y-002 | Form inputs shall have programmatic labels and error descriptions. | P0 |
-| NFR-A11Y-003 | Status shall not be communicated by color alone. | P0 |
-| NFR-A11Y-004 | Graph information shall have a list or tree alternative. | P0 |
-| NFR-A11Y-005 | The main demo flow shall have no serious automated axe findings. | P1 |
-
-## 14.6 Explainability and AI Quality
+### 10.4 Accessibility
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-AI-001 | Every grounded requirement shall link to source evidence. | P0 |
-| NFR-AI-002 | Every architecture option shall include why and why-not reasoning. | P0 |
-| NFR-AI-003 | Unknown information shall remain explicit. | P0 |
-| NFR-AI-004 | Every model output shall pass schema validation. | P0 |
-| NFR-AI-005 | Model explanations shall not alter measured tool metrics. | P0 |
-| NFR-AI-006 | Why answers shall cite graph entity IDs. | P0 |
+| NFR-A11Y-001 | Launch user journeys shall target WCAG 2.2 Level AA. | Launch |
+| NFR-A11Y-002 | Automated scans shall be combined with keyboard and human review; scans alone shall not claim conformance. | Launch |
+| NFR-A11Y-003 | Status shall not rely on color alone and every graph shall have an accessible alternative. | Launch |
 
-## 14.7 Maintainability
+### 10.5 Maintainability and delivery
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-MAINT-001 | TypeScript strict mode shall be enabled. | P0 |
-| NFR-MAINT-002 | Domain logic shall be separated from UI and provider code. | P0 |
-| NFR-MAINT-003 | Model prompts and schemas shall be versioned files. | P0 |
-| NFR-MAINT-004 | Verification parsers shall have unit tests with fixture outputs. | P0 |
-| NFR-MAINT-005 | No duplicated truth-status transition logic shall exist across routes. | P0 |
-| NFR-MAINT-006 | README and AGENTS.md shall contain working commands. | P0 |
+| NFR-MAINT-001 | TypeScript strict mode, explicit module boundaries, Zod validation, and automated migration tests are mandatory. | Launch |
+| NFR-MAINT-002 | Provider-specific code shall remain in adapters. | Launch |
+| NFR-MAINT-003 | Every non-trivial defect fix shall include the smallest useful regression test. | Launch |
+| NFR-MAINT-004 | CI shall run lint, typecheck, unit/integration tests, production build, security checks, and selected E2E tests. | Launch |
+| NFR-MAINT-005 | Releases shall use staged environments, migration gates, health checks, and rollback procedures. | Launch |
 
-## 14.8 Observability
-
-| ID | Requirement | Priority |
-|---|---|---:|
-| NFR-OBS-001 | Each server request shall have a request ID. | P0 |
-| NFR-OBS-002 | Model calls shall record operation, duration, status, and token/cost data when available. | P1 |
-| NFR-OBS-003 | Verification commands shall record duration and exit code. | P0 |
-| NFR-OBS-004 | Logs shall be structured and free of secrets. | P0 |
-
-## 14.9 Cost
+### 10.6 Observability and cost
 
 | ID | Requirement | Priority |
 |---|---|---:|
-| NFR-COST-001 | The demo shall limit model input and output sizes. | P0 |
-| NFR-COST-002 | Repeated artifact rendering shall reuse canonical graph data without re-running analysis when unchanged. | P0 |
-| NFR-COST-003 | The application shall display model cost estimates if provider usage data is available. | P1 |
+| NFR-OBS-001 | Logs, metrics, and traces shall share request, organization, project, and run correlation IDs without leaking content. | Launch |
+| NFR-OBS-002 | Model calls shall record latency, token usage, cache usage, retries, provider status, and cost. | Launch |
+| NFR-OBS-003 | Connector calls shall record provider request IDs, rate-limit state, retries, and outcomes. | Launch |
+| NFR-COST-001 | Launch shall use hosted inference and shall not require reserved GPUs. | Launch |
+| NFR-COST-002 | Model routing, context selection, output limits, caching, and batch/flex execution shall be evaluated as cost controls. | Launch |
+| NFR-COST-003 | Budgets and alerts shall exist for AWS infrastructure and each model provider before production launch. | Launch |
+
+## 11. Verification strategy
+
+### 11.1 Required automated layers
+
+- Domain unit tests for truth transitions, stable IDs, scoring, policies, budget reservations, and mappings.
+- Repository integration tests against PostgreSQL.
+- Contract tests for model providers, Jira, Trello, subscription webhooks, and coding-agent adapters.
+- AI evaluation tests using immutable datasets and stored results.
+- Tenant-isolation and authorization tests.
+- Idempotency, retry, partial-failure, webhook replay, and outbox tests.
+- E2E tests for source-to-approved-ticket and Jira/Trello publication journeys.
+- Backup restoration, migration, and rollback exercises before general availability.
+- Security, accessibility, and load evidence appropriate to each release.
 
----
-
-# 15. Verification Strategy
-
-## 15.1 Product Application Tests
-
-### Unit Tests
-
-Must cover:
-
-- readiness score calculation;
-- truth status transitions;
-- stable ID generation;
-- source span validation;
-- path allowlist;
-- trace-link validation;
-- artifact hash and versioning;
-- verification output parsers;
-- policy threshold evaluation.
-
-### Integration Tests
-
-Must cover:
-
-- valid model output persistence;
-- malformed model output rejection;
-- clarification answer updating graph;
-- architecture approval creating ADR;
-- artifact generation from graph;
-- code file validation and write;
-- verification run producing Evidence records;
-- Why answer with entity citations.
-
-### E2E Tests
-
-At least one Playwright scenario shall cover:
-
-1. Launch sample.
-2. Analyze brief or load deterministic seeded analysis in test mode.
-3. Answer clarification questions.
-4. Approve architecture.
-5. Generate artifacts.
-6. Generate or load controlled code.
-7. Run verification.
-8. Open traceability.
-9. Ask a Why question.
-
-A separate E2E test shall cover a failed tool run and ensure the UI displays failure honestly.
-
-## 15.2 Generated Workspace Tests
-
-The sample generated workspace shall contain:
-
-- unit tests for notification validation and retry policy;
-- API tests for create and get endpoints;
-- coverage configuration;
-- optional performance script;
-- optional security scan configuration.
-
-Each generated test shall include requirement IDs in its description or metadata.
-
-## 15.3 Tool Result Parsing
-
-Parsers shall use JSON output where available. When text parsing is unavoidable, fixture-based tests shall cover:
-
-- success output;
-- failed tests;
-- command error;
-- timeout;
-- malformed output;
-- zero-test condition.
-
-## 15.4 AI Evaluation
-
-The MVP shall include a small deterministic evaluation harness that checks:
-
-- all generated requirements have valid IDs;
-- grounded requirements have valid source span IDs;
-- architecture options include why and why-not;
-- each option includes assumptions and triggers;
-- artifacts do not omit mandatory sections;
-- generated code paths are allowlisted;
-- Why responses cite existing entities;
-- proof claims reference Evidence with an appropriate truth status.
-
----
-
-# 16. Hackathon Acceptance Criteria
-
-The product is accepted for submission only when all P0 criteria below pass.
-
-## 16.1 Core Flow
-
-- [ ] A user can launch the NotifyFlow sample.
-- [ ] Analysis produces structured FRs, NFRs, risks, assumptions, and gaps.
-- [ ] Requirements link to exact source excerpts.
-- [ ] Three to five clarification questions can be answered.
-- [ ] Readiness score changes deterministically.
-- [ ] Architecture view shows at least three options.
-- [ ] Every option includes why, why not, assumptions, failure modes, and triggers.
-- [ ] User can approve one option.
-- [ ] Approval creates an ADR and Engineering Constitution.
-- [ ] SRS, NFR, HLD, OpenAPI, test strategy, backlog, and Codex task are generated.
-- [ ] One code vertical slice is generated in the controlled workspace.
-- [ ] Generated code can be inspected as files and diff.
-- [ ] Real build, unit, API, and coverage commands execute.
-- [ ] Evidence stores actual results and truth status.
-- [ ] Traceability links requirement to code, test, and evidence.
-- [ ] Why explorer answers at least four approved sample questions.
-- [ ] At least one unknown remains visible and is not mislabeled as passed.
-- [ ] Artifacts and traceability can be exported.
-
-## 16.2 Quality Gate
-
-- [ ] `pnpm lint` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] `pnpm test:e2e` passes for the primary flow.
-- [ ] `pnpm build` passes.
-- [ ] No secrets exist in repository or browser bundle.
-- [ ] No serious automated accessibility issue exists in the main demo flow, if the scan is implemented.
-- [ ] README setup works from a clean environment.
-- [ ] Demo can be reset in under 30 seconds.
-
----
-
-# 17. NotifyFlow Demo Scenario
-
-## 17.1 Product Brief
-
-The included sample shall use this brief:
-
-> Build a multi-tenant customer notification service for a SaaS product. It must support email and SMS, retries, delivery-status tracking, audit logs, and a simple admin dashboard. The first release should run on AWS and remain below USD 1,000 per month. We expect up to one million notifications per month. Customers must not see another tenant's data. The product team wants the first usable release quickly and expects the service to scale later.
-
-## 17.2 Seeded Ambiguities
-
-The analysis should identify several of the following:
-
-- peak requests per second are unspecified;
-- delivery latency target is unspecified;
-- transactional versus marketing message behavior is unspecified;
-- retry count and backoff policy are unspecified;
-- exactly-once versus at-least-once behavior is unspecified;
-- idempotency behavior is unspecified;
-- message ordering is unspecified;
-- retention period for payloads and audit records is unspecified;
-- data residency is unspecified;
-- SMS and email providers are unspecified;
-- provider outage behavior is unspecified;
-- authentication and tenant identity are unspecified;
-- admin roles and permissions are unspecified;
-- opt-out and consent rules are unspecified;
-- dashboard accessibility target is unspecified.
-
-## 17.3 Suggested Clarification Answers for Demo
-
-- Peak load: 100 requests per second initially, with bursts to 300.
-- Delivery target: accepted within 250 ms, 95 percent delivered or failed within 60 seconds excluding provider outage.
-- Delivery semantics: at-least-once processing with idempotency key support.
-- Retry policy: three attempts with exponential backoff, then dead-letter queue.
-- Data retention: notification metadata for 90 days; message bodies for 7 days.
-- Tenant isolation: tenant ID from authenticated token, never from editable request body alone.
-- Region: initial data stored in one approved AWS region.
-
-## 17.4 Architecture Options
-
-The system should produce comparable options similar to:
-
-1. **Serverless event-driven:** API Gateway, Lambda, SQS, DynamoDB, provider adapters.
-2. **Containerized modular service:** ECS/Fargate, SQS, PostgreSQL, provider adapters.
-3. **Kafka microservices:** separate ingestion, routing, delivery, and audit services.
-
-The recommended option for the seeded assumptions may be serverless event-driven. Kafka should be rejected for current scale and team complexity, while retaining measurable reconsideration triggers.
-
-## 17.5 Generated Vertical Slice
-
-The first slice shall implement:
-
-- `POST /notifications`;
-- input validation;
-- tenant ID enforcement from trusted context;
-- idempotency key behavior;
-- created notification status;
-- provider abstraction or queue abstraction;
-- `GET /notifications/{id}`;
-- tenant isolation;
-- audit event creation;
-- unit and API tests.
-
-Actual external email and SMS delivery is mocked.
-
-## 17.6 Approved Why Questions
-
-The demo shall include buttons for:
-
-1. Why did we choose a queue-based design?
-2. Why did we not choose Kafka?
-3. Which requirement caused tenant isolation logic?
-4. What proves idempotency behavior works?
-5. What is still unverified?
-6. When should we reconsider the selected architecture?
-
----
-
-# 18. Four-Day Implementation Plan
-
-## Day 1: Canonical Graph and Requirement Intelligence
-
-### Outcome
-
-A user can launch NotifyFlow, analyze the brief, see structured requirements and gaps, answer clarifications, and observe readiness changes.
-
-### Tasks
-
-- Scaffold monorepo, Next.js app, packages, database, and AGENTS.md.
-- Implement domain entities and Zod schemas.
-- Implement project and source persistence.
-- Implement sample seeding and reset.
-- Implement model provider interface.
-- Implement requirement-analysis prompt and response validation.
-- Implement source span grounding.
-- Implement deterministic readiness score.
-- Implement requirement and clarification UI.
-- Add unit tests for scoring, IDs, grounding, and invalid output.
-
-### Suggested ownership
-
-- Prashant: project UI, lifecycle navigation, requirement cards, clarification interactions.
-- Kshitij: requirement schema, NFR rubric, gap taxonomy, acceptance criteria, test fixtures.
-- Codex: scaffolding, domain types, persistence, components, test boilerplate.
-
-## Day 2: Architecture Lab and Artifact Compiler
-
-### Outcome
-
-A user can compare options, approve a decision, and generate all required enterprise artifacts.
-
-### Tasks
-
-- Implement architecture output schema and prompt.
-- Build comparison matrix and option detail.
-- Implement approval and ADR creation.
-- Implement Engineering Constitution schema and generator.
-- Implement artifact compilers for SRS, NFR, HLD, ADR, OpenAPI, test strategy, backlog, and Codex task.
-- Validate OpenAPI output.
-- Add artifact preview and download.
-- Add tests for missing why-not, invalid triggers, and stable IDs.
-
-### Suggested ownership
-
-- Prashant: architecture comparison, artifact tabs, previews, download UX.
-- Kshitij: architecture evaluation rubric, NFR/test strategy templates, constitution rules.
-- Codex: compilers, schema validation, route handlers, UI wiring.
-
-## Day 3: Controlled Build and Real Verification
-
-### Outcome
-
-A generated vertical slice is written to the sandbox and real tests produce evidence.
-
-### Tasks
-
-- Build fixed notification-service template.
-- Define allowlisted generated paths.
-- Implement code generation schema.
-- Implement safe workspace writer.
-- Build file tree and diff viewer.
-- Implement command registry and timeouts.
-- Run build, unit, API, and coverage commands.
-- Parse tool results into Evidence.
-- Map tests and evidence to requirement IDs.
-- Implement failure-state fixtures.
-
-### Suggested ownership
-
-- Prashant: diff viewer, verification cards, run progress, evidence UI.
-- Kshitij: generated test scenarios, API assertions, coverage thresholds, result validation.
-- Codex: runner, parsers, sandbox code, integration tests.
-
-## Day 4: Traceability, Why Explorer, Hardening, and Demo
-
-### Outcome
-
-The product tells one polished end-to-end story and can be submitted confidently.
-
-### Tasks
-
-- Implement trace graph and list fallback.
-- Implement Why query resolver and suggested questions.
-- Add exports and manifest.
-- Add P1 security/performance scan only if P0 is stable.
-- Complete E2E tests.
-- Fix loading, empty, error, and retry states.
-- Validate accessibility.
-- Deploy on a child-process-capable host.
-- Record demo video.
-- Finalize README, architecture diagram, and submission text.
-- Freeze features and fix only defects.
-
----
-
-# 19. Risks and Mitigations
-
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Scope explosion | MVP remains incomplete | Enforce P0/P1 boundary and one vertical slice |
-| Model output instability | Demo becomes unreliable | Structured outputs, fixtures, cache valid sample responses, explicit retry |
-| Long model latency | Poor demo pacing | Stage operations, preload sample, allow deterministic demo mode while retaining live mode |
-| Generated code fails | Verification cannot complete | Use fixed template, fixed dependencies, narrow file allowlist, validated code schema |
-| Runner security | Host compromise | No arbitrary commands or arbitrary user code, isolated workspace, timeouts, synthetic demo only |
-| Tool parsing errors | False evidence | Prefer JSON outputs and fixture-test parsers |
-| Fake-looking demo | Low trust | Show raw command, exit code, timestamps, and exact parsed values |
-| Documentation overwhelms UI | Weak narrative | Lead with lifecycle and progressive disclosure |
-| Architecture advice is generic | Low differentiation | Require constraints, why-not, triggers, and linked assumptions |
-| Internet or provider failure | Demo interruption | Cache approved sample analysis and allow local seeded fallback clearly labeled `Demo Cache` |
-| Deployment host blocks child processes | Runner fails | Select host on Day 1 and test a minimal command before building full runner |
-
----
-
-# 20. Future Roadmap
-
-## Phase 1: Decision Before Code
-
-- richer requirement ingestion;
-- enterprise templates;
-- clarification workflows;
-- architecture comparison;
-- ADRs;
-- engineering constitution.
-
-## Phase 2: Decision Enforced in Code
-
-- VS Code extension;
-- Codex workflow integration;
-- GitHub and GitLab apps;
-- architecture and policy checks;
-- repository-level traceability;
-- change-impact analysis.
-
-## Phase 3: Decision Validated in Delivery
-
-- CI/CD orchestration;
-- real security, API, accessibility, and performance tool adapters;
-- environment promotion;
-- AWS, Azure, and GCP deployment templates;
-- pricing and billing integration;
-- release readiness.
-
-## Phase 4: Living Engineering Twin
-
-- production telemetry;
-- NFR drift detection;
-- cost drift;
-- incident-to-decision feedback;
-- stale-assumption detection;
-- automatic decision review suggestions.
-
-## Phase 5: Engineering GRC
-
-- control libraries;
-- approval workflows;
-- evidence mapping;
-- audit exports;
-- AI-generated code governance;
-- regulated SDLC templates;
-- private runners and on-premises deployment.
-
----
-
-# 21. Definition of Done
-
-A task is done only when:
-
-1. Its behavior matches this SRS.
-2. Relevant loading, empty, success, and failure states exist.
-3. Input and model output are validated.
-4. Relevant automated tests pass.
-5. No fake metric or fake tool result is shown.
-6. Traceability links are created where required.
-7. Accessibility basics are implemented.
-8. Typecheck and lint pass.
-9. Documentation and commands are updated.
-10. The feature works through the visible product flow, not only through an isolated API.
-
----
-
-# 22. Open Decisions
-
-These decisions may be resolved during implementation and recorded in `/docs/decisions`:
-
-1. Prisma versus another typed SQLite layer.
-2. Exact Node-compatible deployment host.
-3. Whether live model calls or approved cached responses are the default demo mode.
-4. Exact graph visualization library.
-5. Exact unified diff component.
-6. Whether performance and security scans fit within P1 time.
-7. Whether code generation returns complete files or validated patch operations.
-
-The following decisions are locked for the MVP:
-
-- TypeScript monorepo
-- Next.js web application
-- one sample domain
-- one controlled generated workspace
-- fixed command registry
-- structured model output
-- canonical project graph
-- evidence truth statuses
-- no arbitrary repository execution
-
----
-
-# 23. Codex Start Instructions
-
-Use this exact sequence when starting the build:
-
-1. Read `AGENTS.md`.
-2. Read this `SRS.md` completely.
-3. Read `IMPLEMENTATION_BACKLOG.md` and `DEMO_SCENARIO.md`.
-4. Produce a concise implementation plan and proposed file tree.
-5. Identify any contradiction between the plan and the SRS.
-6. Do not add P1 or P2 features to the initial plan.
-7. Implement Milestone 0 and Milestone 1 only.
-8. Run lint, typecheck, and tests.
-9. Report files changed, tests executed, failures, and next milestone.
-10. Continue in vertical slices, maintaining a working application after every milestone.
-
-Recommended initial Codex prompt:
-
-```text
-Read AGENTS.md, SRS.md, IMPLEMENTATION_BACKLOG.md, and DEMO_SCENARIO.md.
-Treat SRS.md as the product contract.
-
-First, do not write code. Produce:
-1. a P0-only implementation plan;
-2. the proposed repository tree;
-3. the domain entities and Zod schemas you will create;
-4. the commands needed for local development and verification;
-5. the highest implementation risks.
-
-Then implement only Milestone 0 and Milestone 1 from IMPLEMENTATION_BACKLOG.md.
-Keep the app runnable, add tests, and do not create placeholder modules for future scope.
-```
-
----
-
-# Appendix A: Suggested Status Colors and Labels
-
-Color shall never be the sole indicator.
-
-| Status | Label |
-|---|---|
-| AI_SUGGESTED | Suggested |
-| HUMAN_APPROVED | Approved |
-| TOOL_EXECUTED | Executed |
-| TOOL_VERIFIED | Verified |
-| UNKNOWN | Unknown |
-| CONTRADICTED | Contradicted |
-| FAILED | Failed |
-
-# Appendix B: Required Sample Evidence
-
-The final sample should contain evidence records similar to:
-
-```json
-{
-  "id": "EVD-UNIT-001",
-  "type": "test-result",
-  "truthStatus": "TOOL_VERIFIED",
-  "claim": "Notification request validation behaves as specified",
-  "measurements": {
-    "passed": 8,
-    "failed": 0,
-    "skipped": 0
-  },
-  "linkedEntityIds": ["FR-API-001", "FR-API-002", "TEST-001"]
-}
-```
-
-```json
-{
-  "id": "EVD-COV-001",
-  "type": "coverage",
-  "truthStatus": "TOOL_EXECUTED",
-  "claim": "Generated workspace coverage result",
-  "measurements": {
-    "lines": 86.2,
-    "branches": 78.4,
-    "functions": 91.0,
-    "statements": 85.7
-  },
-  "linkedEntityIds": ["QUAL-001", "WORK-001"]
-}
-```
-
-If branch coverage is below an approved threshold, the evidence remains executed but the related constitution rule is marked failed.
-
-# Appendix C: Submission Narrative
-
-Suggested product statement:
-
-> Axiom is the living reasoning and evidence layer for software engineering. It turns ambiguous business intent into requirements, architecture decisions, enterprise artifacts, code, and real verification evidence. Unlike tools that only generate output, Axiom records why a decision was made, why alternatives were rejected, what proves the implementation works, and when the decision should be reconsidered.
-
-Suggested demo closing line: **Axiom does not only help teams build software faster. It preserves the reasoning, rules, and proof that make software trustworthy.**
+### 11.2 Evidence rules
+
+A requirement is complete only when its visible behavior, validation, failure states, authorization, auditability, and relevant automated evidence exist. Generated explanations do not satisfy verification requirements.
+
+## 12. Commercial launch acceptance criteria
+
+The first commercial release is accepted only when all of the following are evidenced:
+
+- [ ] PostgreSQL is the authoritative store locally and in the production architecture.
+- [ ] Organization-scoped authentication and authorization pass tenant-isolation tests.
+- [ ] Source ingestion and exact-span grounding work for supported launch formats.
+- [ ] Ticket generation passes the Section 7 quality gates on the approved dataset.
+- [ ] Critical unknowns produce clarification questions rather than invented answers.
+- [ ] Jira and Trello each pass sandbox/tenant contract tests, idempotency tests, and partial-failure tests.
+- [ ] No Jira-style or Trello-style work-management board exists in Axiom.
+- [ ] Groq and OpenAI adapters are evaluated, budgeted, observable, and independently disableable.
+- [ ] Economy/Balanced/Best routing cannot exceed organization limits.
+- [ ] Subscription, entitlement, reservation, and usage ledgers reconcile in test scenarios.
+- [ ] External writes require explicit approval and produce audit records.
+- [ ] Fixed verification produces real evidence and preserves failures honestly.
+- [ ] Docker-based local setup works from a clean checkout.
+- [ ] AWS deployment artifacts target ECS Fargate, RDS PostgreSQL, S3, and SQS; no Vercel deployment path is active.
+- [ ] Backup restoration and rollback procedures have been executed in a non-production environment.
+- [ ] CI quality and security gates pass.
+- [ ] Launch journeys satisfy the documented accessibility review.
+- [ ] Cost alerts and hard model-spend controls are enabled.
+- [ ] Customer-facing privacy, retention, provider-use, and deletion behavior is documented.
+
+## 13. Delivery sequence
+
+### Milestone A — Contract and data foundation
+
+- Replace hackathon scope and remove obsolete release assumptions.
+- Introduce PostgreSQL schema, migrations, repositories, and local Docker environment.
+- Preserve and migrate current project data where supported.
+- Add organization ownership to canonical data.
+
+### Milestone B — Commercial identity and governance
+
+- Authentication, organizations, roles, audit, retention foundations.
+- Plans, entitlements, usage reservation, usage ledger, and hard limits.
+
+### Milestone C — Ticket Quality Engine
+
+- Agent Kernel, prompt/schema versioning, model catalog, evaluation harness.
+- Grounded work-item generation, deterministic validators, review feedback.
+- Groq and OpenAI qualification.
+
+### Milestone D — Jira and Trello
+
+- OAuth installations and field mapping.
+- Exact preview, approval, idempotent publication, reconciliation, status refresh.
+
+### Milestone E — AWS private beta
+
+- Docker release images, ECS Fargate, RDS PostgreSQL, S3, SQS, telemetry, secrets, backups, alerts.
+- Staging, production migration, rollback, security, accessibility, and load evidence.
+
+### Milestone F — Agent execution ecosystem
+
+- Customer-authorized repository boundary.
+- Native and external coding-agent adapters.
+- Controlled verification and imported PR/evidence lifecycle.
+
+## 14. Migration from the hackathon prototype
+
+1. Preserve current domain concepts that uphold canonical truth, stable IDs, validation, traceability, approval, and evidence integrity.
+2. Replace filesystem/Blob persistence with PostgreSQL repositories and S3 object references.
+3. Treat existing Vercel code as legacy infrastructure; do not deploy it and remove it after AWS replacements and migration tests exist.
+4. Replace internal Jira credentials with organization installations and add Trello.
+5. Generalize the Groq-only provider into the Agent Kernel and model catalog.
+6. Retain fixture providers only for deterministic tests and explicitly labelled local demonstrations.
+7. Keep the modular monolith; extract services only against Section 9.5 triggers.
+8. Do not migrate fabricated, stale, or unverifiable prototype evidence into commercial customer records.
+
+## 15. Normative engineering references
+
+Engineering decisions shall use primary standards and vendor documentation. The launch baseline includes:
+
+- [OWASP Application Security Verification Standard](https://owasp.org/www-project-application-security-verification-standard/)
+- [OWASP API Security Project](https://owasp.org/www-project-api-security/)
+- [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/)
+- [NIST AI Risk Management Framework and Generative AI Profile](https://www.nist.gov/itl/ai-risk-management-framework)
+- [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)
+- [AWS SaaS Lens](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/saas-lens.html)
+- [AWS Agentic AI Lens](https://docs.aws.amazon.com/wellarchitected/latest/agentic-ai-lens/agentic-ai-lens.html)
+- [PostgreSQL documentation](https://www.postgresql.org/docs/)
+- [OpenAPI Specification](https://spec.openapis.org/oas/latest.html)
+- [OpenTelemetry specifications](https://opentelemetry.io/docs/specs/)
+
+Where a referenced standard or vendor recommendation changes, adoption requires an assessed change rather than an automatic undocumented upgrade.
+
+## 16. Definition of done
+
+A product change is done only when:
+
+1. It satisfies this SRS and the visible user outcome.
+2. Inputs, outputs, authorization, and organization scope are validated.
+3. Idle, loading/queued, success, empty, partial-failure, failure, and safe-retry states exist where applicable.
+4. Model output is schema-validated and grounded before persistence.
+5. External writes are approved, idempotent, and audited.
+6. Relevant unit, integration, contract, evaluation, and E2E checks pass.
+7. No evidence or provider outcome is fabricated.
+8. Traceability and cost usage are recorded where required.
+9. Security, privacy, accessibility, and data-loss protections are preserved.
+10. Operational documentation, migrations, and rollback instructions are current.
