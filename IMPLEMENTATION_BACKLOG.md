@@ -20,10 +20,10 @@ The repository follows the commercial SRS and has a measured, reproducible local
 - [x] Replace the hackathon SRS with the commercial product contract.
 - [x] Align `AGENTS.md` and this backlog with commercial decisions.
 - [x] Remove obsolete hackathon prompts, duplicate specifications, demo scripts, and one-time handoff/audit documents.
-- [ ] Inventory current persistence, integrations, routes, and customer-data boundaries.
-- [ ] Record current lint, typecheck, unit, E2E, build, and sandbox results.
-- [ ] Add an ADR for commercial platform, persistence, connector, and AI-provider boundaries.
-- [ ] Document current-to-target migration risks and rollback checkpoints.
+- [x] Inventory current persistence, integrations, routes, and customer-data boundaries. Evidence: `docs/implementation/commercial-migration-baseline.md`.
+- [x] Record current lint, typecheck, unit, E2E, build, and sandbox results. Evidence: `docs/implementation/commercial-migration-baseline.md`.
+- [x] Add an ADR for commercial platform, persistence, connector, and AI-provider boundaries. Evidence: `docs/decisions/0010-commercial-platform-boundaries.md`.
+- [x] Document current-to-target migration risks and rollback checkpoints. Evidence: `docs/implementation/commercial-migration-baseline.md`.
 
 ### Exit criteria
 
@@ -37,16 +37,16 @@ The repository follows the commercial SRS and has a measured, reproducible local
 
 PostgreSQL becomes the authoritative commercial store locally, with a safe migration path from current prototype data.
 
-- [ ] Add Docker Compose for application dependencies and PostgreSQL.
-- [ ] Select and document the typed migration/data-access layer.
-- [ ] Design organization-scoped normalized tables from the SRS data model.
-- [ ] Implement migrations, constraints, indexes, timestamps, and optimistic concurrency.
-- [ ] Introduce repository interfaces and PostgreSQL implementations.
-- [ ] Add transactional outbox and idempotency records for future external writes.
-- [ ] Build a one-time prototype-data importer with dry-run and validation modes.
-- [ ] Preserve stable graph IDs, versions, hashes, approvals, and trace links.
-- [ ] Add PostgreSQL integration tests and migration rollback/forward tests.
-- [ ] Add local database setup, migrate, seed, test, and reset commands.
+- [x] Add Docker Compose for application dependencies and PostgreSQL.
+- [x] Select and document the typed migration/data-access layer. Evidence: `docs/decisions/0011-postgresql-data-access-and-migration.md`.
+- [x] Design organization-scoped normalized tables from the SRS data model.
+- [x] Implement migrations, constraints, indexes, timestamps, explicit ranked order, and optimistic concurrency.
+- [x] Introduce repository interfaces and PostgreSQL implementations.
+- [x] Add transactional outbox and idempotency records for future external writes.
+- [x] Build a one-time prototype-data importer with dry-run, apply, and parity-validation modes.
+- [x] Preserve stable graph IDs, versions, hashes, approvals, trace links, and ranked aggregate order.
+- [x] Add PostgreSQL integration tests and migration rollback/forward tests.
+- [x] Add local database setup, migrate, seed, test, import, verify, and reset commands. Evidence: `docs/implementation/postgresql-foundation.md`.
 
 ### Exit criteria
 

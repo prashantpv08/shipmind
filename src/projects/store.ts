@@ -41,6 +41,7 @@ const dataRoot = isVercelRuntime
   ? resolve(process.env.AXIOM_DATA_DIR)
   : join(/* turbopackIgnore: true */ process.cwd(), '.axiom-data');
 const databasePath = join(dataRoot, 'projects.json');
+const usePostgresStorage = process.env.AXIOM_PROJECT_STORE === 'postgres';
 
 let writeQueue = Promise.resolve();
 
@@ -156,10 +157,12 @@ export function projectUsesBlobStorage() {
 }
 
 export async function listWorkspaces() {
+  if (usePostgresStorage) return (await import('./postgres-store')).listWorkspaces();
   return (await readDatabase()).workspaces;
 }
 
 export async function createProject(name: string, workspaceId = DEFAULT_WORKSPACE_ID) {
+  if (usePostgresStorage) return (await import('./postgres-store')).createProject(name, workspaceId);
   return mutate((database) => {
     const workspace = database.workspaces.find((item) => item.id === workspaceId);
     if (!workspace) throw new Error('Workspace not found');
@@ -179,10 +182,12 @@ export async function createProject(name: string, workspaceId = DEFAULT_WORKSPAC
 }
 
 export async function listProjects(workspaceId = DEFAULT_WORKSPACE_ID) {
+  if (usePostgresStorage) return (await import('./postgres-store')).listProjects(workspaceId);
   return (await readDatabase()).projects.filter((project) => project.workspaceId === workspaceId);
 }
 
 export async function getProject(projectId: string) {
+  if (usePostgresStorage) return (await import('./postgres-store')).getProject(projectId);
   const database = await readDatabase();
   const project = database.projects.find((item) => item.id === projectId);
   if (!project) return null;
@@ -202,6 +207,7 @@ export async function getProject(projectId: string) {
 }
 
 export async function addSources(projectId: string, sources: ProjectSourceType[]) {
+  if (usePostgresStorage) return (await import('./postgres-store')).addSources(projectId, sources);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === projectId);
     if (!project) throw new Error('Project not found');
@@ -216,6 +222,7 @@ export async function addSources(projectId: string, sources: ProjectSourceType[]
 }
 
 export async function saveKnowledge(knowledge: ProjectKnowledgeType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveKnowledge(knowledge);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === knowledge.projectId);
     if (!project) throw new Error('Project not found');
@@ -231,6 +238,7 @@ export async function saveKnowledge(knowledge: ProjectKnowledgeType) {
 }
 
 export async function saveArchitectureBrief(brief: ArchitectureBriefType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveArchitectureBrief(brief);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === brief.projectId);
     if (!project) throw new Error('Project not found');
@@ -244,6 +252,7 @@ export async function saveArchitectureBrief(brief: ArchitectureBriefType) {
 }
 
 export async function saveDocuments(projectId: string, documents: ProjectDocumentType[]) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveDocuments(projectId, documents);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === projectId);
     if (!project) throw new Error('Project not found');
@@ -261,6 +270,7 @@ export async function saveDocuments(projectId: string, documents: ProjectDocumen
 }
 
 export async function saveKnowledgeAndDocuments(knowledge: ProjectKnowledgeType, documents: ProjectDocumentType[]) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveKnowledgeAndDocuments(knowledge, documents);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === knowledge.projectId);
     if (!project) throw new Error('Project not found');
@@ -282,6 +292,7 @@ export async function saveKnowledgeAndDocuments(knowledge: ProjectKnowledgeType,
 }
 
 export async function saveDocumentApproval(approval: DocumentApprovalType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveDocumentApproval(approval);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === approval.projectId);
     if (!project) throw new Error('Project not found');
@@ -296,6 +307,18 @@ export async function saveDocumentApproval(approval: DocumentApprovalType) {
 }
 
 export async function deleteProject(projectId: string) {
+  if (usePostgresStorage) {
+    const result = await (await import('./postgres-store')).deleteProject(projectId);
+    if (!result.deleted) return false;
+    if (useBlobStorage) {
+      if (result.rawPaths.length) await del(result.rawPaths);
+    } else {
+      const root = resolve(dataRoot);
+      const sourcePaths = result.rawPaths.map((path) => resolve(dataRoot, path));
+      await Promise.all(sourcePaths.filter((path) => path.startsWith(`${root}${sep}`)).map((path) => unlink(path).catch(() => undefined)));
+    }
+    return true;
+  }
   const database = await readDatabase();
   const project = database.projects.find((item) => item.id === projectId);
   if (!project) return false;
@@ -323,6 +346,7 @@ export async function deleteProject(projectId: string) {
 }
 
 export async function saveArbDecision(decision: ArbDecisionType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveArbDecision(decision);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === decision.projectId);
     if (!project) throw new Error('Project not found');
@@ -336,6 +360,7 @@ export async function saveArbDecision(decision: ArbDecisionType) {
 }
 
 export async function saveNotionPublication(publication: NotionPublicationType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveNotionPublication(publication);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === publication.projectId);
     if (!project) throw new Error('Project not found');
@@ -349,6 +374,7 @@ export async function saveNotionPublication(publication: NotionPublicationType) 
 }
 
 export async function saveJiraPublication(publication: JiraPublicationType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveJiraPublication(publication);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === publication.projectId);
     if (!project) throw new Error('Project not found');
@@ -363,6 +389,7 @@ export async function saveJiraPublication(publication: JiraPublicationType) {
 }
 
 export async function saveWireframeRevision(revision: WireframeRevisionType) {
+  if (usePostgresStorage) return (await import('./postgres-store')).saveWireframeRevision(revision);
   return mutate((database) => {
     const project = database.projects.find((item) => item.id === revision.projectId);
     if (!project) throw new Error('Project not found');

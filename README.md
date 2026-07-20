@@ -43,11 +43,20 @@ pnpm demo:reset
 pnpm sandbox:build
 pnpm sandbox:test
 pnpm sandbox:coverage
+pnpm db:up
+pnpm db:migrate
+pnpm db:seed
+pnpm db:import:dry-run
+pnpm db:import
+pnpm db:verify-import
+pnpm db:test
+pnpm db:reset
+pnpm db:down
 ```
 
 After `pnpm build`, `pnpm start` serves the local production build. Keep development and verification local unless an AWS deployment is explicitly authorized.
 
-Commercial milestones will add documented commands for Docker PostgreSQL, migrations, integration tests, AI evaluations, security checks, and container builds.
+The PostgreSQL setup and migration safety procedure are documented in [docs/implementation/postgresql-foundation.md](docs/implementation/postgresql-foundation.md). `db:reset` is intentionally restricted to local `axiom`/`axiom_test*` databases. AI evaluations, security checks, and release container commands arrive in their ordered commercial milestones.
 
 ## Current local environment
 
@@ -58,6 +67,10 @@ AXIOM_AI_MODE=fixture
 GROQ_API_KEY=
 GROQ_MODEL=openai/gpt-oss-120b
 AXIOM_DATA_DIR=
+AXIOM_PROJECT_STORE=postgres
+DATABASE_URL=postgresql://axiom:axiom-local-only@localhost:54329/axiom
+DATABASE_SSL_MODE=disable
+DATABASE_POOL_MAX=10
 NOTION_ACCESS_TOKEN=
 NOTION_PARENT_PAGE_ID=
 JIRA_BASE_URL=
@@ -67,6 +80,8 @@ JIRA_PROJECT_KEY=
 ```
 
 `AXIOM_AI_MODE=fixture` is the deterministic offline mode. Set it to `live` with a server-only Groq key only when intentionally testing the existing live adapter. A live failure is shown honestly and does not silently fall back to fixture output.
+
+`AXIOM_PROJECT_STORE=postgres` selects the commercial local store. `json` exists only as the prototype migration and rollback adapter. Start and migrate PostgreSQL before switching the local application. Source binary files remain local until the S3 adapter milestone; PostgreSQL owns their metadata and references.
 
 The current Jira credentials are prototype-only. The commercial connector will use organization-scoped authorization, idempotent publication, field mapping, reconciliation, and audit. Trello will use the same normalized work-item contract.
 
