@@ -2,7 +2,7 @@
 
 **Document ID:** AX-SRS-COM-001
 
-**Version:** 2.0
+**Version:** 2.1
 
 **Date:** 2026-07-20
 
@@ -20,7 +20,7 @@
 | Product thesis | Convert ambiguous intent into grounded engineering decisions, high-quality delivery work, controlled execution, and verifiable evidence |
 | Initial customers | SMEs, product teams, engineering organizations, and enterprise pilots |
 | Source of truth | The canonical project graph in PostgreSQL |
-| Delivery architecture | TypeScript modular monolith with independently extractable modules |
+| Delivery architecture | Separate Next.js web, Node.js TypeScript platform, and Terraform repositories; the platform remains a modular monolith with independently extractable modules |
 | Production cloud | AWS |
 | Local development | Docker Compose; no cloud deployment required |
 | Work management | Jira and Trello connectors; Axiom does not replace either product |
@@ -416,19 +416,28 @@ The schema shall include at least:
 ```text
 Browser
   -> AWS edge/load balancer
-  -> Next.js TypeScript application on ECS Fargate
-       -> PostgreSQL repositories -> RDS PostgreSQL
-       -> object storage adapter -> S3
-       -> durable job adapter -> SQS
-       -> Agent Kernel -> Groq / OpenAI
-       -> Connector adapters -> Jira / Trello
-       -> verification worker -> approved workspace
+       -> Next.js web/BFF container on ECS Fargate
+       -> Node.js API container on ECS Fargate
+            -> PostgreSQL repositories -> RDS PostgreSQL
+            -> object storage adapter -> S3
+            -> durable job adapter -> SQS
+            -> Agent Kernel -> Groq / OpenAI
+            -> Connector adapters -> Jira / Trello
+       -> Node.js worker container on ECS Fargate
+            -> durable job adapter -> SQS
+            -> verification runner -> approved workspace
   -> CloudWatch / OpenTelemetry-compatible telemetry
 ```
 
 ### 9.2 Application structure
 
-The first commercial release shall remain one modular monolith with independently testable modules:
+The product shall use three repository boundaries:
+
+- `axiom-web`: Next.js user interface, server rendering, session integration, and thin browser-specific Backend-for-Frontend behavior;
+- `axiom-platform`: Node.js TypeScript API, background worker, domain modules, application services, database access, Agent Kernel, and connector adapters;
+- `axiom-infrastructure`: Terraform configurations, reusable infrastructure modules, environment composition, and infrastructure delivery controls.
+
+The platform repository shall remain one modular monolith with independently testable modules:
 
 - identity and organizations;
 - projects and canonical graph;
@@ -441,10 +450,13 @@ The first commercial release shall remain one modular monolith with independentl
 - execution and verification;
 - traceability and audit.
 
-Domain modules shall not depend on React components, Next.js route handlers, provider SDKs, or infrastructure implementations. Cross-module access shall use explicit application services and contracts, not direct table access from arbitrary routes.
+Domain modules shall not depend on React components, Next.js route handlers, NestJS controllers, provider SDKs, or infrastructure implementations. Cross-module access shall use explicit application services and contracts, not direct table access from arbitrary routes.
+
+The API and worker may be separate processes and independently scalable containers while sharing the same versioned platform codebase. This process separation does not make the domain modules microservices and does not permit duplicated business logic or direct cross-module table access.
 
 ### 9.3 API
 
+- The authoritative commercial API shall run as a dedicated Node.js TypeScript service using NestJS with the Fastify adapter.
 - The commercial API shall be versioned under `/api/v1` and documented with OpenAPI 3.1.
 - Request and response boundaries shall be validated with Zod.
 - Errors shall expose stable machine codes, safe messages, request IDs, and retryability.
@@ -452,11 +464,13 @@ Domain modules shall not depend on React components, Next.js route handlers, pro
 - Pagination shall be cursor-based for unbounded collections.
 - Long operations shall return a durable job/run ID and shall not depend on one browser request remaining open.
 - Webhooks shall be signed or authenticated, deduplicated, and safely replayable.
+- Next.js route handlers shall be limited to browser-specific BFF needs such as session exchange, callback handling, same-origin proxying, and response shaping. They shall not own domain rules, persistence, long-running workflows, connector publication, or billing decisions.
+- The web repository shall consume a generated client from the reviewed OpenAPI contract. Cross-repository API changes shall pass compatibility checks before release.
 
 ### 9.4 Containers and orchestration
 
 - Docker images shall be reproducible, minimally privileged, scanned, and immutable per release.
-- Docker Compose shall run the local app, PostgreSQL, and required local dependencies.
+- Docker Compose shall run the local web, API, worker, PostgreSQL, and required local dependencies.
 - AWS ECS Fargate is the launch orchestrator.
 - Kubernetes manifests and EKS are Later scope, triggered by measured needs such as independent service scaling, advanced scheduling, isolation, or platform-team readiness.
 - No local or production workflow shall deploy to Vercel.
@@ -624,8 +638,11 @@ The first commercial release is accepted only when all of the following are evid
 4. Replace internal Jira credentials with organization installations and add Trello.
 5. Generalize the Groq-only provider into the Agent Kernel and model catalog.
 6. Retain fixture providers only for deterministic tests and explicitly labelled local demonstrations.
-7. Keep the modular monolith; extract services only against Section 9.5 triggers.
-8. Do not migrate fabricated, stale, or unverifiable prototype evidence into commercial customer records.
+7. Migrate Next.js API routes to the dedicated platform API one bounded vertical slice at a time; keep the current application runnable until each replacement passes contract and end-to-end tests.
+8. Move reusable domain and application code into `axiom-platform`; replace direct frontend imports with the generated OpenAPI client and presentation-only web types.
+9. Keep the platform modular monolith; extract services only against Section 9.5 triggers.
+10. Keep Terraform isolated from application repositories and never commit state, plans containing secrets, credentials, or environment secrets.
+11. Do not migrate fabricated, stale, or unverifiable prototype evidence into commercial customer records.
 
 ## 15. Normative engineering references
 

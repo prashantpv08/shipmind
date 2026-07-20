@@ -10,13 +10,16 @@ The authoritative commercial product contract is [SRS.md](SRS.md). Ordered imple
 - Customers publish approved work to Jira, Trello, both, or neither. Axiom does not provide a project-management board.
 - Groq and OpenAI are the initial hosted model-provider candidates. Models must pass Axiom’s task-specific evaluations before production use.
 - The commercial source of truth is PostgreSQL: Docker PostgreSQL locally and Amazon RDS for PostgreSQL in AWS.
-- The application remains a TypeScript modular monolith until measured extraction triggers justify a service.
+- The commercial product uses separate web, platform, and infrastructure repositories. The Node.js TypeScript platform remains a modular monolith until measured extraction triggers justify a domain service.
+- Next.js is the user interface and thin browser-specific BFF. NestJS with Fastify is the authoritative commercial API and worker platform.
 - AWS ECS Fargate is the initial production orchestrator. Kubernetes/EKS is later scope.
 - Axiom does not require owned GPUs and must not be deployed to Vercel.
 
 ## Current repository state
 
-The repository contains a working prototype whose durable capabilities include:
+This repository contains the working migration source for the future `axiom-web` repository. It still includes prototype Next.js API routes and framework-independent domain code so the product remains runnable while bounded slices move to `axiom-platform`.
+
+Its durable capabilities include:
 
 - workspace and project intake for bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-note sources;
 - immutable source references, grounded project intelligence, contextual clarifications, deterministic readiness, and approval invalidation;
@@ -27,6 +30,8 @@ The repository contains a working prototype whose durable capabilities include:
 - controlled NotifyFlow code generation, fixed-command verification, evidence, traceability, Why answers, and export.
 
 Prototype filesystem storage, Vercel infrastructure adapters, single-workspace credentials, and Groq-only configuration are migration targets. They are not the commercial architecture and must not be deployed.
+
+The repository split and safe migration sequence are documented in [ADR 0012](docs/decisions/0012-web-platform-infrastructure-repository-split.md) and [the repository split implementation note](docs/implementation/repository-split-foundation.md).
 
 ## Local commands
 
@@ -85,9 +90,11 @@ JIRA_PROJECT_KEY=
 
 The current Jira credentials are prototype-only. The commercial connector will use organization-scoped authorization, idempotent publication, field mapping, reconciliation, and audit. Trello will use the same normalized work-item contract.
 
-## Architecture boundaries
+## Architecture boundaries during migration
 
-- Domain and application logic lives under `src/` and must remain independent of React and route handlers.
+- Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.
+- New commercial business endpoints belong in `axiom-platform`; do not add new domain ownership to Next.js route handlers.
+- The final `axiom-web` repository consumes the versioned OpenAPI client and keeps only presentation-specific types.
 - Model-provider behavior is isolated under `src/ai` and validated with Zod.
 - Project graph and intelligence behavior lives under `src/projects`.
 - External integrations live under `src/integrations`.

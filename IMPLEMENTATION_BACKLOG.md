@@ -55,6 +55,31 @@ PostgreSQL becomes the authoritative commercial store locally, with a safe migra
 - Organization-scoped repository integration tests pass.
 - Filesystem and SQLite-like stores are not the authoritative commercial path.
 
+## Milestone 1.5 — Repository and API boundary
+
+### Outcome
+
+The commercial web, platform, and infrastructure responsibilities have independent repositories, while the prototype remains runnable during contract-tested migration.
+
+- [x] Record the web/platform/infrastructure split and Node.js backend decision. Evidence: `docs/decisions/0012-web-platform-infrastructure-repository-split.md`.
+- [x] Establish `axiom-platform` and `axiom-infrastructure` as independent local Git repositories; retain this repository as the runnable `axiom-web` migration source.
+- [ ] Complete the frontend extraction and rename or replace this repository with the final `axiom-web` repository after migrated flows have parity evidence.
+- [x] Scaffold the Node.js TypeScript platform using NestJS with Fastify in strict mode.
+- [x] Add a versioned `/api/v1` foundation, stable error envelope, request correlation, and generated OpenAPI contract.
+- [ ] Add a separately runnable worker process without duplicating domain logic.
+- [x] Add lint, typecheck, contract, build, and local start commands to the platform repository.
+- [x] Document the current route-to-platform migration order and rollback checkpoints. Evidence: `docs/implementation/repository-split-foundation.md`.
+- [ ] Move one bounded vertical slice at a time and replace frontend domain imports with reviewed API contracts.
+- [x] Add ignore rules and a repository policy check preventing Terraform state, plans, credentials, keys, and environment secrets from version control.
+- [ ] Remove each migrated Next.js business route only after replacement contract and end-to-end tests pass.
+
+### Exit criteria
+
+- Next.js owns presentation and thin browser-specific BFF behavior only.
+- The Node.js platform owns business APIs, workers, persistence, AI orchestration, and connector side effects.
+- The web consumes a reviewed OpenAPI contract rather than importing platform domain code.
+- Local development starts without Vercel, AWS, or any paid cloud resource.
+
 ## Milestone 2 — Identity, organizations, and audit
 
 ### Outcome
@@ -62,11 +87,14 @@ PostgreSQL becomes the authoritative commercial store locally, with a safe migra
 Multiple organizations can use Axiom without crossing data or authority boundaries.
 
 - [ ] Implement the isolated authentication adapter and secure sessions.
+- [x] Add the PostgreSQL user, membership, opaque-session, and immutable-audit foundation. Evidence: `docs/decisions/0013-opaque-sessions-authorization-and-audit.md` and `docs/implementation/identity-organization-audit-foundation.md`.
+- [x] Add a global deny-by-default platform guard with explicit public and permission metadata.
+- [x] Prove one organization-scoped API permits an active member and rejects anonymous, expired, revoked, and cross-tenant access.
 - [ ] Implement Organization, Membership, Role, and invitation flows.
 - [ ] Add server-side authorization policies and deny-by-default behavior.
 - [ ] Require organization scope in shared repositories and application services.
 - [ ] Add owner, administrator, contributor, reviewer, and viewer permissions.
-- [ ] Implement immutable audit events for security-sensitive and approval actions.
+- [x] Implement database-enforced immutable audit events for the current platform security-sensitive actions; extend action coverage with each new workflow.
 - [ ] Add organization/project archive, restore, retention, and deletion workflows.
 - [ ] Add tenant-isolation, role, session, and destructive-action tests.
 - [ ] Add MFA requirement for organization owners before general availability.

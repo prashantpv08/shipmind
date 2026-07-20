@@ -21,7 +21,9 @@ The authoritative product contract is `SRS.md`.
 - Axiom does not provide a Jira- or Trello-style work-management interface.
 - Jira and Trello are connector targets selected by the customer.
 - PostgreSQL is the commercial source of truth. Local development uses Docker PostgreSQL; AWS production targets RDS PostgreSQL.
-- Build a TypeScript modular monolith first. Extract services only when the SRS extraction triggers are evidenced.
+- Maintain three repository boundaries: Next.js web, Node.js TypeScript platform, and Terraform infrastructure.
+- Keep the platform backend a modular monolith first. Extract domain services only when the SRS extraction triggers are evidenced.
+- Next.js is the web and thin BFF only. The authoritative API is Node.js with NestJS and Fastify; business rules shall not remain in Next.js route handlers.
 - Axiom owns its Agent Kernel and workflows but does not train a foundation model or operate GPUs for launch.
 - Model providers remain behind interfaces. Groq and OpenAI are the launch candidates and must pass task-specific evaluations.
 - Kubernetes/EKS is later scope; ECS Fargate is the initial AWS orchestrator.
@@ -29,7 +31,7 @@ The authoritative product contract is `SRS.md`.
 ## Engineering rules
 
 - TypeScript strict mode is mandatory.
-- Domain logic must not depend on React components, route handlers, provider SDKs, or infrastructure implementations.
+- Domain logic must not depend on React components, Next.js route handlers, NestJS controllers, provider SDKs, or infrastructure implementations.
 - Organization scope and authorization must be enforced server-side at shared boundaries.
 - Model, connector, billing, storage, and coding-agent implementations must be isolated behind interfaces.
 - Every model response must pass Zod validation and grounding checks before persistence.
