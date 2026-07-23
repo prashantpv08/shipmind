@@ -137,6 +137,46 @@ export const PlatformWorkItemIdSchema = z.string().regex(/^WI-[A-Za-z0-9_-]{1,12
 export const PlatformWorkItemGenerationIdSchema = z.string().regex(/^WIGEN-[A-Za-z0-9_-]{1,123}$/);
 export const PlatformWorkItemReviewEtagSchema = z.string().regex(/^"WIGEN-[A-Za-z0-9_-]{1,123}:[a-f0-9]{64}"$/);
 export const PlatformSourceEntityIdSchema = z.string().regex(/^[A-Z][A-Z0-9_]*-[A-Za-z0-9_-]{1,120}$/);
+export const PlatformWorkItemGenerationBlockerSchema = z.object({
+  gapId: z.string().min(1).max(200),
+  type: z.string().min(1).max(100),
+  category: z.string().min(1).max(100),
+  title: z.string().min(1).max(500),
+  description: z.string().min(1).max(2_000),
+  severity: z.string().min(1).max(100),
+  truthStatus: z.literal('UNKNOWN'),
+  clarification: z.object({
+    id: z.string().min(1).max(200),
+    question: z.string().min(1).max(1_000),
+    whyItMatters: z.string().min(1).max(1_000),
+    affectedEntityIds: z.array(PlatformSourceEntityIdSchema).max(100),
+  }).strict().nullable(),
+}).strict();
+export const PlatformWorkItemGenerationBlockedResponseSchema = z.object({
+  error: z.object({
+    code: z.literal('CLARIFICATION_REQUIRED'),
+    message: z.string().min(1),
+    requestId: z.string().min(1),
+    retryable: z.literal(false),
+    details: z.object({ blockers: z.array(PlatformWorkItemGenerationBlockerSchema).min(1).max(100) }).strict(),
+  }).strict(),
+}).strict();
+export type PlatformWorkItemGenerationBlocker = z.infer<typeof PlatformWorkItemGenerationBlockerSchema>;
+export const PlatformClarificationQuestionIdSchema = z.string().regex(/^(?:CQ|QUESTION)-[A-Za-z0-9_-]{1,120}$/);
+export const PlatformAnswerClarificationRequestSchema = z.object({ answer: z.string().trim().min(1).max(2_000) }).strict();
+export const PlatformClarificationAnswerResponseSchema = z.object({
+  project: PlatformProjectSchema,
+  clarification: z.object({
+    id: PlatformClarificationQuestionIdSchema,
+    gapId: z.string().min(1).max(200),
+    status: z.literal('ANSWERED'),
+    truthStatus: z.literal('HUMAN_CONFIRMED'),
+    answeredAt: z.iso.datetime(),
+  }).strict(),
+  previousGraphVersion: z.number().int().positive(),
+  graphVersion: z.number().int().positive(),
+  replayed: z.boolean(),
+}).strict();
 const PlatformAcceptanceCriterionSchema = z.object({
   id: z.string().regex(/^AC-[A-Za-z0-9_-]{1,125}$/),
   statement: z.string().min(15).max(1_000),

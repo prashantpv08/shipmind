@@ -5,6 +5,8 @@ import { useRef, useState } from 'react';
 
 import type { PlatformWorkItem } from '@/src/platform/contracts';
 
+import { useBacklogEligibility } from './backlog-eligibility-context';
+
 type ReviewMode = 'ACCEPT' | 'ACCEPT_WITH_EDITS' | 'REJECT';
 type ReviewState = 'idle' | 'loading' | 'success' | 'blocked' | 'stale' | 'error' | 'unknown';
 type EditableWorkItem = Pick<PlatformWorkItem, 'title' | 'priority' | 'estimate' | 'outcome' | 'context'> & { scope: string; outOfScope: string };
@@ -43,6 +45,7 @@ export function ReviewBacklogAction({
   workItems: PlatformWorkItem[];
 }) {
   const router = useRouter();
+  const { clarificationBlocked } = useBacklogEligibility();
   const retryKey = useRef<string | null>(null);
   const inFlight = useRef(false);
   const [mode, setMode] = useState<ReviewMode>('ACCEPT');
@@ -153,6 +156,7 @@ export function ReviewBacklogAction({
   }
 
   const reasons = mode === 'ACCEPT_WITH_EDITS' ? editReasonOptions : rejectionReasonOptions;
+  if (clarificationBlocked) return <div className="backlog-notice" role="status"><b>Review blocked by a current clarification</b><p>The previous draft remains visible as evidence, but it cannot be accepted or edited while a critical graph decision is unresolved.</p></div>;
   return (
     <section className="backlog-review-action" aria-labelledby="human-review-heading">
       <div><h2 id="human-review-heading">Human review decision</h2><p>Review the exact versions below. This decision does not publish anything externally.</p></div>

@@ -6,6 +6,7 @@ vi.mock('../src/platform/request', () => ({ requestPlatform: mocks.requestPlatfo
 
 import { POST as generateWorkItems } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/work-item-generations/route';
 import { POST as reviewWorkItems } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/work-item-generations/[generationId]/reviews/route';
+import { POST as answerClarification } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/clarifications/[questionId]/answer/route';
 
 const preview = {
   id: 'WIGEN-ONE', projectId: 'PROJ-ONE', sourceGraphVersion: 2, status: 'DRAFT', contentHash: 'a'.repeat(64),
@@ -33,6 +34,83 @@ describe('work-item generation BFF', () => {
 
   it('rejects cross-origin generation before reading the session', async () => {
     const response = await generateWorkItems(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', { method: 'POST', headers: { host: '127.0.0.1', origin: 'http://attacker.invalid' } }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
+    expect(response.status).toBe(403);
+    expect(mocks.currentSessionToken).not.toHaveBeenCalled();
+    expect(mocks.requestPlatform).not.toHaveBeenCalled();
+  });
+
+  it('preserves validated clarification guidance from the platform', async () => {
+    const blockedBody = {
+      error: {
+        code: 'CLARIFICATION_REQUIRED',
+        message: 'Critical unknowns or contradictions remain open: GAP-AUTH-POLICY.',
+        requestId: 'clarification-001',
+        retryable: false,
+        details: {
+          blockers: [{
+            gapId: 'GAP-AUTH-POLICY', type: 'CONTRADICTION', category: 'SECURITY_PRIVACY',
+            title: 'Conflicting invitation authentication policies',
+            description: 'Approved sources require different invitation authentication policies.',
+            severity: 'MEDIUM', truthStatus: 'UNKNOWN',
+            clarification: {
+              id: 'QUESTION-AUTH-POLICY',
+              question: 'Which approved authentication policy must govern invitation acceptance?',
+              whyItMatters: 'Selecting one without a decision could weaken access controls.',
+              affectedEntityIds: ['REQ-ACCESS'],
+            },
+          }],
+        },
+      },
+    };
+    mocks.requestPlatform.mockResolvedValue({ status: 422, requestId: 'clarification-001', body: blockedBody });
+
+    const response = await generateWorkItems(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', {
+      method: 'POST',
+      headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json', 'idempotency-key': 'work-item-key-blocked-001' },
+      body: JSON.stringify({ sourceGraphVersion: 2, tier: 'ECONOMY' }),
+    }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual(blockedBody);
+  });
+
+  it('forwards a clarification answer with project concurrency and idempotency controls', async () => {
+    const answered = {
+      project: {
+        id: 'PROJ-ONE', workspaceId: 'WS-ONE', name: 'Product One', status: 'ANALYZED', graphVersion: 3, rowVersion: 5,
+        archivedAt: null, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-24T00:00:00.000Z',
+      },
+      clarification: {
+        id: 'QUESTION-AUTH-POLICY', gapId: 'GAP-AUTH-POLICY', status: 'ANSWERED', truthStatus: 'HUMAN_CONFIRMED', answeredAt: '2026-07-24T00:00:00.000Z',
+      },
+      previousGraphVersion: 2,
+      graphVersion: 3,
+      replayed: false,
+    };
+    mocks.requestPlatform.mockResolvedValue({ status: 200, requestId: 'answer-001', etag: '"PROJ-ONE:5"', idempotencyReplayed: 'false', body: answered });
+    const body = { answer: 'Invited users must authenticate with a verified organization identity before acceptance.' };
+    const response = await answerClarification(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/clarifications/QUESTION-AUTH-POLICY/answer', {
+      method: 'POST',
+      headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json', 'idempotency-key': 'clarification-key-001', 'if-match': '"PROJ-ONE:4"' },
+      body: JSON.stringify(body),
+    }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE', questionId: 'QUESTION-AUTH-POLICY' }) });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('etag')).toBe('"PROJ-ONE:5"');
+    expect(response.headers.get('idempotency-replayed')).toBe('false');
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(
+      '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/clarifications/QUESTION-AUTH-POLICY/answer',
+      'A'.repeat(43),
+      'generated-request-id',
+      { method: 'POST', body, ifMatch: '"PROJ-ONE:4"', idempotencyKey: 'clarification-key-001' },
+    );
+    await expect(response.json()).resolves.toEqual(answered);
+  });
+
+  it('rejects a cross-origin clarification answer before reading the session', async () => {
+    const response = await answerClarification(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/clarifications/QUESTION-AUTH-POLICY/answer', {
+      method: 'POST', headers: { host: '127.0.0.1', origin: 'http://attacker.invalid' },
+    }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE', questionId: 'QUESTION-AUTH-POLICY' }) });
     expect(response.status).toBe(403);
     expect(mocks.currentSessionToken).not.toHaveBeenCalled();
     expect(mocks.requestPlatform).not.toHaveBeenCalled();
