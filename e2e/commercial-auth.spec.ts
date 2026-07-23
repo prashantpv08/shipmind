@@ -123,6 +123,73 @@ test.describe('commercial web session boundary', () => {
     expect(keys[1]).toBe(keys[0]);
   });
 
+  test('renders the exact quality-gated backlog and preserves generation retries', async ({ page }) => {
+    await page.goto('/account');
+    await page.getByRole('button', { name: 'Connect local session' }).click();
+    await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
+    const projectsResponse = await page.request.get('/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects?limit=50');
+    const projectPage = await projectsResponse.json() as { projects: Array<{ id: string }> };
+    let selected: { projectId: string; preview: Record<string, unknown> } | null = null;
+    for (const project of projectPage.projects) {
+      const previewResponse = await page.request.get(`/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${encodeURIComponent(project.id)}/work-item-generations`);
+      if (previewResponse.status() !== 200) continue;
+      selected = { projectId: project.id, preview: await previewResponse.json() as Record<string, unknown> };
+      break;
+    }
+    expect(selected).not.toBeNull();
+    await page.goto(`/account/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/backlog`);
+    await expect(page.getByRole('heading', { name: 'Agile backlog preview' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Deterministic quality result' })).toBeVisible();
+    await expect(page.getByText('DRAFT · awaiting human review')).toBeVisible();
+    await expect(page.locator('.backlog-items article').first()).toBeVisible();
+
+    const keys: string[] = [];
+    let attempts = 0;
+    await page.route(`**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/work-item-generations`, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      attempts += 1;
+      keys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (attempts === 1) return route.abort('failed');
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(selected!.preview) });
+    });
+    await page.getByRole('button', { name: 'Regenerate draft version' }).click();
+    await expect(page.getByText('The result is unknown. Retry without changing the graph so the same idempotency key is reused.')).toBeVisible();
+    await page.getByRole('button', { name: 'Regenerate draft version' }).click();
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+
+    const preview = selected!.preview as { id: string; contentHash: string; generationContentHash: string };
+    const reviewKeys: string[] = [];
+    const reviewEtags: string[] = [];
+    let reviewAttempts = 0;
+    await page.route(`**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/work-item-generations/${preview.id}/reviews`, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      reviewAttempts += 1;
+      reviewKeys.push(route.request().headers()['idempotency-key'] ?? '');
+      reviewEtags.push(route.request().headers()['if-match'] ?? '');
+      if (reviewAttempts === 1) return route.abort('failed');
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
+        ...selected!.preview,
+        status: 'APPROVED',
+        review: {
+          id: 'WIREVIEW-UI-RETRY', generationId: preview.id, decision: 'ACCEPT', reasonCategory: 'MEETS_REQUIREMENTS',
+          comment: 'The exact grounded backlog is ready for controlled connector preparation.',
+          generationContentHash: preview.generationContentHash, reviewedContentHash: preview.contentHash,
+          reviewedByUserId: 'USER-LOCAL-OWNER', reviewedAt: '2026-07-23T01:00:00.000Z',
+        },
+      }) });
+    });
+    await page.getByLabel('Approval explanation').fill('The exact grounded backlog is ready for controlled connector preparation.');
+    await page.getByRole('button', { name: 'Accept exact backlog' }).click();
+    await expect(page.getByText('The result is unknown. Retry the unchanged decision so the same idempotency key is reused.')).toBeVisible();
+    await page.getByRole('button', { name: 'Accept exact backlog' }).click();
+    expect(reviewKeys).toHaveLength(2);
+    expect(reviewKeys[0]).toBeTruthy();
+    expect(reviewKeys[1]).toBe(reviewKeys[0]);
+    expect(reviewEtags).toEqual([`"${preview.id}:${preview.generationContentHash}"`, `"${preview.id}:${preview.generationContentHash}"`]);
+  });
+
   test('requires archive confirmation and reconciles a stale project version', async ({ page }) => {
     await page.goto('/account');
     await page.getByRole('button', { name: 'Connect local session' }).click();

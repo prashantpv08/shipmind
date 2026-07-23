@@ -102,6 +102,7 @@ export default async function OrganizationProjectsPage({
                       <div><dt>Status</dt><dd>{project.status.replaceAll('_', ' ')}</dd></div>
                       <div><dt>Graph</dt><dd>v{project.graphVersion}</dd></div>
                     </dl>
+                    <Link className="account-text-link" href={`/account/organizations/${organizationId}/projects/${project.id}/backlog`}>Review backlog</Link>
                     {state.canManageLifecycle ? (
                       <ProjectLifecycleActions organizationId={organizationId} project={project} />
                     ) : null}

@@ -132,3 +132,94 @@ export const PlatformInvitationEtagSchema = z.string().regex(/^"INV-[A-Za-z0-9_-
 export type PlatformMember = z.infer<typeof PlatformMemberSchema>;
 export type PlatformInvitation = z.infer<typeof PlatformInvitationSchema>;
 export type PlatformInvitationRole = z.infer<typeof PlatformInvitationRoleSchema>;
+
+export const PlatformWorkItemIdSchema = z.string().regex(/^WI-[A-Za-z0-9_-]{1,125}$/);
+export const PlatformWorkItemGenerationIdSchema = z.string().regex(/^WIGEN-[A-Za-z0-9_-]{1,123}$/);
+export const PlatformWorkItemReviewEtagSchema = z.string().regex(/^"WIGEN-[A-Za-z0-9_-]{1,123}:[a-f0-9]{64}"$/);
+export const PlatformSourceEntityIdSchema = z.string().regex(/^[A-Z][A-Z0-9_]*-[A-Za-z0-9_-]{1,120}$/);
+const PlatformAcceptanceCriterionSchema = z.object({
+  id: z.string().regex(/^AC-[A-Za-z0-9_-]{1,125}$/),
+  statement: z.string().min(15).max(1_000),
+  verificationKind: z.enum(['AUTOMATED_TEST', 'INTEGRATION_TEST', 'CONTRACT_TEST', 'MANUAL_REVIEW', 'METRIC']),
+  verificationMethod: z.string().min(10).max(1_000),
+  sourceEntityIds: z.array(PlatformSourceEntityIdSchema).min(1).max(20),
+}).strict();
+export const PlatformWorkItemSchema = z.object({
+  id: PlatformWorkItemIdSchema,
+  version: z.number().int().positive(),
+  type: z.enum(['INITIATIVE', 'EPIC', 'STORY', 'TASK', 'DEFECT']),
+  parentId: PlatformWorkItemIdSchema.nullable(),
+  title: z.string().min(8).max(180),
+  priority: z.enum(['P0', 'P1', 'P2', 'P3']),
+  estimate: z.enum(['XS', 'S', 'M', 'L', 'XL', 'UNKNOWN']),
+  outcome: z.string().min(20).max(2_000),
+  context: z.string().min(20).max(4_000),
+  scope: z.array(z.string().min(8).max(1_000)).min(1).max(30),
+  outOfScope: z.array(z.string().min(8).max(1_000)).max(30),
+  acceptanceCriteria: z.array(PlatformAcceptanceCriterionSchema).max(30),
+  dependencyIds: z.array(PlatformWorkItemIdSchema).max(30),
+  risks: z.array(z.object({ description: z.string().min(10).max(500), impact: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']), mitigation: z.string().min(10).max(500) }).strict()).max(20),
+  openQuestions: z.array(z.object({ id: z.string().regex(/^QUESTION-[A-Za-z0-9_-]{1,120}$/), question: z.string().min(10).max(500), whyItMatters: z.string().min(10).max(500), blocking: z.boolean(), affectedSourceEntityIds: z.array(PlatformSourceEntityIdSchema).max(20) }).strict()).max(20),
+  evidenceExpectations: z.array(z.string().min(10).max(1_000)).max(20),
+  sourceEntityIds: z.array(PlatformSourceEntityIdSchema).min(1).max(50),
+  userStory: z.object({ persona: z.string().min(2).max(200), capability: z.string().min(10).max(500), benefit: z.string().min(10).max(500) }).strict().optional(),
+  defect: z.object({ observedBehavior: z.string().min(10).max(1_000), expectedBehavior: z.string().min(10).max(1_000), reproductionSteps: z.array(z.string().min(5).max(500)).min(1).max(20) }).strict().optional(),
+  truthStatus: z.literal('AI_SUGGESTED'),
+  reviewStatus: z.literal('DRAFT'),
+}).strict();
+const PlatformTicketQualityFindingSchema = z.object({
+  code: z.string().min(1), severity: z.enum(['BLOCKER', 'ERROR', 'WARNING']), message: z.string().min(1),
+  workItemId: PlatformWorkItemIdSchema.optional(), path: z.string().min(1).optional(), relatedIds: z.array(z.string().min(1)).optional(),
+}).strict();
+export const PlatformTicketQualityReportSchema = z.object({
+  evaluatorVersion: z.literal('ticket-quality-v1'), passed: z.boolean(), clarificationRequired: z.boolean(),
+  findings: z.array(PlatformTicketQualityFindingSchema),
+  metrics: z.object({ schemaValid: z.boolean(), workItemCount: z.number().int().nonnegative(), implementableWorkItemCount: z.number().int().nonnegative(), requiredFieldCompleteness: z.number().min(0).max(1), validSourceReferenceRate: z.number().min(0).max(1), approvedRequirementCoverage: z.number().min(0).max(1), duplicatePairCount: z.number().int().nonnegative(), blockingQuestionCount: z.number().int().nonnegative() }).strict(),
+}).strict();
+export const PlatformWorkItemGenerationPreviewSchema = z.object({
+  id: PlatformWorkItemGenerationIdSchema,
+  projectId: PlatformProjectIdSchema,
+  sourceGraphVersion: z.number().int().positive(),
+  status: z.enum(['DRAFT', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'SUPERSEDED']),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  generationContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  schemaVersion: z.literal('work-item-v1'),
+  evaluatorVersion: z.literal('ticket-quality-v1'),
+  promptVersion: z.literal('fixture-grounded-agile-v1'),
+  workflowVersion: z.literal('ticket-workflow-v1'),
+  qualityReport: PlatformTicketQualityReportSchema,
+  workItems: z.array(PlatformWorkItemSchema).min(1).max(200),
+  generatedAt: z.iso.datetime(),
+  review: z.object({
+    id: z.string().regex(/^WIREVIEW-[A-Za-z0-9_-]{1,120}$/),
+    generationId: PlatformWorkItemGenerationIdSchema,
+    decision: z.enum(['ACCEPT', 'ACCEPT_WITH_EDITS', 'REJECT']),
+    reasonCategory: z.enum(['MEETS_REQUIREMENTS', 'SCOPE_ADJUSTMENT', 'TECHNICAL_CORRECTION', 'PRIORITY_OR_ESTIMATE', 'MISSING_REQUIREMENT', 'UNGROUNDED', 'UNTESTABLE', 'DUPLICATE_OR_OVERLAP', 'DEPENDENCY_ERROR', 'CRITICAL_UNKNOWN', 'OTHER']),
+    comment: z.string().min(10).max(2_000),
+    generationContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+    reviewedContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+    reviewedByUserId: z.string().regex(/^USER-[A-Za-z0-9_-]{1,123}$/),
+    reviewedAt: z.iso.datetime(),
+  }).strict().nullable(),
+  replayed: z.boolean(),
+}).strict();
+export const PlatformGenerateWorkItemsRequestSchema = z.object({ sourceGraphVersion: z.number().int().positive(), mode: z.literal('FIXTURE') }).strict();
+const PlatformWorkItemEditSchema = z.object({
+  workItemId: PlatformWorkItemIdSchema,
+  expectedVersion: z.number().int().positive(),
+  title: z.string().trim().min(8).max(180).optional(),
+  priority: z.enum(['P0', 'P1', 'P2', 'P3']).optional(),
+  estimate: z.enum(['XS', 'S', 'M', 'L', 'XL', 'UNKNOWN']).optional(),
+  outcome: z.string().trim().min(20).max(2_000).optional(),
+  context: z.string().trim().min(20).max(4_000).optional(),
+  scope: z.array(z.string().trim().min(8).max(1_000)).min(1).max(30).optional(),
+  outOfScope: z.array(z.string().trim().min(8).max(1_000)).max(30).optional(),
+}).strict().refine((value) => Object.keys(value).some((key) => !['workItemId', 'expectedVersion'].includes(key)));
+export const PlatformSubmitWorkItemReviewRequestSchema = z.discriminatedUnion('decision', [
+  z.object({ decision: z.literal('ACCEPT'), reasonCategory: z.literal('MEETS_REQUIREMENTS'), comment: z.string().trim().min(10).max(2_000) }).strict(),
+  z.object({ decision: z.literal('ACCEPT_WITH_EDITS'), reasonCategory: z.enum(['SCOPE_ADJUSTMENT', 'TECHNICAL_CORRECTION', 'PRIORITY_OR_ESTIMATE', 'OTHER']), comment: z.string().trim().min(10).max(2_000), edits: z.array(PlatformWorkItemEditSchema).min(1).max(200).refine((edits) => new Set(edits.map((edit) => edit.workItemId)).size === edits.length) }).strict(),
+  z.object({ decision: z.literal('REJECT'), reasonCategory: z.enum(['MISSING_REQUIREMENT', 'UNGROUNDED', 'UNTESTABLE', 'DUPLICATE_OR_OVERLAP', 'DEPENDENCY_ERROR', 'CRITICAL_UNKNOWN', 'OTHER']), comment: z.string().trim().min(10).max(2_000) }).strict(),
+]);
+
+export type PlatformWorkItem = z.infer<typeof PlatformWorkItemSchema>;
+export type PlatformWorkItemGenerationPreview = z.infer<typeof PlatformWorkItemGenerationPreviewSchema>;

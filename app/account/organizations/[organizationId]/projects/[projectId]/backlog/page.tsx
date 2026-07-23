@@ -1,0 +1,39 @@
+import Link from 'next/link';
+
+import { getWorkItemReview } from '@/src/platform/work-items';
+
+import { GenerateBacklogAction } from './generate-backlog-action';
+import { ReviewBacklogAction } from './review-backlog-action';
+
+export const dynamic = 'force-dynamic';
+
+function percentage(value: number) { return `${Math.round(value * 100)}%`; }
+
+export default async function BacklogReviewPage({ params }: { params: Promise<{ organizationId: string; projectId: string }> }) {
+  const { organizationId, projectId } = await params;
+  const state = await getWorkItemReview(organizationId, projectId);
+  const projectsHref = `/account/organizations/${encodeURIComponent(organizationId)}/projects`;
+  return (
+    <main className="account-shell">
+      <header className="account-topbar"><Link href="/account"><span>A</span><b>Axiom</b></Link><p>Exact backlog review</p></header>
+      <section className="account-card backlog-review-card" aria-labelledby="backlog-heading">
+        <span className="landing-kicker"><i /> Governed Agile backlog</span>
+        <h1 id="backlog-heading">Agile backlog preview</h1>
+        <p>This page shows exact persisted WorkItem versions and their real human-review state. Nothing here publishes to Jira or Trello.</p>
+        {state.status !== 'ready' ? <div className="account-state" role={state.status === 'forbidden' || state.status === 'unavailable' ? 'alert' : undefined}><h2>{state.status === 'unauthenticated' ? 'Authentication required' : state.status === 'forbidden' ? 'Access denied' : state.status === 'not-found' ? 'Project not found' : 'Backlog unavailable'}</h2><p>{state.status === 'unavailable' ? state.message : 'Return to the authorized project list and try again.'}</p><Link className="account-text-link" href={projectsHref}>Return to projects</Link></div> : null}
+        {state.status === 'ready' ? <div className="account-state">
+          <div className="project-access-heading"><div><h2>{state.project.name}</h2><p>{state.project.id} · graph v{state.project.graphVersion} · {state.project.status.replaceAll('_', ' ')}</p></div><Link className="account-text-link" href={projectsHref}>Return to projects</Link></div>
+          {state.canGenerate ? <GenerateBacklogAction organizationId={organizationId} projectId={projectId} sourceGraphVersion={state.project.graphVersion} hasPreview={state.preview !== null} /> : <div className="backlog-notice"><b>Generation is read-only</b><p>Your role cannot generate a new draft version.</p></div>}
+          {state.preview === null ? <div className="backlog-empty"><h2>No persisted draft</h2><p>Generate a fixture draft after the current graph, documents, and architecture are approved and blocking gaps are resolved.</p></div> : <>
+            <section className="backlog-proof" aria-labelledby="quality-heading"><div><h2 id="quality-heading">Deterministic quality result</h2><p>Passed by {state.preview.evaluatorVersion}. Human edits are rerun through the same gates before acceptance.</p></div><strong>{state.preview.qualityReport.passed ? 'PASSED' : 'FAILED'}</strong><dl><div><dt>Schema</dt><dd>{state.preview.qualityReport.metrics.schemaValid ? 'Valid' : 'Invalid'}</dd></div><div><dt>Grounding</dt><dd>{percentage(state.preview.qualityReport.metrics.validSourceReferenceRate)}</dd></div><div><dt>Coverage</dt><dd>{percentage(state.preview.qualityReport.metrics.approvedRequirementCoverage)}</dd></div><div><dt>Items</dt><dd>{state.preview.qualityReport.metrics.workItemCount}</dd></div></dl></section>
+            <div className={`backlog-version status-${state.preview.status.toLowerCase()}`}><span>{state.preview.status.replaceAll('_', ' ')}{state.preview.status === 'DRAFT' ? ' · awaiting human review' : ''}</span><code>{state.preview.id} · exact content {state.preview.contentHash}</code>{state.preview.contentHash !== state.preview.generationContentHash ? <code>Generated snapshot {state.preview.generationContentHash}</code> : null}<small>Graph v{state.preview.sourceGraphVersion} · generated {new Date(state.preview.generatedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</small></div>
+            {state.preview.review ? <section className="backlog-review-record" aria-labelledby="recorded-review-heading"><div><h2 id="recorded-review-heading">Recorded human review</h2><strong>{state.preview.review.decision.replaceAll('_', ' ')}</strong></div><dl><div><dt>Reason</dt><dd>{state.preview.review.reasonCategory.replaceAll('_', ' ')}</dd></div><div><dt>Reviewer</dt><dd><code>{state.preview.review.reviewedByUserId}</code></dd></div><div><dt>Recorded</dt><dd>{new Date(state.preview.review.reviewedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</dd></div></dl><p>{state.preview.review.comment}</p><small>{state.preview.status === 'APPROVED' ? 'Approved for later connector preparation. No external publication has occurred.' : 'Rejected versions remain immutable. Generate a new draft after addressing the recorded reason.'}</small></section> : null}
+            {state.preview.status === 'DRAFT' && state.canReview ? <ReviewBacklogAction organizationId={organizationId} projectId={projectId} generationId={state.preview.id} generationContentHash={state.preview.generationContentHash} workItems={state.preview.workItems} /> : null}
+            {state.preview.status === 'DRAFT' && !state.canReview ? <div className="backlog-notice"><b>Review is read-only</b><p>Your role can inspect the exact draft but cannot accept, edit, or reject it.</p></div> : null}
+            <section aria-labelledby="items-heading"><h2 id="items-heading">Exact work-item versions</h2><ol className="backlog-items">{state.preview.workItems.map((item) => <li key={`${item.id}:${item.version}`}><article><header><div><span>{item.type}</span><h3>{item.title}</h3><code>{item.id} · v{item.version}</code></div><dl><div><dt>Priority</dt><dd>{item.priority}</dd></div><div><dt>Estimate</dt><dd>{item.estimate}</dd></div></dl></header>{item.userStory ? <p className="backlog-user-story">As a <b>{item.userStory.persona}</b>, I want to {item.userStory.capability}, so that {item.userStory.benefit}.</p> : null}<section><h4>Outcome</h4><p>{item.outcome}</p></section><section><h4>Context</h4><p>{item.context}</p></section><div className="backlog-columns"><section><h4>In scope</h4><ul>{item.scope.map((value) => <li key={value}>{value}</li>)}</ul></section><section><h4>Out of scope</h4>{item.outOfScope.length ? <ul>{item.outOfScope.map((value) => <li key={value}>{value}</li>)}</ul> : <p>None recorded.</p>}</section></div>{item.acceptanceCriteria.length ? <section><h4>Acceptance criteria</h4><ol className="acceptance-list">{item.acceptanceCriteria.map((criterion) => <li key={criterion.id}><b>{criterion.statement}</b><span>{criterion.verificationKind.replaceAll('_', ' ')} — {criterion.verificationMethod}</span><code>{criterion.sourceEntityIds.join(', ')}</code></li>)}</ol></section> : null}<div className="backlog-columns"><section><h4>Dependencies</h4><p>{item.dependencyIds.length ? item.dependencyIds.join(', ') : 'None recorded.'}</p></section><section><h4>Evidence expected</h4>{item.evidenceExpectations.length ? <ul>{item.evidenceExpectations.map((value) => <li key={value}>{value}</li>)}</ul> : <p>Defined by child items.</p>}</section></div>{item.risks.length ? <section><h4>Risks</h4><ul>{item.risks.map((risk) => <li key={risk.description}><b>{risk.impact}</b> — {risk.description} Mitigation: {risk.mitigation}</li>)}</ul></section> : null}<footer><span>Sources</span><code>{item.sourceEntityIds.join(', ')}</code><span>{item.truthStatus}</span></footer></article></li>)}</ol></section>
+          </>}
+        </div> : null}
+      </section>
+    </main>
+  );
+}

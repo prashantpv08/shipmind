@@ -169,14 +169,14 @@ Axiom produces grounded, complete, testable work items that pass measurable qual
 
 - [x] Add the bounded Ticket Quality Foundation: connector-neutral Agile `WorkItem v1`, deterministic hierarchy/grounding/coverage/testability/overlap/dependency/clarification/evidence-claim gates, seven curated local evaluation cases, and `pnpm eval:tickets`. The corpus remains `AWAITING_HUMAN_REVIEW`, and persistence, generation, semantic review, approval, and connector compilation remain open. Evidence: `docs/implementation/ticket-quality-foundation.md`.
 
-- [ ] Finalize normalized WorkItem and WorkItemVersion schemas.
-- [ ] Implement context selection from approved graph versions.
+- [x] Finalize normalized `WorkItem v1` and immutable PostgreSQL `WorkItemVersion` persistence. Evidence: `docs/implementation/work-item-generation-preview.md`.
+- [x] Implement bounded context selection from the current document-approved and architecture-approved graph version, excluding unsupported/unknown entities and blocking open critical gaps. Evidence: `docs/implementation/work-item-generation-preview.md`.
 - [ ] Generate hierarchy, scope, out-of-scope, context, acceptance criteria, dependencies, risks, open questions, evidence expectations, and source links.
-- [ ] Reject invalid, incomplete, ungrounded, or untestable output deterministically.
+- [x] Reject invalid, incomplete, ungrounded, or untestable fixture output deterministically before persistence. Provider-generated output must use the same gate when added. Evidence: `docs/implementation/ticket-quality-foundation.md` and `docs/implementation/work-item-generation-preview.md`.
 - [ ] Implement requirement coverage, overlap, duplicate, contradiction, and orphan checks.
 - [ ] Implement critical-unknown clarification gates.
 - [ ] Add an optional independent semantic review stage behind policy.
-- [ ] Implement immutable review previews and accept/edit/reject feedback.
+- [x] Implement exact immutable review previews and categorized accept, accept-with-edits, and reject feedback with ETags, idempotency, edited WorkItem versions, deterministic revalidation, organization authorization, and audit evidence. Evidence: `docs/implementation/work-item-human-review.md`.
 - [ ] Version prompts, schemas, rubrics, policies, and generations.
 - [ ] Build the launch evaluation dataset with reviewed good, bad, contradictory, incomplete, and adversarial cases.
 - [ ] Implement evaluation runs, comparison reports, thresholds, and model promotion rules.

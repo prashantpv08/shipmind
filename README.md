@@ -101,6 +101,10 @@ Owners and administrators can also open `/account/organizations/:organizationId/
 
 The commercial platform also contains the first Ticket Quality Foundation. `WorkItem v1` represents Initiative, Epic, Story, Task, and Defect independently of Jira or Trello. `pnpm eval:tickets` in `axiom-platform` locally verifies deterministic schema, hierarchy, grounding, coverage, acceptance-criteria, overlap, dependency, clarification, and evidence-integrity gates without using a paid model.
 
+Authorized owners, administrators, product analysts, and architects can now generate a non-billable fixture backlog from the current approved graph. The platform quality-gates it before transactionally storing stable work-item identities and immutable versions. Every project row links to `/account/organizations/:organizationId/projects/:projectId/backlog`, where authorized members see the exact persisted draft, its content hash, evaluator metrics, sources, scope, acceptance criteria, risks, dependencies, and evidence expectations. The draft is explicitly unapproved and cannot yet be published.
+
+Owners, administrators, product analysts, architects, and reviewers can record one exact human decision on the latest draft. Accept-with-edits creates new immutable versions only for materially changed items and reruns deterministic quality gates; rejection records a categorized reason without destroying the draft. Exact hashes, selected versions, reviewer identity, audit evidence, stale-write protection, and idempotent unknown-result retries are preserved. Approval makes the selected versions eligible for future connector preparation, but Jira and Trello publication are still unavailable from this flow.
+
 ## Architecture boundaries during migration
 
 - Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.
