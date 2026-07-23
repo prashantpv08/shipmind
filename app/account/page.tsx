@@ -55,6 +55,7 @@ export default async function AccountPage() {
                     <div className="account-org-actions">
                       <span>{organization.role}</span>
                       <Link href={`/account/organizations/${organization.id}/projects`}>View projects</Link>
+                      {['OWNER', 'ADMINISTRATOR'].includes(organization.role) ? <Link href={`/account/organizations/${organization.id}/billing`}>View budget</Link> : null}
                       {['OWNER', 'ADMINISTRATOR'].includes(organization.role) ? <Link href={`/account/organizations/${organization.id}/members`}>Manage access</Link> : null}
                     </div>
                   </li>

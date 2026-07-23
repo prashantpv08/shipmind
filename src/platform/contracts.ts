@@ -223,3 +223,64 @@ export const PlatformSubmitWorkItemReviewRequestSchema = z.discriminatedUnion('d
 
 export type PlatformWorkItem = z.infer<typeof PlatformWorkItemSchema>;
 export type PlatformWorkItemGenerationPreview = z.infer<typeof PlatformWorkItemGenerationPreviewSchema>;
+
+export const PlatformProductCreditUnitsSchema = z.number().int().min(0).max(2_000_000_000);
+export const PlatformUsageReservationIdSchema = z.string().regex(/^URES-[A-Za-z0-9_-]{1,123}$/);
+export const PlatformUsageLedgerEntrySchema = z.object({
+  id: z.string().regex(/^ULED-[A-Za-z0-9_-]{1,123}$/),
+  reservationId: PlatformUsageReservationIdSchema,
+  eventType: z.enum(['RESERVATION', 'RECONCILIATION']),
+  reservedCreditUnits: PlatformProductCreditUnitsSchema,
+  chargedCreditUnits: PlatformProductCreditUnitsSchema,
+  releasedCreditUnits: PlatformProductCreditUnitsSchema,
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  toolChargeMicros: z.number().int().nonnegative(),
+  providerCostMicros: z.number().int().nonnegative(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  outcome: z.enum(['SUCCEEDED', 'FAILED', 'CANCELLED', 'CACHED']).nullable(),
+  retryCount: z.number().int().nonnegative(),
+  fallbackUsed: z.boolean(),
+  cacheHit: z.boolean(),
+  projectId: PlatformProjectIdSchema.nullable(),
+  userId: z.string().regex(/^USER-[A-Za-z0-9_-]{1,123}$/),
+  workflow: z.string().min(1),
+  workflowVersion: z.string().min(1),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  generationId: z.string().nullable(),
+  runId: z.string().min(1),
+  occurredAt: z.iso.datetime(),
+}).strict();
+export const PlatformBillingOverviewSchema = z.object({
+  plan: z.object({
+    id: z.string().regex(/^PLAN-[A-Za-z0-9_-]{1,123}$/),
+    code: z.string().min(1),
+    name: z.string().min(1),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+  }).strict(),
+  subscription: z.object({
+    id: z.string().regex(/^SUB-[A-Za-z0-9_-]{1,124}$/),
+    status: z.enum(['TRIALING', 'ACTIVE', 'PAST_DUE']),
+    billingPeriodStart: z.iso.datetime(),
+    billingPeriodEnd: z.iso.datetime(),
+  }).strict(),
+  entitlements: z.object({
+    aiUsageEnabled: z.boolean(),
+    maxCreditsPerRequest: PlatformProductCreditUnitsSchema,
+  }).strict(),
+  balance: z.object({
+    id: z.string().regex(/^BAL-[A-Za-z0-9_-]{1,124}$/),
+    allocatedCreditUnits: PlatformProductCreditUnitsSchema,
+    reservedCreditUnits: PlatformProductCreditUnitsSchema,
+    consumedCreditUnits: PlatformProductCreditUnitsSchema,
+    remainingCreditUnits: PlatformProductCreditUnitsSchema,
+    committedPercent: z.number().min(0).max(100),
+    alertThresholdPercent: z.number().int().min(1).max(100),
+    status: z.enum(['AVAILABLE', 'APPROACHING', 'EXHAUSTED']),
+    rowVersion: z.number().int().positive(),
+  }).strict(),
+  recentUsage: z.array(PlatformUsageLedgerEntrySchema).max(25),
+}).strict();
+
+export type PlatformBillingOverview = z.infer<typeof PlatformBillingOverviewSchema>;

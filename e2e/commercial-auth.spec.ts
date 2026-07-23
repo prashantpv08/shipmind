@@ -12,6 +12,14 @@ test.describe('commercial web session boundary', () => {
     await expect(page.getByText('Local Development')).toBeVisible();
     await expect(page.getByText('OWNER')).toBeVisible();
 
+    await page.getByRole('link', { name: 'View budget' }).click();
+    await expect(page.getByRole('heading', { name: 'Plan and AI usage' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Local development' })).toBeVisible();
+    await expect(page.getByText('Budget available')).toBeVisible();
+    await expect(page.getByText('No chargeable usage recorded')).toBeVisible();
+
+    await page.goto('/account');
+
     const organizationsResponse = await page.request.get('/api/platform/me/organizations');
     expect(organizationsResponse.status()).toBe(200);
     await expect(organizationsResponse.json()).resolves.toMatchObject({

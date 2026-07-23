@@ -119,15 +119,15 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 
 AI and product usage cannot exceed an organization’s approved plan or budget.
 
-- [ ] Implement Plan, Subscription, Entitlement, UsageReservation, and UsageLedgerEntry.
+- [x] Implement Plan, Subscription, Entitlement, UsageReservation, and UsageLedgerEntry. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [ ] Integrate the selected subscription provider behind an adapter.
 - [ ] Authenticate, deduplicate, and replay-test billing webhooks.
-- [ ] Implement product credits while retaining raw provider usage and effective cost.
-- [ ] Attribute usage to organization, project, user, workflow, provider, model, and run.
-- [ ] Reserve estimated cost before work and reconcile actual cost afterward.
+- [x] Implement product credits while retaining raw provider usage and effective cost. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
+- [x] Attribute usage to organization, project, user, workflow, provider, model, and run. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
+- [x] Reserve estimated cost before work and reconcile actual cost afterward. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [ ] Enforce per-request, daily, monthly, user, project, and organization hard limits.
 - [ ] Add alert thresholds, exhausted-budget states, and administrator controls.
-- [ ] Record retries, fallbacks, failures, cancellation, caching, and tool charges.
+- [x] Record retries, fallbacks, failures, cancellation, caching, and tool charges. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [ ] Add reconciliation, concurrency, overrun, and webhook tests.
 
 ### Exit criteria
