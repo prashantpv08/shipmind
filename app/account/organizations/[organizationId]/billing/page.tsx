@@ -2,6 +2,9 @@ import Link from 'next/link';
 
 import { getOrganizationBilling } from '@/src/platform/billing';
 
+import { BudgetPolicyForm } from './budget-policy-form';
+import { ExpiredReservationRecovery } from './expired-reservation-recovery';
+
 export const dynamic = 'force-dynamic';
 
 const integer = new Intl.NumberFormat('en-US');
@@ -60,14 +63,37 @@ export default async function OrganizationBillingPage({
               <div><dt>Consumed</dt><dd>{integer.format(state.overview.balance.consumedCreditUnits)}</dd><small>reconciled</small></div>
               <div><dt>Reserved</dt><dd>{integer.format(state.overview.balance.reservedCreditUnits)}</dd><small>approved, not final</small></div>
               <div><dt>Allocated</dt><dd>{integer.format(state.overview.balance.allocatedCreditUnits)}</dd><small>this period</small></div>
+              <div><dt>Today remaining</dt><dd>{integer.format(state.overview.dailyUsage.remainingCreditUnits)}</dd><small>{integer.format(state.overview.dailyUsage.committedCreditUnits)} committed today</small></div>
             </dl>
 
             <dl className="billing-details">
               <div><dt>Billing period</dt><dd>{date(state.overview.subscription.billingPeriodStart)} – {date(state.overview.subscription.billingPeriodEnd)}</dd></div>
               <div><dt>AI entitlement</dt><dd>{state.overview.entitlements.aiUsageEnabled ? 'Enabled' : 'Disabled'}</dd></div>
               <div><dt>Per-request ceiling</dt><dd>{integer.format(state.overview.entitlements.maxCreditsPerRequest)} credits</dd></div>
+              <div><dt>Organization/day</dt><dd>{integer.format(state.overview.policy.dailyCreditLimit)} credits</dd></div>
+              <div><dt>User/day</dt><dd>{integer.format(state.overview.policy.userDailyCreditLimit)} credits</dd></div>
+              <div><dt>Project/day</dt><dd>{integer.format(state.overview.policy.projectDailyCreditLimit)} credits</dd></div>
               <div><dt>Ledger currency</dt><dd>{state.overview.plan.currency}</dd></div>
             </dl>
+
+            {state.overview.expiredReservations.count > 0 ? (
+              <ExpiredReservationRecovery
+                organizationId={organizationId}
+                count={state.overview.expiredReservations.count}
+                creditUnits={state.overview.expiredReservations.reservedCreditUnits}
+              />
+            ) : null}
+
+            <BudgetPolicyForm
+              key={`${state.overview.policy.id}:${state.overview.policy.rowVersion}`}
+              organizationId={organizationId}
+              policy={state.overview.policy}
+              planLimits={{
+                dailyCreditLimit: state.overview.entitlements.maxDailyCredits,
+                userDailyCreditLimit: state.overview.entitlements.maxUserDailyCredits,
+                projectDailyCreditLimit: state.overview.entitlements.maxProjectDailyCredits,
+              }}
+            />
 
             <section className="billing-ledger" aria-labelledby="usage-ledger-heading">
               <div><h2 id="usage-ledger-heading">Recent usage evidence</h2><p>Newest immutable reservation and reconciliation events.</p></div>
@@ -79,7 +105,7 @@ export default async function OrganizationBillingPage({
                     <tr key={entry.id}>
                       <td><b>{entry.eventType}</b><small>{date(entry.occurredAt)}</small></td>
                       <td>{entry.workflow}<small>{entry.provider} · {entry.model}</small></td>
-                      <td>{entry.eventType === 'RESERVATION' ? `+${integer.format(entry.reservedCreditUnits)} reserved` : `${integer.format(entry.chargedCreditUnits)} charged`}<small>{entry.releasedCreditUnits > 0 ? `${integer.format(entry.releasedCreditUnits)} released` : 'No release'}</small></td>
+                      <td>{entry.eventType === 'RESERVATION' ? `+${integer.format(entry.reservedCreditUnits)} reserved` : entry.eventType === 'EXPIRATION' ? `${integer.format(entry.releasedCreditUnits)} released` : `${integer.format(entry.chargedCreditUnits)} charged`}<small>{entry.releasedCreditUnits > 0 ? `${integer.format(entry.releasedCreditUnits)} released` : 'No release'}</small></td>
                       <td>{integer.format(entry.inputTokens + entry.outputTokens)}<small>{integer.format(entry.inputTokens)} in · {integer.format(entry.outputTokens)} out</small></td>
                       <td>{money(entry.providerCostMicros + entry.toolChargeMicros, entry.currency)}<small>{entry.retryCount} retries · {entry.cacheHit ? 'cache hit' : 'no cache hit'}</small></td>
                       <td>{entry.outcome ?? 'Pending'}<small>{entry.fallbackUsed ? 'fallback used' : 'no fallback'}</small></td>

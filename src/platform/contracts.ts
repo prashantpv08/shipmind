@@ -226,10 +226,12 @@ export type PlatformWorkItemGenerationPreview = z.infer<typeof PlatformWorkItemG
 
 export const PlatformProductCreditUnitsSchema = z.number().int().min(0).max(2_000_000_000);
 export const PlatformUsageReservationIdSchema = z.string().regex(/^URES-[A-Za-z0-9_-]{1,123}$/);
+export const PlatformBudgetPolicyIdSchema = z.string().regex(/^BPOL-[A-Za-z0-9_-]{1,123}$/);
+export const PlatformBudgetPolicyEtagSchema = z.string().regex(/^"BPOL-[A-Za-z0-9_-]{1,123}:[1-9][0-9]*"$/);
 export const PlatformUsageLedgerEntrySchema = z.object({
   id: z.string().regex(/^ULED-[A-Za-z0-9_-]{1,123}$/),
   reservationId: PlatformUsageReservationIdSchema,
-  eventType: z.enum(['RESERVATION', 'RECONCILIATION']),
+  eventType: z.enum(['RESERVATION', 'RECONCILIATION', 'EXPIRATION']),
   reservedCreditUnits: PlatformProductCreditUnitsSchema,
   chargedCreditUnits: PlatformProductCreditUnitsSchema,
   releasedCreditUnits: PlatformProductCreditUnitsSchema,
@@ -252,6 +254,32 @@ export const PlatformUsageLedgerEntrySchema = z.object({
   runId: z.string().min(1),
   occurredAt: z.iso.datetime(),
 }).strict();
+export const PlatformUpdateBudgetPolicyRequestSchema = z.object({
+  dailyCreditLimit: PlatformProductCreditUnitsSchema,
+  userDailyCreditLimit: PlatformProductCreditUnitsSchema,
+  projectDailyCreditLimit: PlatformProductCreditUnitsSchema,
+  alertThresholdPercent: z.number().int().min(1).max(100),
+}).strict().refine((value) => value.userDailyCreditLimit <= value.dailyCreditLimit, {
+  message: 'User daily limit cannot exceed the organization daily limit.',
+  path: ['userDailyCreditLimit'],
+}).refine((value) => value.projectDailyCreditLimit <= value.dailyCreditLimit, {
+  message: 'Project daily limit cannot exceed the organization daily limit.',
+  path: ['projectDailyCreditLimit'],
+});
+export const PlatformBudgetPolicySchema = z.object({
+  id: PlatformBudgetPolicyIdSchema,
+  dailyCreditLimit: PlatformProductCreditUnitsSchema,
+  userDailyCreditLimit: PlatformProductCreditUnitsSchema,
+  projectDailyCreditLimit: PlatformProductCreditUnitsSchema,
+  alertThresholdPercent: z.number().int().min(1).max(100),
+  rowVersion: z.number().int().positive(),
+  updatedAt: z.iso.datetime(),
+  replayed: z.boolean(),
+}).strict();
+export const PlatformExpiredReservationRecoverySchema = z.object({
+  releasedReservations: z.number().int().nonnegative(),
+  releasedCreditUnits: PlatformProductCreditUnitsSchema,
+}).strict();
 export const PlatformBillingOverviewSchema = z.object({
   plan: z.object({
     id: z.string().regex(/^PLAN-[A-Za-z0-9_-]{1,123}$/),
@@ -268,7 +296,11 @@ export const PlatformBillingOverviewSchema = z.object({
   entitlements: z.object({
     aiUsageEnabled: z.boolean(),
     maxCreditsPerRequest: PlatformProductCreditUnitsSchema,
+    maxDailyCredits: PlatformProductCreditUnitsSchema,
+    maxUserDailyCredits: PlatformProductCreditUnitsSchema,
+    maxProjectDailyCredits: PlatformProductCreditUnitsSchema,
   }).strict(),
+  policy: PlatformBudgetPolicySchema.omit({ replayed: true }),
   balance: z.object({
     id: z.string().regex(/^BAL-[A-Za-z0-9_-]{1,124}$/),
     allocatedCreditUnits: PlatformProductCreditUnitsSchema,
@@ -280,7 +312,17 @@ export const PlatformBillingOverviewSchema = z.object({
     status: z.enum(['AVAILABLE', 'APPROACHING', 'EXHAUSTED']),
     rowVersion: z.number().int().positive(),
   }).strict(),
+  dailyUsage: z.object({
+    committedCreditUnits: PlatformProductCreditUnitsSchema,
+    remainingCreditUnits: PlatformProductCreditUnitsSchema,
+  }).strict(),
+  expiredReservations: z.object({
+    count: z.number().int().nonnegative(),
+    reservedCreditUnits: PlatformProductCreditUnitsSchema,
+  }).strict(),
   recentUsage: z.array(PlatformUsageLedgerEntrySchema).max(25),
 }).strict();
 
 export type PlatformBillingOverview = z.infer<typeof PlatformBillingOverviewSchema>;
+export type PlatformBudgetPolicy = z.infer<typeof PlatformBudgetPolicySchema>;
+export type PlatformUpdateBudgetPolicyRequest = z.infer<typeof PlatformUpdateBudgetPolicyRequestSchema>;

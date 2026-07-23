@@ -23,5 +23,5 @@ Axiom must prevent chargeable AI work from exceeding an organization’s approve
 
 - Concurrent requests cannot overspend the same organization balance.
 - Failed, cancelled, cached, retried, fallback, and tool usage can be retained without conflating product credits with provider invoices.
-- Daily, per-user, and per-project limits, expired-reservation recovery, administrator budget mutation, subscription-provider adapters, and authenticated webhooks remain required before the milestone is complete.
+- Daily, per-user, and per-project limits, expired-reservation recovery, and owner/administrator policy mutation are specified by [ADR 0016](0016-scoped-budget-policy-and-expiration.md). Subscription-provider adapters and authenticated webhooks remain required before the milestone is complete.
 - The Agent Kernel must depend on the exported billing application service before any paid model adapter can be enabled.

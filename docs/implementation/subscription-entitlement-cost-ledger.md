@@ -19,6 +19,7 @@ Organization owners and administrators can inspect the current local plan, AI en
   - organization, optional project, user, workflow, provider, model, generation, and run attribution;
   - transactional audit events.
 - Thin Next.js BFF validation and a server-rendered plan/usage page with loading, failure, unauthorized, unprovisioned, available, approaching, exhausted, and empty-ledger states.
+- Scoped daily policy controls and expired-reservation recovery are implemented in the follow-on [scoped budget controls slice](scoped-budget-controls.md).
 
 ## Local commands
 
@@ -42,17 +43,15 @@ Open `/account`, connect the local session, and choose **View budget**. No paid 
 ## Verified evidence
 
 - Platform TypeScript check passes.
-- PostgreSQL integration suite: 5 files and 41 tests pass, including tenant authorization, concurrency, idempotency, reconciliation, overrun protection, immutability, and migration rollback.
+- PostgreSQL integration suite: 5 files and 44 tests pass, including tenant authorization, scoped hard limits, concurrency, idempotency, reconciliation, expiration, overrun protection, immutability, and migration rollback.
 - Web lint and TypeScript checks pass.
-- Web unit suite: 18 files pass, 1 file is intentionally skipped; 106 tests pass and 5 are intentionally skipped.
+- Web unit suite: 18 files pass, 1 file is intentionally skipped; 109 tests pass and 5 are intentionally skipped.
 - Next.js production build passes and includes the dynamic billing page and BFF route.
-- Focused commercial Playwright flow passes locally: sign-in, budget page, project reads, cross-tenant denial, and sign-out (1/1).
+- All 10 local Playwright flows pass, including sign-in, exact budget-control preview/cancellation, project reads, cross-tenant denial, and sign-out.
 
 ## Deliberately incomplete
 
 - No commercial plan prices or checkout flow are claimed.
 - No subscription-provider adapter or webhook exists yet.
-- Daily, per-user, and per-project budgets are not yet enforced.
-- Administrators cannot mutate allocations or alert thresholds from the UI yet.
-- Expired reservation recovery is not yet implemented.
+- Commercial plan allocation changes remain owned by the future subscription-provider adapter; owners and administrators can lower hard-limit policies and change alert thresholds within plan ceilings.
 - The existing local fixture generator remains non-billable and correctly creates no fake cost rows.

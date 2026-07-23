@@ -125,8 +125,8 @@ AI and product usage cannot exceed an organization’s approved plan or budget.
 - [x] Implement product credits while retaining raw provider usage and effective cost. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [x] Attribute usage to organization, project, user, workflow, provider, model, and run. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [x] Reserve estimated cost before work and reconcile actual cost afterward. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
-- [ ] Enforce per-request, daily, monthly, user, project, and organization hard limits.
-- [ ] Add alert thresholds, exhausted-budget states, and administrator controls.
+- [x] Enforce per-request, daily, billing-period, user, project, and organization hard limits. Evidence: `docs/implementation/scoped-budget-controls.md`.
+- [x] Add alert thresholds, exhausted-budget states, and owner/administrator controls. Evidence: `docs/implementation/scoped-budget-controls.md`.
 - [x] Record retries, fallbacks, failures, cancellation, caching, and tool charges. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [ ] Add reconciliation, concurrency, overrun, and webhook tests.
 

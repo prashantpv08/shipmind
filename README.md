@@ -105,6 +105,8 @@ Authorized owners, administrators, product analysts, and architects can now gene
 
 Owners, administrators, product analysts, architects, and reviewers can record one exact human decision on the latest draft. Accept-with-edits creates new immutable versions only for materially changed items and reruns deterministic quality gates; rejection records a categorized reason without destroying the draft. Exact hashes, selected versions, reviewer identity, audit evidence, stale-write protection, and idempotent unknown-result retries are preserved. Approval makes the selected versions eligible for future connector preparation, but Jira and Trello publication are still unavailable from this flow.
 
+Owners and administrators can inspect local plan and immutable usage evidence at `/account/organizations/:organizationId/billing`. The commercial platform enforces plan-bounded per-request, billing-period, organization-daily, user-daily, and project-daily product-credit limits before chargeable work. The view provides exact-preview, ETag- and idempotency-protected policy controls plus safe expired-reservation recovery. The local fixture generator remains non-billable; no fake usage is created. See [scoped budget controls](docs/implementation/scoped-budget-controls.md).
+
 ## Architecture boundaries during migration
 
 - Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.

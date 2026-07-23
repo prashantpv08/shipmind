@@ -16,6 +16,12 @@ test.describe('commercial web session boundary', () => {
     await expect(page.getByRole('heading', { name: 'Plan and AI usage' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Local development' })).toBeVisible();
     await expect(page.getByText('Budget available')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Budget controls' })).toBeVisible();
+    await page.getByLabel('Organization daily limit').fill('49000');
+    await page.getByRole('button', { name: 'Review changes' }).click();
+    await expect(page.getByRole('region', { name: 'Exact budget policy preview' })).toContainText('49,000');
+    await expect(page.getByRole('button', { name: 'Apply controls' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByText('No chargeable usage recorded')).toBeVisible();
 
     await page.goto('/account');
