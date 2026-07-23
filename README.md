@@ -107,6 +107,8 @@ Owners, administrators, product analysts, architects, and reviewers can record o
 
 Owners and administrators can inspect local plan and immutable usage evidence at `/account/organizations/:organizationId/billing`. The commercial platform enforces plan-bounded per-request, billing-period, organization-daily, user-daily, and project-daily product-credit limits before chargeable work. The view provides exact-preview, ETag- and idempotency-protected policy controls plus safe expired-reservation recovery. The local fixture generator remains non-billable; no fake usage is created. See [scoped budget controls](docs/implementation/scoped-budget-controls.md).
 
+The platform also owns a provider-neutral subscription adapter and authenticated webhook inbox. Its disabled-by-default local fixture verifies raw-body signatures, deduplicates exact replays, rejects changed retries, preserves ordering and tenant scope, provisions safe period balances, and audits outcomes. It is not a payment-provider integration. See [subscription webhook foundation](docs/implementation/subscription-webhook-foundation.md).
+
 ## Architecture boundaries during migration
 
 - Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.

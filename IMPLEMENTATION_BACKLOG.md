@@ -120,15 +120,16 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 AI and product usage cannot exceed an organization’s approved plan or budget.
 
 - [x] Implement Plan, Subscription, Entitlement, UsageReservation, and UsageLedgerEntry. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
+- [x] Establish the provider-neutral subscription adapter and deterministic local fixture. Evidence: `docs/implementation/subscription-webhook-foundation.md`.
 - [ ] Integrate the selected subscription provider behind an adapter.
-- [ ] Authenticate, deduplicate, and replay-test billing webhooks.
+- [x] Authenticate, deduplicate, and replay-test the provider-neutral webhook inbox with a local fixture. Repeat the contract suite for the selected commercial provider. Evidence: `docs/implementation/subscription-webhook-foundation.md`.
 - [x] Implement product credits while retaining raw provider usage and effective cost. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [x] Attribute usage to organization, project, user, workflow, provider, model, and run. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [x] Reserve estimated cost before work and reconcile actual cost afterward. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
 - [x] Enforce per-request, daily, billing-period, user, project, and organization hard limits. Evidence: `docs/implementation/scoped-budget-controls.md`.
 - [x] Add alert thresholds, exhausted-budget states, and owner/administrator controls. Evidence: `docs/implementation/scoped-budget-controls.md`.
 - [x] Record retries, fallbacks, failures, cancellation, caching, and tool charges. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`.
-- [ ] Add reconciliation, concurrency, overrun, and webhook tests.
+- [x] Add reconciliation, concurrency, overrun, and provider-neutral webhook tests. Evidence: `docs/implementation/subscription-entitlement-cost-ledger.md`, `docs/implementation/scoped-budget-controls.md`, and `docs/implementation/subscription-webhook-foundation.md`.
 
 ### Exit criteria
 
