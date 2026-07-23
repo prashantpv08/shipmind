@@ -187,6 +187,30 @@ export const PlatformWorkItemGenerationPreviewSchema = z.object({
   evaluatorVersion: z.literal('ticket-quality-v1'),
   promptVersion: z.literal('fixture-grounded-agile-v1'),
   workflowVersion: z.literal('ticket-workflow-v1'),
+  provenance: z.object({
+    runId: z.string().regex(/^ARUN-[A-Za-z0-9_-]{1,123}$/),
+    modelCallId: z.string().regex(/^MCALL-[A-Za-z0-9_-]{1,122}$/),
+    tier: z.enum(['ECONOMY', 'BALANCED', 'BEST']),
+    provider: z.enum(['LOCAL_FIXTURE', 'OPENAI', 'GROQ']),
+    modelDefinitionId: z.string().regex(/^MODEL-[A-Za-z0-9_-]{1,122}$/),
+    immutableModelId: z.string().min(1).max(300),
+    promptVersion: z.string().min(1).max(100),
+    workflowVersion: z.string().min(1).max(100),
+    policyId: z.string().regex(/^MPOL-[A-Za-z0-9_-]{1,122}$/),
+    policyVersion: z.number().int().positive(),
+    budget: z.union([
+      z.object({ status: z.literal('NOT_APPLICABLE'), reason: z.literal('NON_BILLABLE_LOCAL_FIXTURE') }).strict(),
+      z.object({ status: z.literal('RESERVED'), reservationId: z.string().regex(/^URES-[A-Za-z0-9_-]{1,123}$/) }).strict(),
+    ]),
+    usage: z.union([
+      z.object({ evidenceStatus: z.literal('NOT_APPLICABLE'), reason: z.literal('NON_BILLABLE_LOCAL_FIXTURE') }).strict(),
+      z.object({ evidenceStatus: z.literal('MEASURED'), measurementSource: z.literal('PROVIDER_RESPONSE'), inputTokens: z.number().int().nonnegative(), cachedInputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative(), totalTokens: z.number().int().nonnegative() }).strict(),
+    ]),
+    attemptCount: z.number().int().min(1).max(3),
+    fallbackUsed: z.boolean(),
+    latencyMs: z.number().int().nonnegative(),
+    completedAt: z.iso.datetime(),
+  }).strict().nullable(),
   qualityReport: PlatformTicketQualityReportSchema,
   workItems: z.array(PlatformWorkItemSchema).min(1).max(200),
   generatedAt: z.iso.datetime(),
@@ -203,7 +227,7 @@ export const PlatformWorkItemGenerationPreviewSchema = z.object({
   }).strict().nullable(),
   replayed: z.boolean(),
 }).strict();
-export const PlatformGenerateWorkItemsRequestSchema = z.object({ sourceGraphVersion: z.number().int().positive(), mode: z.literal('FIXTURE') }).strict();
+export const PlatformGenerateWorkItemsRequestSchema = z.object({ sourceGraphVersion: z.number().int().positive(), tier: z.enum(['ECONOMY', 'BALANCED', 'BEST']) }).strict();
 const PlatformWorkItemEditSchema = z.object({
   workItemId: PlatformWorkItemIdSchema,
   expectedVersion: z.number().int().positive(),

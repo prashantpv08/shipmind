@@ -145,6 +145,7 @@ Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 
 - [x] Define provider-neutral generation, structured-output, tool, usage, and error contracts with a deterministic non-billable local fixture. Evidence: `docs/decisions/0018-provider-neutral-generation-and-model-catalog.md` and `docs/implementation/model-catalog-foundation.md`.
 - [ ] Implement the Agent Kernel: context builder, policy engine, router, tool registry, validator, budget guard, trace writer, and evidence writer.
+- [x] Route the first bounded `ticket-generation` workflow through shared context assembly, three-tier policy resolution, an empty tool allowlist, structured/deterministic validation, fail-closed hosted-budget policy, immutable AgentRun/ModelCall evidence, and the local fixture adapter. Chargeable reservation/reconciliation and the remaining logical workflows are still open. Evidence: `docs/decisions/0019-agent-kernel-ticket-generation-run-evidence.md` and `docs/implementation/agent-kernel-ticket-generation.md`.
 - [ ] Convert logical agents into versioned workflows rather than separate services.
 - [x] Implement the PostgreSQL model-catalog foundation for lifecycle, capability, pricing status, context limits, data policy, regions, and evaluation state. OpenAI and Groq remain disabled candidates until qualification. Evidence: `docs/implementation/model-catalog-foundation.md`.
 - [x] Implement organization-scoped Economy, Balanced, and Best policy reads with the safe local fixture; administrator mutation and Agent Kernel routing remain open. Evidence: `docs/implementation/model-catalog-foundation.md`.
@@ -153,6 +154,7 @@ Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 - [ ] Add bounded retry, repair, fallback, cancellation, and circuit-breaker behavior.
 - [ ] Encrypt eligible customer-provided provider credentials.
 - [ ] Record prompt, schema, workflow, provider, model, latency, token, cache, and cost provenance.
+- [x] Record immutable prompt, schema, evaluator, workflow, model-policy, provider, model, attempt, latency, and measured-or-not-applicable usage provenance for the ticket-generation fixture path. Hosted token/cache/cost evidence remains open. Evidence: `docs/implementation/agent-kernel-ticket-generation.md`.
 - [x] Add the first provider contract suite and deterministic fixture without paid APIs; hosted provider adapter suites remain required when those adapters are added. Evidence: `docs/implementation/model-catalog-foundation.md`.
 
 ### Exit criteria
@@ -172,7 +174,7 @@ Axiom produces grounded, complete, testable work items that pass measurable qual
 
 - [x] Finalize normalized `WorkItem v1` and immutable PostgreSQL `WorkItemVersion` persistence. Evidence: `docs/implementation/work-item-generation-preview.md`.
 - [x] Implement bounded context selection from the current document-approved and architecture-approved graph version, excluding unsupported/unknown entities and blocking open critical gaps. Evidence: `docs/implementation/work-item-generation-preview.md`.
-- [ ] Generate hierarchy, scope, out-of-scope, context, acceptance criteria, dependencies, risks, open questions, evidence expectations, and source links.
+- [x] Generate hierarchy, scope, out-of-scope, context, acceptance criteria, dependencies, risks, open questions, evidence expectations, and source links through the bounded Agent Kernel fixture workflow. Hosted-model qualification remains open. Evidence: `docs/implementation/agent-kernel-ticket-generation.md`.
 - [x] Reject invalid, incomplete, ungrounded, or untestable fixture output deterministically before persistence. Provider-generated output must use the same gate when added. Evidence: `docs/implementation/ticket-quality-foundation.md` and `docs/implementation/work-item-generation-preview.md`.
 - [ ] Implement requirement coverage, overlap, duplicate, contradiction, and orphan checks.
 - [ ] Implement critical-unknown clarification gates.

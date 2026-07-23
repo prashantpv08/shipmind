@@ -534,6 +534,9 @@ button,input,textarea { font:inherit; } button { cursor:pointer; }
 @media (max-width:480px) { .billing-metrics,.billing-details,.billing-policy form,.billing-confirmation dl { grid-template-columns:1fr; } }
 .backlog-review-card { max-width:70rem; }
 .backlog-generation-action { display:flex; align-items:center; flex-wrap:wrap; gap:.7rem; border:1px solid #9387f52e; border-radius:.75rem; background:#7969e810; margin:1.1rem 0; padding:.9rem; }
+.backlog-generation-action label { font-size:.58rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.backlog-generation-action select { min-height:2.3rem; border:1px solid #9d91ff45; border-radius:.5rem; background:#171529; color:#f5f3ff; padding:.45rem .7rem; }
+.backlog-generation-action small { flex-basis:100%; color:#aaa4c7; }
 .backlog-generation-action button,.backlog-review-card>button { min-height:2.3rem; border:1px solid #9d91ff45; border-radius:.5rem; background:#7969e8; color:white; padding:.5rem .85rem; font-size:.56rem; font-weight:800; }
 .backlog-generation-action button:disabled { cursor:wait; opacity:.65; }.backlog-generation-action p { flex:1 1 20rem; margin:0; }
 .backlog-notice,.backlog-empty { border:1px solid #ffffff16; border-radius:.75rem; margin:1rem 0; padding:1rem; }.backlog-empty { text-align:center; padding:2rem 1rem; }.backlog-empty h2 { margin:0 0 .35rem; }

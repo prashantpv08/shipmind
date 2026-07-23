@@ -11,6 +11,7 @@ const preview = {
   id: 'WIGEN-ONE', projectId: 'PROJ-ONE', sourceGraphVersion: 2, status: 'DRAFT', contentHash: 'a'.repeat(64),
   generationContentHash: 'a'.repeat(64),
   schemaVersion: 'work-item-v1', evaluatorVersion: 'ticket-quality-v1', promptVersion: 'fixture-grounded-agile-v1', workflowVersion: 'ticket-workflow-v1',
+  provenance: null,
   qualityReport: { evaluatorVersion: 'ticket-quality-v1', passed: true, clarificationRequired: false, findings: [], metrics: { schemaValid: true, workItemCount: 1, implementableWorkItemCount: 0, requiredFieldCompleteness: 1, validSourceReferenceRate: 1, approvedRequirementCoverage: 1, duplicatePairCount: 0, blockingQuestionCount: 0 } },
   workItems: [{ id: 'WI-EPIC-ONE', version: 1, type: 'EPIC', parentId: null, title: 'Approved product delivery', priority: 'P0', estimate: 'L', outcome: 'Deliver the approved product outcome without unsupported scope.', context: 'The approved canonical graph provides the source context for this draft.', scope: ['Deliver the approved behavior represented by child stories.'], outOfScope: ['External publication before explicit approval.'], acceptanceCriteria: [], dependencyIds: [], risks: [], openQuestions: [], evidenceExpectations: [], sourceEntityIds: ['REQ-ONE'], truthStatus: 'AI_SUGGESTED', reviewStatus: 'DRAFT' }],
   generatedAt: '2026-07-23T00:00:00.000Z', review: null, replayed: false,
@@ -24,10 +25,10 @@ describe('work-item generation BFF', () => {
   });
 
   it('validates and forwards the current graph version with idempotency', async () => {
-    const response = await generateWorkItems(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', { method: 'POST', headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json', 'idempotency-key': 'work-item-key-001' }, body: JSON.stringify({ sourceGraphVersion: 2, mode: 'FIXTURE' }) }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
+    const response = await generateWorkItems(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', { method: 'POST', headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json', 'idempotency-key': 'work-item-key-001' }, body: JSON.stringify({ sourceGraphVersion: 2, tier: 'BALANCED' }) }), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
     expect(response.headers.get('etag')).toBe(`"WIGEN-ONE:${'a'.repeat(64)}"`);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', 'A'.repeat(43), 'generated-request-id', { method: 'POST', body: { sourceGraphVersion: 2, mode: 'FIXTURE' }, idempotencyKey: 'work-item-key-001' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/work-item-generations', 'A'.repeat(43), 'generated-request-id', { method: 'POST', body: { sourceGraphVersion: 2, tier: 'BALANCED' }, idempotencyKey: 'work-item-key-001' });
   });
 
   it('rejects cross-origin generation before reading the session', async () => {
