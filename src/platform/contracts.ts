@@ -79,3 +79,56 @@ export const PlatformWorkspaceListSchema = z.object({
 }).strict();
 
 export type PlatformWorkspace = z.infer<typeof PlatformWorkspaceSchema>;
+
+export const PlatformMemberSchema = z.object({
+  userId: z.string().regex(/^USER-[A-Za-z0-9_-]{1,123}$/),
+  email: z.email().max(320),
+  displayName: z.string().min(1).max(200),
+  role: PlatformOrganizationSchema.shape.role,
+  status: z.enum(['ACTIVE', 'REVOKED']),
+  rowVersion: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+
+export const PlatformInvitationIdSchema = z.string().regex(/^INV-[A-Za-z0-9_-]{1,124}$/);
+export const PlatformInvitationRoleSchema = z.enum([
+  'ADMINISTRATOR', 'PRODUCT_ANALYST', 'ARCHITECT', 'DEVELOPER', 'REVIEWER', 'VIEWER',
+]);
+export const PlatformInvitationSchema = z.object({
+  id: PlatformInvitationIdSchema,
+  email: z.email().max(320),
+  role: PlatformInvitationRoleSchema,
+  status: z.enum(['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED']),
+  expiresAt: z.iso.datetime(),
+  rowVersion: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformMemberListSchema = z.object({
+  members: z.array(PlatformMemberSchema).max(100),
+  nextCursor: z.string().min(1).max(512).nullable(),
+}).strict();
+export const PlatformInvitationListSchema = z.object({
+  invitations: z.array(PlatformInvitationSchema).max(100),
+  nextCursor: z.string().min(1).max(512).nullable(),
+}).strict();
+export const PlatformGovernanceListQuerySchema = z.object({
+  cursor: z.string().min(1).max(512).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+}).strict();
+export const PlatformCreateInvitationRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().pipe(z.email().max(320)),
+  role: PlatformInvitationRoleSchema,
+}).strict();
+export const PlatformInvitationTokenSchema = z.string().regex(/^INV-[A-Za-z0-9_-]{1,124}\.[A-Za-z0-9_-]{43}$/);
+export const PlatformCreateInvitationResponseSchema = z.object({
+  invitation: PlatformInvitationSchema,
+  delivery: z.object({ mode: z.literal('MANUAL_LOCAL'), acceptanceToken: PlatformInvitationTokenSchema }).strict(),
+  replayed: z.boolean(),
+}).strict();
+export const PlatformInvitationEtagSchema = z.string().regex(/^"INV-[A-Za-z0-9_-]{1,124}:[1-9][0-9]*"$/);
+
+export type PlatformMember = z.infer<typeof PlatformMemberSchema>;
+export type PlatformInvitation = z.infer<typeof PlatformInvitationSchema>;
+export type PlatformInvitationRole = z.infer<typeof PlatformInvitationRoleSchema>;

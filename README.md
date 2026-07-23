@@ -97,6 +97,10 @@ For the commercial identity slice, start the local platform on `127.0.0.1:4100`,
 
 Authenticated organization members can continue from `/account` to the commercial project view. The web validates and forwards list, detail, workspace-discovery, create, archive, and restore requests through its thin BFF; the platform re-authorizes membership and every PostgreSQL query requires organization scope. Owners, administrators, product analysts, and architects can create a project with a retry-safe idempotency key. Owners and administrators can archive or restore a project using its current ETag. The platform preserves the exact pre-archive lifecycle status and commits each lifecycle transition, row-version increment, and immutable audit event in one transaction. The legacy `/api/projects` route remains only for prototype journey parity until full project-aggregate reads and the remaining mutations have migrated.
 
+Owners and administrators can also open `/account/organizations/:organizationId/members` to list members, create local-development invitations, and revoke pending invitations. The browser never receives the platform session credential. Invitation plaintext is returned only when the platform's explicit local manual-delivery flag is enabled; PostgreSQL stores only its SHA-256 hash. Production identity-provider onboarding and email delivery remain separate, unfinished adapters.
+
+The commercial platform also contains the first Ticket Quality Foundation. `WorkItem v1` represents Initiative, Epic, Story, Task, and Defect independently of Jira or Trello. `pnpm eval:tickets` in `axiom-platform` locally verifies deterministic schema, hierarchy, grounding, coverage, acceptance-criteria, overlap, dependency, clarification, and evidence-integrity gates without using a paid model.
+
 ## Architecture boundaries during migration
 
 - Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.

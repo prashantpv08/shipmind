@@ -92,6 +92,37 @@ test.describe('commercial web session boundary', () => {
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   });
 
+  test('shows organization access and preserves an invitation retry key', async ({ page }) => {
+    await page.goto('/account');
+    await page.getByRole('button', { name: 'Connect local session' }).click();
+    await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
+    await page.getByRole('link', { name: 'Manage access' }).click();
+    await expect(page.getByRole('heading', { name: 'Members and invitations' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Members', exact: true })).toBeVisible();
+
+    const keys: string[] = [];
+    let attempts = 0;
+    await page.route('**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/invitations', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      attempts += 1;
+      keys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (attempts === 1) return route.abort('failed');
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
+        invitation: { id: 'INV-UI-RETRY', email: 'invitee@example.test', role: 'VIEWER', status: 'PENDING', expiresAt: '2026-07-30T00:00:00.000Z', rowVersion: 1, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-23T00:00:00.000Z' },
+        delivery: { mode: 'MANUAL_LOCAL', acceptanceToken: `INV-UI-RETRY.${'A'.repeat(43)}` }, replayed: false,
+      }) });
+    });
+
+    await page.getByLabel('Email').fill('invitee@example.test');
+    await page.getByRole('button', { name: 'Create invitation' }).click();
+    await expect(page.getByText('The result is unknown. Retry without changing the input so the same idempotency key is used.')).toBeVisible();
+    await page.getByRole('button', { name: 'Create invitation' }).click();
+    await expect(page.locator('.invitation-token code')).toContainText('INV-UI-RETRY.');
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+  });
+
   test('requires archive confirmation and reconciles a stale project version', async ({ page }) => {
     await page.goto('/account');
     await page.getByRole('button', { name: 'Connect local session' }).click();

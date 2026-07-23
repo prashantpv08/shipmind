@@ -95,6 +95,7 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 - [x] Add a global deny-by-default platform guard with explicit public and permission metadata.
 - [x] Prove one organization-scoped API permits an active member and rejects anonymous, expired, revoked, and cross-tenant access.
 - [ ] Implement Organization, Membership, Role, and invitation flows.
+- [x] Implement the bounded member-list and invitation create/list/revoke/accept governance slice with owner/administrator authorization, hash-only deterministic tokens, local-only manual delivery, idempotency, ETags, row locking, tenant isolation, and immutable audit evidence. Production IdP, email delivery, role changes, removal, ownership transfer, and MFA remain open. Evidence: `docs/implementation/organization-membership-invitations.md`.
 - [ ] Add server-side authorization policies and deny-by-default behavior.
 - [ ] Require organization scope in shared repositories and application services.
 - [x] Require organization scope in the migrated project metadata repository and service, with repository-level and API-level tenant-isolation tests. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
@@ -165,6 +166,8 @@ Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 ### Outcome
 
 Axiom produces grounded, complete, testable work items that pass measurable quality gates.
+
+- [x] Add the bounded Ticket Quality Foundation: connector-neutral Agile `WorkItem v1`, deterministic hierarchy/grounding/coverage/testability/overlap/dependency/clarification/evidence-claim gates, seven curated local evaluation cases, and `pnpm eval:tickets`. The corpus remains `AWAITING_HUMAN_REVIEW`, and persistence, generation, semantic review, approval, and connector compilation remain open. Evidence: `docs/implementation/ticket-quality-foundation.md`.
 
 - [ ] Finalize normalized WorkItem and WorkItemVersion schemas.
 - [ ] Implement context selection from approved graph versions.
