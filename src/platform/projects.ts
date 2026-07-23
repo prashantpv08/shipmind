@@ -19,6 +19,7 @@ export type OrganizationProjectsState =
       workspaces: PlatformWorkspace[];
       moreWorkspaces: boolean;
       canCreate: boolean;
+      canManageLifecycle: boolean;
     }
   | { status: 'unauthenticated' }
   | { status: 'forbidden' }
@@ -67,5 +68,6 @@ export async function getOrganizationProjects(
     workspaces: workspacePage.data.workspaces,
     moreWorkspaces: workspacePage.data.nextCursor !== null,
     canCreate: ['OWNER', 'ADMINISTRATOR', 'PRODUCT_ANALYST', 'ARCHITECT'].includes(organization.data.role),
+    canManageLifecycle: ['OWNER', 'ADMINISTRATOR'].includes(organization.data.role),
   };
 }

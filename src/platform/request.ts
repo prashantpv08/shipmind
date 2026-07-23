@@ -16,6 +16,7 @@ export type PlatformRequestOptions = {
   method?: 'GET' | 'POST';
   body?: unknown;
   idempotencyKey?: string;
+  ifMatch?: string;
 };
 
 export function safeRequestId(value: string | null): string {
@@ -38,6 +39,7 @@ export async function requestPlatform(
     };
     if (options.body !== undefined) headers['content-type'] = 'application/json';
     if (options.idempotencyKey !== undefined) headers['idempotency-key'] = options.idempotencyKey;
+    if (options.ifMatch !== undefined) headers['if-match'] = options.ifMatch;
     const response = await fetch(new URL(path, platformBaseUrl()), {
       method: options.method ?? 'GET',
       headers,

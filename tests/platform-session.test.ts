@@ -8,6 +8,7 @@ import { POST as installLocalSession } from '../app/api/auth/local-session/route
 import {
   CurrentUserOrganizationsSchema,
   PlatformCreateProjectRequestSchema,
+  PlatformProjectEtagSchema,
   PlatformProjectListQuerySchema,
   PlatformProjectListSchema,
   PlatformWorkspaceListSchema,
@@ -69,11 +70,14 @@ describe('platform session boundary', () => {
         status: 'ANALYZED',
         graphVersion: 2,
         rowVersion: 1,
+        archivedAt: null,
         createdAt: '2026-07-20T00:00:00.000Z',
         updatedAt: '2026-07-21T00:00:00.000Z',
       }],
       nextCursor: null,
     }).success).toBe(true);
+    expect(PlatformProjectEtagSchema.safeParse('"PROJ-LOCAL-1:7"').success).toBe(true);
+    expect(PlatformProjectEtagSchema.safeParse('"PROJ-LOCAL-1:0"').success).toBe(false);
     expect(PlatformProjectListQuerySchema.safeParse({ limit: '25', unscoped: 'true' }).success).toBe(false);
     expect(PlatformCreateProjectRequestSchema.safeParse({ name: ' New project ', workspaceId: 'WS-TEAM' }).success).toBe(true);
     expect(PlatformWorkspaceListSchema.safeParse({
@@ -116,6 +120,34 @@ describe('platform session boundary', () => {
         headers: expect.objectContaining({
           authorization: `Bearer ${'A'.repeat(43)}`,
           'idempotency-key': 'project-create-001',
+        }),
+      }),
+    );
+  });
+
+  it('forwards project lifecycle preconditions without exposing credentials to the browser', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: 'ARCHIVED' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', etag: '"PROJ-ONE:2"' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubEnv('AXIOM_PLATFORM_URL', 'http://127.0.0.1:4100');
+
+    const response = await requestPlatform(
+      '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive',
+      'A'.repeat(43),
+      'project-archive-001',
+      { method: 'POST', ifMatch: '"PROJ-ONE:1"' },
+    );
+
+    expect(response).toMatchObject({ status: 200, etag: '"PROJ-ONE:2"' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          authorization: `Bearer ${'A'.repeat(43)}`,
+          'if-match': '"PROJ-ONE:1"',
         }),
       }),
     );

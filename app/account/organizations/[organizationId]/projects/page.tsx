@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getOrganizationProjects } from '@/src/platform/projects';
 
 import { CreateProjectForm } from './create-project-form';
+import { ProjectLifecycleActions } from './project-lifecycle-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +102,9 @@ export default async function OrganizationProjectsPage({
                       <div><dt>Status</dt><dd>{project.status.replaceAll('_', ' ')}</dd></div>
                       <div><dt>Graph</dt><dd>v{project.graphVersion}</dd></div>
                     </dl>
+                    {state.canManageLifecycle ? (
+                      <ProjectLifecycleActions organizationId={organizationId} project={project} />
+                    ) : null}
                   </li>
                 ))}
               </ul>

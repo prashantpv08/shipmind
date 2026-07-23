@@ -72,6 +72,7 @@ The commercial web, platform, and infrastructure responsibilities have independe
 - [ ] Move one bounded vertical slice at a time and replace frontend domain imports with reviewed API contracts.
 - [x] Move organization-scoped project metadata list/detail reads behind the platform API and thin web BFF. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
 - [x] Move project creation behind the platform API with scoped workspace validation, role authorization, idempotent transactional persistence, immutable audit evidence, and a retry-safe web flow. Evidence: `docs/implementation/organization-scoped-project-creation.md`.
+- [x] Move recoverable project archive/restore behind the platform API with `If-Match`, preserved lifecycle state, row locking, immutable audit evidence, and guarded migration rollback. Evidence: `docs/implementation/project-archive-restore.md`.
 - [x] Add ignore rules and a repository policy check preventing Terraform state, plans, credentials, keys, and environment secrets from version control.
 - [ ] Remove each migrated Next.js business route only after replacement contract and end-to-end tests pass.
 
@@ -100,7 +101,8 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 - [x] Require organization scope and explicit create permission for migrated project creation, with cross-tenant, idempotency, rollback, and audit integration tests. Evidence: `docs/implementation/organization-scoped-project-creation.md`.
 - [ ] Add owner, administrator, contributor, reviewer, and viewer permissions.
 - [x] Implement database-enforced immutable audit events for the current platform security-sensitive actions; extend action coverage with each new workflow.
-- [ ] Add organization/project archive, restore, retention, and deletion workflows.
+- [x] Add recoverable project archive and restore for owners and administrators, including stale-write, concurrency, tenant-isolation, and audit tests. Evidence: `docs/implementation/project-archive-restore.md`.
+- [ ] Add organization lifecycle plus project/organization retention and explicit deletion workflows.
 - [ ] Add tenant-isolation, role, session, and destructive-action tests.
 - [ ] Add MFA requirement for organization owners before general availability.
 

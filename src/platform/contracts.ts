@@ -35,9 +35,11 @@ export const PlatformProjectSchema = z.object({
     'HLD_READY',
     'PUBLISHED',
     'BACKLOG_READY',
+    'ARCHIVED',
   ]),
   graphVersion: z.number().int().nonnegative(),
   rowVersion: z.number().int().positive(),
+  archivedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 }).strict();
@@ -61,6 +63,7 @@ export const PlatformCreateProjectRequestSchema = z.object({
 }).strict();
 
 export const PlatformIdempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/);
+export const PlatformProjectEtagSchema = z.string().regex(/^"PROJ-[A-Za-z0-9_-]{1,123}:[1-9][0-9]*"$/);
 
 export const PlatformWorkspaceSchema = z.object({
   id: PlatformWorkspaceIdSchema,

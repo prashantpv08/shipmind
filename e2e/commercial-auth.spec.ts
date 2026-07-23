@@ -72,6 +72,7 @@ test.describe('commercial web session boundary', () => {
           status: 'DRAFT',
           graphVersion: 0,
           rowVersion: 1,
+          archivedAt: null,
           createdAt: '2026-07-21T00:00:00.000Z',
           updatedAt: '2026-07-21T00:00:00.000Z',
         }),
@@ -89,5 +90,34 @@ test.describe('commercial web session boundary', () => {
     expect(idempotencyKeys).toHaveLength(2);
     expect(idempotencyKeys[0]).toBeTruthy();
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
+  });
+
+  test('requires archive confirmation and reconciles a stale project version', async ({ page }) => {
+    await page.goto('/account');
+    await page.getByRole('button', { name: 'Connect local session' }).click();
+    await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
+    await page.getByRole('link', { name: 'View projects' }).click();
+
+    const projectItem = page.locator('.project-access-list > li').first();
+    await expect(projectItem.getByRole('button', { name: 'Archive' })).toBeVisible();
+    const metadata = await projectItem.locator('small').textContent();
+    const projectId = metadata?.split(' · ')[0];
+    expect(projectId).toMatch(/^PROJ-/);
+
+    let capturedIfMatch = '';
+    await page.route(`**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${projectId}/archive`, async (route) => {
+      capturedIfMatch = route.request().headers()['if-match'] ?? '';
+      await route.fulfill({
+        status: 412,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { code: 'PRECONDITION_FAILED', message: 'Project changed.' } }),
+      });
+    });
+
+    await projectItem.getByRole('button', { name: 'Archive' }).click();
+    await expect(projectItem.getByText(`Archive ${await projectItem.locator('b').first().textContent()}?`)).toBeVisible();
+    await projectItem.getByRole('button', { name: 'Confirm archive' }).click();
+    await expect(projectItem.getByText('The project changed before this action completed. Refresh the list before deciding again.')).toBeVisible();
+    expect(capturedIfMatch).toMatch(new RegExp(`^"${projectId}:[1-9][0-9]*"$`));
   });
 });
