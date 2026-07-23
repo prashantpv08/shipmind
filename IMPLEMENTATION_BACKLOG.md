@@ -143,17 +143,17 @@ AI and product usage cannot exceed an organization’s approved plan or budget.
 
 Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 
-- [ ] Define provider-neutral generation, structured-output, tool, usage, and error contracts.
+- [x] Define provider-neutral generation, structured-output, tool, usage, and error contracts with a deterministic non-billable local fixture. Evidence: `docs/decisions/0018-provider-neutral-generation-and-model-catalog.md` and `docs/implementation/model-catalog-foundation.md`.
 - [ ] Implement the Agent Kernel: context builder, policy engine, router, tool registry, validator, budget guard, trace writer, and evidence writer.
 - [ ] Convert logical agents into versioned workflows rather than separate services.
-- [ ] Implement model catalog, lifecycle, capability, pricing, data-policy, and region metadata.
-- [ ] Implement Economy, Balanced, and Best policies.
+- [x] Implement the PostgreSQL model-catalog foundation for lifecycle, capability, pricing status, context limits, data policy, regions, and evaluation state. OpenAI and Groq remain disabled candidates until qualification. Evidence: `docs/implementation/model-catalog-foundation.md`.
+- [x] Implement organization-scoped Economy, Balanced, and Best policy reads with the safe local fixture; administrator mutation and Agent Kernel routing remain open. Evidence: `docs/implementation/model-catalog-foundation.md`.
 - [ ] Adapt existing Groq support to the new contract.
 - [ ] Add an OpenAI provider through the same contract.
 - [ ] Add bounded retry, repair, fallback, cancellation, and circuit-breaker behavior.
 - [ ] Encrypt eligible customer-provided provider credentials.
 - [ ] Record prompt, schema, workflow, provider, model, latency, token, cache, and cost provenance.
-- [ ] Add contract tests and provider fixtures without requiring paid APIs in ordinary CI.
+- [x] Add the first provider contract suite and deterministic fixture without paid APIs; hosted provider adapter suites remain required when those adapters are added. Evidence: `docs/implementation/model-catalog-foundation.md`.
 
 ### Exit criteria
 

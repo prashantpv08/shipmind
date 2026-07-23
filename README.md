@@ -109,6 +109,8 @@ Owners and administrators can inspect local plan and immutable usage evidence at
 
 The platform also owns a provider-neutral subscription adapter and authenticated webhook inbox. Its disabled-by-default local fixture verifies raw-body signatures, deduplicates exact replays, rejects changed retries, preserves ordering and tenant scope, provisions safe period balances, and audits outcomes. It is not a payment-provider integration. See [subscription webhook foundation](docs/implementation/subscription-webhook-foundation.md).
 
+Every authorized organization member can inspect `/account/organizations/:organizationId/models`. PostgreSQL owns the provider lifecycle, immutable local fixture definition, and Economy/Balanced/Best policy. OpenAI and Groq are visible only as disabled candidates; no hosted model ID, price, credential, provider result, or evaluation score is fabricated. The only executable adapter is the deterministic non-billable local fixture. See [model catalog foundation](docs/implementation/model-catalog-foundation.md).
+
 ## Architecture boundaries during migration
 
 - Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.

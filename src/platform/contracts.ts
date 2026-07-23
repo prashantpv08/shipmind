@@ -224,6 +224,97 @@ export const PlatformSubmitWorkItemReviewRequestSchema = z.discriminatedUnion('d
 export type PlatformWorkItem = z.infer<typeof PlatformWorkItemSchema>;
 export type PlatformWorkItemGenerationPreview = z.infer<typeof PlatformWorkItemGenerationPreviewSchema>;
 
+export const PlatformModelProviderCodeSchema = z.enum(['LOCAL_FIXTURE', 'OPENAI', 'GROQ']);
+export const PlatformModelProviderIdSchema = z.string().regex(/^MPROV-[A-Za-z0-9_-]{1,121}$/);
+export const PlatformModelDefinitionIdSchema = z.string().regex(/^MODEL-[A-Za-z0-9_-]{1,122}$/);
+const PlatformModelLifecycleSchema = z.enum(['LOCAL_ONLY', 'CANDIDATE', 'QUALIFIED', 'SUSPENDED', 'RETIRED']);
+const PlatformModelExecutionStatusSchema = z.enum(['ENABLED', 'DISABLED']);
+const PlatformModelDataPolicyStatusSchema = z.enum(['NO_EXTERNAL_TRANSFER', 'REQUIRES_REVIEW', 'APPROVED']);
+export const PlatformModelProviderSchema = z.object({
+  id: PlatformModelProviderIdSchema,
+  code: PlatformModelProviderCodeSchema,
+  displayName: z.string().min(1).max(200),
+  lifecycleStatus: PlatformModelLifecycleSchema,
+  executionStatus: PlatformModelExecutionStatusSchema,
+  dataPolicyStatus: PlatformModelDataPolicyStatusSchema,
+  allowedRegions: z.array(z.string().min(1).max(100)).max(50),
+  updatedAt: z.iso.datetime(),
+}).strict().superRefine((provider, context) => {
+  if (provider.executionStatus === 'ENABLED' && !['LOCAL_ONLY', 'QUALIFIED'].includes(provider.lifecycleStatus)) {
+    context.addIssue({ code: 'custom', message: 'Only local or qualified providers can be enabled', path: ['executionStatus'] });
+  }
+});
+export const PlatformModelDefinitionSchema = z.object({
+  id: PlatformModelDefinitionIdSchema,
+  providerId: PlatformModelProviderIdSchema,
+  immutableModelId: z.string().min(1).max(300),
+  displayName: z.string().min(1).max(200),
+  lifecycleStatus: PlatformModelLifecycleSchema,
+  executionStatus: PlatformModelExecutionStatusSchema,
+  capabilities: z.object({ structuredOutput: z.boolean(), tools: z.boolean(), vision: z.boolean() }).strict(),
+  contextWindowTokens: z.number().int().positive().nullable(),
+  maxOutputTokens: z.number().int().positive().nullable(),
+  pricing: z.discriminatedUnion('status', [
+    z.object({ status: z.literal('NOT_APPLICABLE') }).strict(),
+    z.object({ status: z.literal('UNVERIFIED') }).strict(),
+    z.object({
+      status: z.literal('VERIFIED'),
+      currency: z.string().regex(/^[A-Z]{3}$/),
+      inputMicrosPerMillionTokens: z.number().int().nonnegative(),
+      cachedInputMicrosPerMillionTokens: z.number().int().nonnegative().nullable(),
+      outputMicrosPerMillionTokens: z.number().int().nonnegative(),
+      verifiedAt: z.iso.datetime(),
+    }).strict(),
+  ]),
+  dataPolicyStatus: PlatformModelDataPolicyStatusSchema,
+  allowedRegions: z.array(z.string().min(1).max(100)).max(50),
+  evaluation: z.object({
+    status: z.enum(['LOCAL_FIXTURE_ONLY', 'NOT_EVALUATED', 'QUALIFIED', 'FAILED']),
+    scores: z.record(z.string().min(1).max(100), z.number().min(0).max(1)),
+    evaluationRunId: z.string().min(1).max(200).nullable(),
+    evaluatedAt: z.iso.datetime().nullable(),
+  }).strict(),
+  updatedAt: z.iso.datetime(),
+}).strict().superRefine((model, context) => {
+  if (model.executionStatus === 'ENABLED' && !['LOCAL_ONLY', 'QUALIFIED'].includes(model.lifecycleStatus)) {
+    context.addIssue({ code: 'custom', message: 'Only local or qualified models can be enabled', path: ['executionStatus'] });
+  }
+  if (model.executionStatus === 'ENABLED' && model.lifecycleStatus === 'QUALIFIED') {
+    if (model.evaluation.status !== 'QUALIFIED') context.addIssue({ code: 'custom', message: 'Enabled hosted models require qualification evidence', path: ['evaluation', 'status'] });
+    if (model.pricing.status !== 'VERIFIED') context.addIssue({ code: 'custom', message: 'Enabled hosted models require verified pricing', path: ['pricing', 'status'] });
+    if (model.dataPolicyStatus !== 'APPROVED') context.addIssue({ code: 'custom', message: 'Enabled hosted models require an approved data policy', path: ['dataPolicyStatus'] });
+    if (model.allowedRegions.length === 0) context.addIssue({ code: 'custom', message: 'Enabled hosted models require an approved region', path: ['allowedRegions'] });
+  }
+});
+export const PlatformModelPolicySchema = z.object({
+  id: z.string().regex(/^MPOL-[A-Za-z0-9_-]{1,122}$/),
+  organizationId: OrganizationIdSchema,
+  economyModelDefinitionId: PlatformModelDefinitionIdSchema,
+  balancedModelDefinitionId: PlatformModelDefinitionIdSchema,
+  bestModelDefinitionId: PlatformModelDefinitionIdSchema,
+  rowVersion: z.number().int().positive(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformModelCatalogSchema = z.object({
+  providers: z.array(PlatformModelProviderSchema).max(50),
+  models: z.array(PlatformModelDefinitionSchema).max(500),
+  policy: PlatformModelPolicySchema,
+}).strict().superRefine((catalog, context) => {
+  const modelById = new Map(catalog.models.map((model) => [model.id, model]));
+  for (const [field, modelId] of [
+    ['economyModelDefinitionId', catalog.policy.economyModelDefinitionId],
+    ['balancedModelDefinitionId', catalog.policy.balancedModelDefinitionId],
+    ['bestModelDefinitionId', catalog.policy.bestModelDefinitionId],
+  ] as const) {
+    if (modelById.get(modelId)?.executionStatus !== 'ENABLED') {
+      context.addIssue({ code: 'custom', message: 'Policy tiers must resolve to enabled model definitions', path: ['policy', field] });
+    }
+  }
+});
+export type PlatformModelCatalog = z.infer<typeof PlatformModelCatalogSchema>;
+export type PlatformModelDefinition = z.infer<typeof PlatformModelDefinitionSchema>;
+
+
 export const PlatformProductCreditUnitsSchema = z.number().int().min(0).max(2_000_000_000);
 export const PlatformUsageReservationIdSchema = z.string().regex(/^URES-[A-Za-z0-9_-]{1,123}$/);
 export const PlatformBudgetPolicyIdSchema = z.string().regex(/^BPOL-[A-Za-z0-9_-]{1,123}$/);
