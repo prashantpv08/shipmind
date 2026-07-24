@@ -14,7 +14,7 @@ import { useBacklogEligibility } from './backlog-eligibility-context';
 type GenerationState = 'idle' | 'loading' | 'success' | 'blocked' | 'error' | 'unknown';
 type AnswerState = 'idle' | 'loading' | 'success' | 'error' | 'unknown';
 
-export function GenerateBacklogAction({ organizationId, projectId, projectRowVersion, sourceGraphVersion, hasPreview }: { organizationId: string; projectId: string; projectRowVersion: number; sourceGraphVersion: number; hasPreview: boolean }) {
+export function GenerateBacklogAction({ organizationId, projectId, projectRowVersion, sourceGraphVersion, hasPreview, eligible }: { organizationId: string; projectId: string; projectRowVersion: number; sourceGraphVersion: number; hasPreview: boolean; eligible: boolean }) {
   const router = useRouter();
   const { setClarificationBlocked } = useBacklogEligibility();
   const retryKey = useRef<string | null>(null);
@@ -99,7 +99,7 @@ export function GenerateBacklogAction({ organizationId, projectId, projectRowVer
   }
 
   async function generate() {
-    if (inFlight.current) return;
+    if (inFlight.current || !eligible) return;
     inFlight.current = true;
     const key = retryKey.current ?? crypto.randomUUID();
     retryKey.current = key;
@@ -145,15 +145,15 @@ export function GenerateBacklogAction({ organizationId, projectId, projectRowVer
   return (
     <div className="backlog-generation-action">
       <label htmlFor="backlog-model-tier">Generation tier</label>
-      <select id="backlog-model-tier" value={tier} disabled={state === 'loading'} onChange={(event) => { setTier(event.target.value as typeof tier); retryKey.current = null; }}>
+      <select id="backlog-model-tier" value={tier} disabled={state === 'loading' || !eligible} onChange={(event) => { setTier(event.target.value as typeof tier); retryKey.current = null; }}>
         <option value="ECONOMY">Economy</option>
         <option value="BALANCED">Balanced</option>
         <option value="BEST">Best</option>
       </select>
-      <button type="button" onClick={generate} disabled={state === 'loading'} aria-busy={state === 'loading'}>
+      <button type="button" onClick={generate} disabled={state === 'loading' || !eligible} aria-busy={state === 'loading'}>
         {state === 'loading' ? 'Generating and validating…' : hasPreview ? 'Regenerate draft version' : 'Generate draft backlog'}
       </button>
-      <small>The organization model policy resolves this tier. Raw provider selection is not available here.</small>
+      <small>{eligible ? 'The organization model policy resolves this tier. Raw provider selection is not available here.' : 'Generation remains disabled until the exact current requirement baseline and latest architecture option are approved.'}</small>
       {state === 'success' ? <p role="status">{message}</p> : null}
       {state === 'blocked' ? <div className="backlog-generation-blocked" role="alert">
         <p>{message}</p>

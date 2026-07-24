@@ -32,6 +32,15 @@ const project = {
   archivedAt: null, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-24T00:00:00.000Z',
 };
 
+const artifactBaseline = {
+  projectId: 'PROJ-ONE', graphVersion: 3,
+  artifacts: [],
+  approval: null,
+};
+const architectureBaseline = {
+  projectId: 'PROJ-ONE', graphVersion: 3, generation: null, decision: null, artifacts: [],
+};
+
 const preview = {
   id: 'WIGEN-ONE', projectId: 'PROJ-ONE', sourceGraphVersion: 2, status: 'DRAFT', contentHash: 'a'.repeat(64),
   generationContentHash: 'a'.repeat(64),
@@ -134,14 +143,21 @@ describe('work-item generation BFF', () => {
       .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
       .mockResolvedValueOnce({ status: 200, body: project })
       .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 3, readiness } })
+      .mockResolvedValueOnce({ status: 200, body: artifactBaseline })
+      .mockResolvedValueOnce({ status: 200, body: architectureBaseline })
       .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
 
     await expect(getWorkItemReview('ORG-ONE', 'PROJ-ONE')).resolves.toEqual({
       status: 'ready',
       project,
       readiness,
+      artifactBaseline,
+      architectureBaseline,
       preview: null,
-      canGenerate: false,
+      canManageArtifacts: false,
+      canGenerateArchitecture: false,
+      canApproveArchitecture: false,
+      canGenerateBacklog: false,
       canReview: false,
     });
     expect(mocks.requestPlatform).toHaveBeenNthCalledWith(3, '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/readiness', 'A'.repeat(43));
@@ -152,6 +168,8 @@ describe('work-item generation BFF', () => {
       .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
       .mockResolvedValueOnce({ status: 200, body: project })
       .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 2, readiness } })
+      .mockResolvedValueOnce({ status: 200, body: artifactBaseline })
+      .mockResolvedValueOnce({ status: 200, body: architectureBaseline })
       .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
 
     await expect(getWorkItemReview('ORG-ONE', 'PROJ-ONE')).resolves.toEqual({

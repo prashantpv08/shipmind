@@ -66,15 +66,18 @@ The commercial web, platform, and infrastructure responsibilities have independe
 - [ ] Complete the frontend extraction and rename or replace this repository with the final `axiom-web` repository after migrated flows have parity evidence.
 - [x] Scaffold the Node.js TypeScript platform using NestJS with Fastify in strict mode.
 - [x] Add a versioned `/api/v1` foundation, stable error envelope, request correlation, and generated OpenAPI contract.
-- [ ] Add a separately runnable worker process without duplicating domain logic.
+- [x] Add a separately runnable worker process without duplicating domain logic. The first worker owns durable source-analysis runs and reuses the platform compiler/repository boundary. Evidence: `docs/implementation/commercial-source-analysis.md`.
 - [x] Add lint, typecheck, contract, build, and local start commands to the platform repository.
 - [x] Document the current route-to-platform migration order and rollback checkpoints. Evidence: `docs/implementation/repository-split-foundation.md`.
-- [ ] Move one bounded vertical slice at a time and replace frontend domain imports with reviewed API contracts.
+- [x] Move the first bounded source-ingestion and analysis vertical slice and replace frontend business-route use with reviewed API/BFF contracts. Continue subsequent slices independently. Evidence: `docs/implementation/commercial-source-analysis.md`.
+- [x] Move bounded source versions, PDF/DOCX/text extraction, immutable local content references, exact-hash provenance, durable analysis-run state, source-snapshot concurrency, deterministic graph/readiness compilation, and visible upload/worker states behind the platform. The local validator does not claim malware scanning, and the deterministic analyzer is not production model evidence. Evidence: `docs/implementation/commercial-source-analysis.md`.
 - [x] Move organization-scoped project metadata list/detail reads behind the platform API and thin web BFF. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
 - [x] Move project creation behind the platform API with scoped workspace validation, role authorization, idempotent transactional persistence, immutable audit evidence, and a retry-safe web flow. Evidence: `docs/implementation/organization-scoped-project-creation.md`.
 - [x] Move recoverable project archive/restore behind the platform API with `If-Match`, preserved lifecycle state, row locking, immutable audit evidence, and guarded migration rollback. Evidence: `docs/implementation/project-archive-restore.md`.
 - [x] Move human clarification answers behind the platform API with tenant authorization, ETags, idempotency, immutable graph versioning, stable IDs, human provenance, audit redaction, and stale-backlog review invalidation. Evidence: `docs/decisions/0021-versioned-human-clarification-mutations.md` and `docs/implementation/commercial-clarification-answers.md`.
 - [x] Recalculate, persist, expose, and render the deterministic readiness calculation for the exact current graph after clarification mutations, rejecting stale graph scores. Evidence: `docs/decisions/0022-deterministic-readiness-on-graph-mutation.md` and `docs/implementation/commercial-clarification-answers.md`.
+- [x] Compile, version, expose, regenerate, and approve the exact current-graph Requirements/SRS/NFR baseline; preserve historical approvals and require exact latest hashes at backlog generation and acceptance. Evidence: `docs/decisions/0023-versioned-requirement-artifact-baseline.md` and `docs/implementation/versioned-requirement-artifacts.md`.
+- [x] Add current-graph architecture-option generation, exact comparison, ADR/HLD compilation, and explicit architecture approval before opening backlog eligibility. Evidence: `docs/decisions/0024-exact-versioned-architecture-decision.md` and `docs/implementation/versioned-architecture-decision.md`.
 - [x] Add ignore rules and a repository policy check preventing Terraform state, plans, credentials, keys, and environment secrets from version control.
 - [ ] Remove each migrated Next.js business route only after replacement contract and end-to-end tests pass.
 
@@ -151,13 +154,13 @@ Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 - [ ] Convert logical agents into versioned workflows rather than separate services.
 - [x] Implement the PostgreSQL model-catalog foundation for lifecycle, capability, pricing status, context limits, data policy, regions, and evaluation state. OpenAI and Groq remain disabled candidates until qualification. Evidence: `docs/implementation/model-catalog-foundation.md`.
 - [x] Implement organization-scoped Economy, Balanced, and Best policy reads with the safe local fixture; administrator mutation and Agent Kernel routing remain open. Evidence: `docs/implementation/model-catalog-foundation.md`.
-- [ ] Adapt existing Groq support to the new contract.
-- [ ] Add an OpenAI provider through the same contract.
+- [x] Adapt Groq Responses API support to the provider-neutral contract with disabled-by-default routing, bounded structured output, measured usage, safe error mapping, and offline HTTP contract tests. No Groq request was executed. Evidence: `docs/decisions/0025-disabled-hosted-provider-adapters.md` and `docs/implementation/hosted-model-provider-adapters.md`.
+- [x] Add an OpenAI Responses API adapter through the same contract with `store: false`, a privacy-preserving safety identifier, bounded structured output, measured usage, safe error mapping, and offline HTTP contract tests. No OpenAI request was executed. Evidence: `docs/decisions/0025-disabled-hosted-provider-adapters.md` and `docs/implementation/hosted-model-provider-adapters.md`.
 - [ ] Add bounded retry, repair, fallback, cancellation, and circuit-breaker behavior.
 - [ ] Encrypt eligible customer-provided provider credentials.
 - [ ] Record prompt, schema, workflow, provider, model, latency, token, cache, and cost provenance.
 - [x] Record immutable prompt, schema, evaluator, workflow, model-policy, provider, model, attempt, latency, and measured-or-not-applicable usage provenance for the ticket-generation fixture path. Hosted token/cache/cost evidence remains open. Evidence: `docs/implementation/agent-kernel-ticket-generation.md`.
-- [x] Add the first provider contract suite and deterministic fixture without paid APIs; hosted provider adapter suites remain required when those adapters are added. Evidence: `docs/implementation/model-catalog-foundation.md`.
+- [x] Add local fixture, OpenAI, and Groq provider contract suites without paid API calls. Hosted suites verify request shape, endpoint isolation, retention setting, safety-ID behavior, measured usage, model binding, invalid output, tool denial, and typed failures. Evidence: `docs/implementation/model-catalog-foundation.md` and `docs/implementation/hosted-model-provider-adapters.md`.
 
 ### Exit criteria
 

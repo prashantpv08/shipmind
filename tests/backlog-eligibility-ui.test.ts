@@ -11,6 +11,7 @@ import {
   useBacklogEligibility,
 } from '../app/account/organizations/[organizationId]/projects/[projectId]/backlog/backlog-eligibility-context';
 import { ReviewBacklogAction } from '../app/account/organizations/[organizationId]/projects/[projectId]/backlog/review-backlog-action';
+import { GenerateBacklogAction } from '../app/account/organizations/[organizationId]/projects/[projectId]/backlog/generate-backlog-action';
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -56,5 +57,21 @@ describe('backlog clarification eligibility UI', () => {
     act(() => trigger?.click());
     expect(container.textContent).toContain('Review blocked by a current clarification');
     expect(container.textContent).not.toContain('Accept exact backlog');
+  });
+
+  it('disables backlog generation while exact document or architecture eligibility is closed', () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(createElement(BacklogEligibilityProvider, null,
+      createElement(GenerateBacklogAction, {
+        organizationId: 'ORG-ONE', projectId: 'PROJ-ONE', projectRowVersion: 4,
+        sourceGraphVersion: 2, hasPreview: false, eligible: false,
+      }),
+    )));
+
+    expect(container.querySelector('button')?.disabled).toBe(true);
+    expect(container.querySelector('select')?.disabled).toBe(true);
+    expect(container.textContent).toContain('exact current requirement baseline and latest architecture option');
   });
 });

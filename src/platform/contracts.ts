@@ -80,6 +80,57 @@ export const PlatformWorkspaceListSchema = z.object({
 
 export type PlatformWorkspace = z.infer<typeof PlatformWorkspaceSchema>;
 
+export const PlatformSourceIdSchema = z.string().regex(/^SRC-[A-F0-9]{24}$/);
+export const PlatformSourceSchema = z.object({
+  id: PlatformSourceIdSchema,
+  workspaceId: PlatformWorkspaceIdSchema,
+  projectId: PlatformProjectIdSchema,
+  name: z.string().min(1).max(240),
+  relativePath: z.string().max(500).nullable(),
+  kind: z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']),
+  mimeType: z.string().min(1).max(160),
+  size: z.number().int().nonnegative().max(10 * 1024 * 1024),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  rawPath: z.string().min(1),
+  status: z.enum(['EXTRACTED', 'FAILED']),
+  extractionError: z.string().max(500).nullable(),
+  sourceKey: z.union([z.string().regex(/^[a-f0-9]{64}$/), z.literal('legacy')]),
+  version: z.number().int().positive(),
+  validationStatus: z.enum(['VALIDATED', 'LEGACY_NOT_VERIFIED']),
+  validator: z.string().min(1).max(160),
+  extractedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+}).strict();
+export const PlatformSourceListSchema = z.object({ sources: z.array(PlatformSourceSchema).max(500) }).strict();
+export const PlatformUploadSourceRequestSchema = z.object({
+  name: z.string().trim().min(1).max(240),
+  relativePath: z.string().trim().min(1).max(500).optional(),
+  kind: z.enum(['FILE', 'FOLDER_FILE', 'MEETING_TRANSCRIPT']).default('FILE'),
+  mimeType: z.string().trim().min(1).max(160),
+  contentBase64: z.string().min(1).max(Math.ceil((10 * 1024 * 1024) / 3) * 4 + 16),
+}).strict();
+export const PlatformAnalysisRunIdSchema = z.string().regex(/^ANRUN-[A-F0-9]{24}$/);
+export const PlatformAnalysisRunSchema = z.object({
+  id: PlatformAnalysisRunIdSchema,
+  projectId: PlatformProjectIdSchema,
+  status: z.enum(['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED']),
+  analyzer: z.literal('axiom-deterministic-grounded-v1'),
+  sourceSnapshotHash: z.string().regex(/^[a-f0-9]{64}$/),
+  attempts: z.number().int().nonnegative(),
+  graphVersion: z.number().int().positive().nullable(),
+  errorCode: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  startedAt: z.iso.datetime().nullable(),
+  completedAt: z.iso.datetime().nullable(),
+  cancelledAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformLatestAnalysisRunSchema = z.object({ run: PlatformAnalysisRunSchema.nullable() }).strict();
+export const PlatformCreateAnalysisRunRequestSchema = z.object({ analyzer: z.literal('axiom-deterministic-grounded-v1').default('axiom-deterministic-grounded-v1') }).strict();
+export type PlatformSource = z.infer<typeof PlatformSourceSchema>;
+export type PlatformAnalysisRun = z.infer<typeof PlatformAnalysisRunSchema>;
+
 export const PlatformMemberSchema = z.object({
   userId: z.string().regex(/^USER-[A-Za-z0-9_-]{1,123}$/),
   email: z.email().max(320),
@@ -186,6 +237,150 @@ export const PlatformProjectReadinessResponseSchema = z.object({
   readiness: PlatformProjectReadinessSchema.nullable(),
 }).strict();
 export type PlatformProjectReadiness = z.infer<typeof PlatformProjectReadinessSchema>;
+export const PlatformArtifactTypeSchema = z.enum(['requirements', 'srs', 'nfr']);
+export const PlatformArtifactHashSchema = z.string().regex(/^[a-f0-9]{64}$/);
+export const PlatformArtifactHashesSchema = z.object({
+  requirements: PlatformArtifactHashSchema,
+  srs: PlatformArtifactHashSchema,
+  nfr: PlatformArtifactHashSchema,
+}).strict();
+export const PlatformProjectArtifactSchema = z.object({
+  id: z.string().min(1).max(240),
+  projectId: PlatformProjectIdSchema,
+  type: PlatformArtifactTypeSchema,
+  version: z.number().int().positive(),
+  sourceGraphVersion: z.number().int().positive(),
+  title: z.string().min(1).max(240),
+  content: z.string().min(1).max(200_000),
+  sha256: PlatformArtifactHashSchema,
+  truthStatus: z.literal('AI_SUGGESTED'),
+  provenance: z.object({
+    mode: z.literal('DETERMINISTIC_COMPILER'),
+    compilerVersion: z.literal('requirement-baseline-compiler-v1'),
+    sourceEntityIds: z.array(z.string().min(1)).max(1_000),
+    sourceIds: z.array(z.string().min(1)).max(1_000),
+  }).strict(),
+  generatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformArtifactApprovalSchema = z.object({
+  id: z.string().regex(/^DOCAPP-[A-Za-z0-9_-]{1,123}$/),
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().positive(),
+  documentHashes: PlatformArtifactHashesSchema,
+  comment: z.string().min(10).max(2_000),
+  truthStatus: z.literal('HUMAN_APPROVED'),
+  approvedByUserId: z.string().min(1).max(160),
+  approvedAt: z.iso.datetime(),
+}).strict();
+export const PlatformArtifactBaselineSchema = z.object({
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().nonnegative(),
+  artifacts: z.array(PlatformProjectArtifactSchema).max(3),
+  approval: PlatformArtifactApprovalSchema.nullable(),
+}).strict();
+export const PlatformGenerateArtifactsRequestSchema = z.object({
+  sourceGraphVersion: z.number().int().positive(),
+}).strict();
+export const PlatformApproveArtifactsRequestSchema = z.object({
+  sourceGraphVersion: z.number().int().positive(),
+  documentHashes: PlatformArtifactHashesSchema,
+  comment: z.string().trim().min(10).max(2_000),
+}).strict();
+export const PlatformArtifactGenerationResponseSchema = z.object({
+  project: PlatformProjectSchema,
+  baseline: PlatformArtifactBaselineSchema,
+  replayed: z.boolean(),
+}).strict();
+export const PlatformArtifactApprovalResponseSchema = PlatformArtifactGenerationResponseSchema;
+export type PlatformProjectArtifact = z.infer<typeof PlatformProjectArtifactSchema>;
+export type PlatformArtifactApproval = z.infer<typeof PlatformArtifactApprovalSchema>;
+export type PlatformArtifactBaseline = z.infer<typeof PlatformArtifactBaselineSchema>;
+
+export const PlatformArchitectureGenerationIdSchema = z.string().regex(/^ARCHGEN-[A-Za-z0-9_-]{1,120}$/);
+export const PlatformArchitectureOptionIdSchema = z.string().regex(/^ARCHOPT-[A-Za-z0-9_-]{1,120}$/);
+const PlatformArchitectureScoreSchema = z.object({ score: z.number().int().min(1).max(5), rationale: z.string().min(10).max(1_000) }).strict();
+export const PlatformArchitectureOptionSchema = z.object({
+  id: PlatformArchitectureOptionIdSchema,
+  generationId: PlatformArchitectureGenerationIdSchema,
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().positive(),
+  generationVersion: z.number().int().positive(),
+  profile: z.enum(['LEAN', 'BALANCED', 'DISTRIBUTED']),
+  name: z.string().min(5).max(200),
+  summary: z.string().min(20).max(2_000),
+  deploymentModel: z.string().min(10).max(1_000),
+  components: z.array(z.object({ name: z.string().min(2).max(160), responsibility: z.string().min(10).max(1_000) }).strict()).min(2).max(20),
+  dataFlows: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  technologies: z.array(z.string().min(2).max(300)).min(1).max(20),
+  why: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  whyNot: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  assumptions: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  risks: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  failureModes: z.array(z.object({ failure: z.string().min(10).max(1_000), mitigation: z.string().min(10).max(1_000) }).strict()).min(2).max(20),
+  estimatedCost: z.object({ range: z.literal('UNKNOWN'), basis: z.string().min(10).max(1_000), truthStatus: z.literal('UNKNOWN') }).strict(),
+  reconsiderationTriggers: z.array(z.object({ metric: z.string().min(2).max(200), condition: z.string().min(10).max(1_000) }).strict()).min(1).max(20),
+  scoreBreakdown: z.object({
+    deliverySpeed: PlatformArchitectureScoreSchema,
+    operationalSimplicity: PlatformArchitectureScoreSchema,
+    scalability: PlatformArchitectureScoreSchema,
+    reliability: PlatformArchitectureScoreSchema,
+    costPredictability: PlatformArchitectureScoreSchema,
+  }).strict(),
+  sourceEntityIds: z.array(z.string().min(1)).max(1_000),
+  truthStatus: z.literal('AI_SUGGESTED'),
+  sha256: PlatformArtifactHashSchema,
+}).strict();
+export const PlatformArchitectureGenerationSchema = z.object({
+  id: PlatformArchitectureGenerationIdSchema,
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().positive(),
+  version: z.number().int().positive(),
+  contentHash: PlatformArtifactHashSchema,
+  compilerVersion: z.literal('architecture-comparison-compiler-v1'),
+  recommendedOptionId: PlatformArchitectureOptionIdSchema,
+  recommendationBasis: z.string().min(20).max(2_000),
+  requirementDocumentHashes: PlatformArtifactHashesSchema,
+  options: z.array(PlatformArchitectureOptionSchema).length(3),
+  generatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformArchitectureDecisionSchema = z.object({
+  id: z.string().regex(/^ADR-[A-Za-z0-9_-]{1,124}$/),
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().positive(),
+  version: z.number().int().positive(),
+  generationId: PlatformArchitectureGenerationIdSchema,
+  generationContentHash: PlatformArtifactHashSchema,
+  selectedOptionId: PlatformArchitectureOptionIdSchema,
+  selectedOptionHash: PlatformArtifactHashSchema,
+  comment: z.string().min(10).max(2_000),
+  rejectedAlternatives: z.array(z.object({ optionId: PlatformArchitectureOptionIdSchema, whyRejected: z.array(z.string().min(1)).min(1) }).strict()).length(2),
+  truthStatus: z.literal('HUMAN_APPROVED'),
+  approvedByUserId: z.string().min(1).max(160),
+  approvedAt: z.iso.datetime(),
+}).strict();
+export const PlatformArchitectureArtifactSchema = z.object({
+  id: z.string().min(1).max(240), projectId: PlatformProjectIdSchema, type: z.enum(['hld', 'adr']), version: z.number().int().positive(),
+  sourceGraphVersion: z.number().int().positive(), title: z.string().min(1).max(240), content: z.string().min(1).max(200_000),
+  sha256: PlatformArtifactHashSchema, truthStatus: z.literal('HUMAN_APPROVED'),
+  provenance: z.object({ mode: z.literal('DETERMINISTIC_COMPILER'), compilerVersion: z.literal('architecture-comparison-compiler-v1'), generationId: PlatformArchitectureGenerationIdSchema, decisionId: z.string().regex(/^ADR-[A-Za-z0-9_-]{1,124}$/), selectedOptionId: PlatformArchitectureOptionIdSchema }).strict(),
+  generatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformArchitectureBaselineSchema = z.object({
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().nonnegative(),
+  generation: PlatformArchitectureGenerationSchema.nullable(),
+  decision: PlatformArchitectureDecisionSchema.nullable(),
+  artifacts: z.array(PlatformArchitectureArtifactSchema).max(2),
+}).strict();
+export const PlatformGenerateArchitectureRequestSchema = z.object({ sourceGraphVersion: z.number().int().positive() }).strict();
+export const PlatformApproveArchitectureRequestSchema = z.object({
+  sourceGraphVersion: z.number().int().positive(), generationId: PlatformArchitectureGenerationIdSchema,
+  generationContentHash: PlatformArtifactHashSchema, selectedOptionId: PlatformArchitectureOptionIdSchema,
+  selectedOptionHash: PlatformArtifactHashSchema, comment: z.string().trim().min(10).max(2_000),
+}).strict();
+export const PlatformArchitectureMutationResponseSchema = z.object({ project: PlatformProjectSchema, baseline: PlatformArchitectureBaselineSchema, replayed: z.boolean() }).strict();
+export type PlatformArchitectureOption = z.infer<typeof PlatformArchitectureOptionSchema>;
+export type PlatformArchitectureBaseline = z.infer<typeof PlatformArchitectureBaselineSchema>;
 export const PlatformClarificationAnswerResponseSchema = z.object({
   project: PlatformProjectSchema,
   clarification: z.object({
