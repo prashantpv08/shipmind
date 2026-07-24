@@ -7,6 +7,30 @@ vi.mock('../src/platform/request', () => ({ requestPlatform: mocks.requestPlatfo
 import { POST as generateWorkItems } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/work-item-generations/route';
 import { POST as reviewWorkItems } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/work-item-generations/[generationId]/reviews/route';
 import { POST as answerClarification } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/clarifications/[questionId]/answer/route';
+import { getWorkItemReview } from '../src/platform/work-items';
+
+const readiness = {
+  score: 92,
+  rawScore: 92,
+  categories: [
+    { key: 'FUNCTIONAL_SCOPE', label: 'Functional scope', score: 20, maximum: 20, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'NFR', label: 'Non-functional requirements', score: 20, maximum: 20, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'DATA', label: 'Data', score: 8, maximum: 8, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'INTEGRATION', label: 'Integrations', score: 7, maximum: 7, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'FAILURE_HANDLING', label: 'Error and edge cases', score: 15, maximum: 15, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'SECURITY_PRIVACY', label: 'Security and privacy', score: 10, maximum: 10, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'TESTABILITY', label: 'Testability', score: 10, maximum: 10, explanation: 'No unresolved gap remains in this category.', openGapIds: [] },
+    { key: 'DELIVERY', label: 'Delivery constraints', score: 2, maximum: 10, explanation: '1 unresolved gap limits readiness.', openGapIds: ['GAP-DELIVERY'] },
+  ],
+  openBlockerIds: [],
+  caps: [],
+  calculatedAt: '2026-07-24T00:00:00.000Z',
+};
+
+const project = {
+  id: 'PROJ-ONE', workspaceId: 'WS-ONE', name: 'Product One', status: 'ANALYZED', graphVersion: 3, rowVersion: 5,
+  archivedAt: null, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-24T00:00:00.000Z',
+};
 
 const preview = {
   id: 'WIGEN-ONE', projectId: 'PROJ-ONE', sourceGraphVersion: 2, status: 'DRAFT', contentHash: 'a'.repeat(64),
@@ -76,15 +100,13 @@ describe('work-item generation BFF', () => {
 
   it('forwards a clarification answer with project concurrency and idempotency controls', async () => {
     const answered = {
-      project: {
-        id: 'PROJ-ONE', workspaceId: 'WS-ONE', name: 'Product One', status: 'ANALYZED', graphVersion: 3, rowVersion: 5,
-        archivedAt: null, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-24T00:00:00.000Z',
-      },
+      project,
       clarification: {
         id: 'QUESTION-AUTH-POLICY', gapId: 'GAP-AUTH-POLICY', status: 'ANSWERED', truthStatus: 'HUMAN_CONFIRMED', answeredAt: '2026-07-24T00:00:00.000Z',
       },
       previousGraphVersion: 2,
       graphVersion: 3,
+      readiness,
       replayed: false,
     };
     mocks.requestPlatform.mockResolvedValue({ status: 200, requestId: 'answer-001', etag: '"PROJ-ONE:5"', idempotencyReplayed: 'false', body: answered });
@@ -105,6 +127,37 @@ describe('work-item generation BFF', () => {
       { method: 'POST', body, ifMatch: '"PROJ-ONE:4"', idempotencyKey: 'clarification-key-001' },
     );
     await expect(response.json()).resolves.toEqual(answered);
+  });
+
+  it('loads the persisted readiness for the exact current graph in the backlog review', async () => {
+    mocks.requestPlatform
+      .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
+      .mockResolvedValueOnce({ status: 200, body: project })
+      .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 3, readiness } })
+      .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
+
+    await expect(getWorkItemReview('ORG-ONE', 'PROJ-ONE')).resolves.toEqual({
+      status: 'ready',
+      project,
+      readiness,
+      preview: null,
+      canGenerate: false,
+      canReview: false,
+    });
+    expect(mocks.requestPlatform).toHaveBeenNthCalledWith(3, '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/readiness', 'A'.repeat(43));
+  });
+
+  it('rejects readiness from a stale graph instead of presenting it as current', async () => {
+    mocks.requestPlatform
+      .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
+      .mockResolvedValueOnce({ status: 200, body: project })
+      .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 2, readiness } })
+      .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
+
+    await expect(getWorkItemReview('ORG-ONE', 'PROJ-ONE')).resolves.toEqual({
+      status: 'unavailable',
+      message: 'The platform returned an unexpected backlog response.',
+    });
   });
 
   it('rejects a cross-origin clarification answer before reading the session', async () => {

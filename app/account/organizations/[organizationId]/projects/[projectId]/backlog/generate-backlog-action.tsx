@@ -83,7 +83,7 @@ export function GenerateBacklogAction({ organizationId, projectId, projectRowVer
       answerRetry.current = null;
       retryKey.current = null;
       setAnswerState('success');
-      setAnswerMessage(`Answer recorded in graph v${parsed.data.graphVersion}. Documents and architecture must now be regenerated and reapproved.`);
+      setAnswerMessage(`Answer recorded in graph v${parsed.data.graphVersion}. Readiness is ${parsed.data.readiness.score}/100. Documents and architecture must now be regenerated and reapproved.`);
       setBlockers([]);
       setClarificationBlocked(false);
       setState('idle');

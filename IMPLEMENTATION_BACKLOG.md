@@ -74,6 +74,7 @@ The commercial web, platform, and infrastructure responsibilities have independe
 - [x] Move project creation behind the platform API with scoped workspace validation, role authorization, idempotent transactional persistence, immutable audit evidence, and a retry-safe web flow. Evidence: `docs/implementation/organization-scoped-project-creation.md`.
 - [x] Move recoverable project archive/restore behind the platform API with `If-Match`, preserved lifecycle state, row locking, immutable audit evidence, and guarded migration rollback. Evidence: `docs/implementation/project-archive-restore.md`.
 - [x] Move human clarification answers behind the platform API with tenant authorization, ETags, idempotency, immutable graph versioning, stable IDs, human provenance, audit redaction, and stale-backlog review invalidation. Evidence: `docs/decisions/0021-versioned-human-clarification-mutations.md` and `docs/implementation/commercial-clarification-answers.md`.
+- [x] Recalculate, persist, expose, and render the deterministic readiness calculation for the exact current graph after clarification mutations, rejecting stale graph scores. Evidence: `docs/decisions/0022-deterministic-readiness-on-graph-mutation.md` and `docs/implementation/commercial-clarification-answers.md`.
 - [x] Add ignore rules and a repository policy check preventing Terraform state, plans, credentials, keys, and environment secrets from version control.
 - [ ] Remove each migrated Next.js business route only after replacement contract and end-to-end tests pass.
 

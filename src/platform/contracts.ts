@@ -164,6 +164,28 @@ export const PlatformWorkItemGenerationBlockedResponseSchema = z.object({
 export type PlatformWorkItemGenerationBlocker = z.infer<typeof PlatformWorkItemGenerationBlockerSchema>;
 export const PlatformClarificationQuestionIdSchema = z.string().regex(/^(?:CQ|QUESTION)-[A-Za-z0-9_-]{1,120}$/);
 export const PlatformAnswerClarificationRequestSchema = z.object({ answer: z.string().trim().min(1).max(2_000) }).strict();
+export const PlatformReadinessCategoryKeySchema = z.enum(['FUNCTIONAL_SCOPE', 'NFR', 'DATA', 'INTEGRATION', 'FAILURE_HANDLING', 'SECURITY_PRIVACY', 'TESTABILITY', 'DELIVERY']);
+export const PlatformProjectReadinessSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  rawScore: z.number().int().min(0).max(100),
+  categories: z.array(z.object({
+    key: PlatformReadinessCategoryKeySchema,
+    label: z.string().min(1),
+    score: z.number().int().nonnegative(),
+    maximum: z.number().int().positive(),
+    explanation: z.string().min(1),
+    openGapIds: z.array(z.string().min(1)),
+  }).strict()).length(8),
+  openBlockerIds: z.array(z.string().min(1)),
+  caps: z.array(z.string().min(1)),
+  calculatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformProjectReadinessResponseSchema = z.object({
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().nonnegative(),
+  readiness: PlatformProjectReadinessSchema.nullable(),
+}).strict();
+export type PlatformProjectReadiness = z.infer<typeof PlatformProjectReadinessSchema>;
 export const PlatformClarificationAnswerResponseSchema = z.object({
   project: PlatformProjectSchema,
   clarification: z.object({
@@ -175,6 +197,7 @@ export const PlatformClarificationAnswerResponseSchema = z.object({
   }).strict(),
   previousGraphVersion: z.number().int().positive(),
   graphVersion: z.number().int().positive(),
+  readiness: PlatformProjectReadinessSchema,
   replayed: z.boolean(),
 }).strict();
 const PlatformAcceptanceCriterionSchema = z.object({

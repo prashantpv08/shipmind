@@ -20,13 +20,13 @@ One PostgreSQL transaction:
 3. creates graph version `N + 1` while retaining all stable entity, gap, and question IDs;
 4. marks the selected question and gap `ANSWERED` and `HUMAN_CONFIRMED` only in the new graph;
 5. creates a deterministic human-answer knowledge entity linked to the question;
-6. resets project readiness to unknown and sets the project to `ANALYZED` or `NEEDS_CLARIFICATION` according to remaining critical gaps;
+6. recalculates and persists deterministic readiness for graph `N + 1` and sets the project to `ANALYZED` or `NEEDS_CLARIFICATION` according to remaining critical gaps;
 7. increments the project row version and records an immutable audit event; and
 8. completes the idempotency record with the exact response.
 
 The answer text is canonical graph content but is not copied into the API response or audit metadata. The audit event stores its SHA-256 hash. Historical graph rows, approvals, architecture decisions, and work-item generations remain immutable. Because they reference graph `N`, they are ineligible for graph `N + 1` review or publication.
 
-This slice does not claim a recalculated readiness score or regenerated documents. Those outputs must be produced by their commercial workflows from graph `N + 1`; until then, the UI reports them as requiring regeneration and reapproval.
+The readiness part of this decision is detailed by [ADR 0022](0022-deterministic-readiness-on-graph-mutation.md). This slice still does not claim regenerated documents or architecture. Those outputs must be produced by their commercial workflows from graph `N + 1`; until then, the UI reports them as requiring regeneration and reapproval.
 
 ## Consequences
 
