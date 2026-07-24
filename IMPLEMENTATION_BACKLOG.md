@@ -197,6 +197,29 @@ Axiom produces grounded, complete, testable work items that pass measurable qual
 - Every rejected generation has an actionable reason.
 - A cheaper model is promoted only when task-specific evidence supports it.
 
+## Milestone 5.5 — Full-lifecycle Engineering Plan
+
+### Outcome
+
+Authorized users receive grounded advice across the complete software delivery lifecycle before downstream backlog, code-generation, connector, or cloud actions.
+
+- [x] Define `Engineering Plan v1` with product, UX/accessibility, architecture/technology, data, API/integration, testing, security/privacy, CI/CD, deployment/AWS infrastructure, reliability/observability, cost/FinOps, and operations/support domains.
+- [x] Require recommendation, why, benefits, trade-offs, risks, why-not-now, reconsideration triggers, actions, verification evidence, source IDs, and controlled reference IDs.
+- [x] Bind generation to the exact current artifact approval and human-approved architecture decision and block critical gaps.
+- [x] Add a deterministic evaluator for domain coverage, valid source references, and prohibited unsupported evidence claims.
+- [x] Persist immutable plan versions with tenant scope, content hash, Agent Kernel provenance, audit evidence, and idempotency claimed before model execution.
+- [x] Add the local thin-BFF and accessible Engineering Plan view with honest loading, failure, empty, success, and read-only states.
+- [x] Add controlled primary references including OWASP ASVS/API/AISVS, NIST SSDF/AI RMF, WCAG, AWS Well-Architected/SaaS Lens, OpenAPI, OpenTelemetry, and PostgreSQL.
+- [ ] Add human plan review, categorized revision feedback, and exact approval before downstream coding tasks.
+- [ ] Add evaluated hosted-model execution; OpenAI and Groq remain disabled until task-specific qualification and verified price/data-policy controls pass.
+
+### Exit criteria
+
+- All required lifecycle domains are present and grounded in approved sources.
+- Unsupported certification, test, security, deployment, performance, availability, and cost claims are rejected.
+- A retry cannot execute the model twice after the same completed idempotent request.
+- No code, GitHub, Jira, Trello, AWS, or other external side effect occurs from plan generation.
+
 ## Milestone 6 — Jira commercial connector
 
 ### Outcome
@@ -293,6 +316,10 @@ Approved work can be handed to native or external coding agents without weakenin
 - [ ] Define the external coding-agent adapter and run lifecycle.
 - [ ] Implement export-only and customer-account handoff first.
 - [ ] Add repository authorization, branch policy, workspace, and path boundaries.
+- [ ] Add a versioned coding-profile catalog with deterministic organization, project, and repository inheritance.
+- [ ] List the effective languages, frameworks, architecture boundaries, formatting, linting, dependency, license, secure-coding, generated-path, and forbidden-pattern rules before generation.
+- [ ] Map applicable secure-coding rules to OWASP ASVS 5.0.0, API Security Top 10 2023, AISVS 1.0, and NIST SSDF 1.1 without claiming certification.
+- [ ] Add a least-privilege GitHub App connector with explicit repository selection, exact side-effect previews, idempotent branch/commit/PR writes, and authenticated webhook reconciliation.
 - [ ] Integrate selected Codex, GitHub Copilot, or Devin paths only where supported and commercially justified.
 - [ ] Import run, pull-request, patch, and artifact references.
 - [ ] Keep all imported claims unverified until Axiom verification executes.
@@ -302,4 +329,6 @@ Approved work can be handed to native or external coding agents without weakenin
 
 - External agents cannot access unapproved organization context or credentials.
 - Axiom can trace an approved work item to external execution and real verification evidence.
+- The exact effective coding profile and approved architecture decision are visible on every coding task and generated patch.
+- GitHub cannot write to an unapproved repository or protected branch, and no provider success is shown without a confirmed response.
 - Customer-owned external-agent costs remain separate unless a commercial plan explicitly includes them.

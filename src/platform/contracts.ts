@@ -506,6 +506,69 @@ export const PlatformSubmitWorkItemReviewRequestSchema = z.discriminatedUnion('d
 export type PlatformWorkItem = z.infer<typeof PlatformWorkItemSchema>;
 export type PlatformWorkItemGenerationPreview = z.infer<typeof PlatformWorkItemGenerationPreviewSchema>;
 
+export const PlatformEngineeringPlanDomainSchema = z.enum([
+  'PRODUCT_SCOPE', 'USER_EXPERIENCE_ACCESSIBILITY', 'ARCHITECTURE_TECH_STACK', 'DATA',
+  'API_INTEGRATION', 'TESTING_QUALITY', 'SECURITY_PRIVACY', 'DELIVERY_CI_CD',
+  'DEPLOYMENT_CLOUD_INFRA', 'RELIABILITY_OBSERVABILITY', 'COST_FINOPS', 'OPERATIONS_SUPPORT',
+]);
+const PlatformEngineeringReferenceIdSchema = z.enum([
+  'OWASP_ASVS_5_0_0', 'OWASP_API_SECURITY_2023', 'OWASP_AISVS_1_0', 'NIST_SSDF_1_1',
+  'NIST_AI_RMF_1_0', 'WCAG_2_2', 'AWS_WELL_ARCHITECTED', 'AWS_SAAS_LENS',
+  'OPENAPI_3_1', 'OPENTELEMETRY', 'POSTGRESQL',
+]);
+const PlatformGenerationProvenanceSchema = z.object({
+  runId: z.string().regex(/^ARUN-[A-Za-z0-9_-]{1,123}$/), modelCallId: z.string().regex(/^MCALL-[A-Za-z0-9_-]{1,122}$/),
+  tier: z.enum(['ECONOMY', 'BALANCED', 'BEST']), provider: z.enum(['LOCAL_FIXTURE', 'OPENAI', 'GROQ']),
+  modelDefinitionId: z.string().regex(/^MODEL-[A-Za-z0-9_-]{1,122}$/), immutableModelId: z.string().min(1).max(300),
+  promptVersion: z.string().min(1).max(100), workflowVersion: z.string().min(1).max(100),
+  policyId: z.string().regex(/^MPOL-[A-Za-z0-9_-]{1,122}$/), policyVersion: z.number().int().positive(),
+  budget: z.union([
+    z.object({ status: z.literal('NOT_APPLICABLE'), reason: z.literal('NON_BILLABLE_LOCAL_FIXTURE') }).strict(),
+    z.object({ status: z.literal('RESERVED'), reservationId: z.string().regex(/^URES-[A-Za-z0-9_-]{1,123}$/) }).strict(),
+  ]),
+  usage: z.union([
+    z.object({ evidenceStatus: z.literal('NOT_APPLICABLE'), reason: z.literal('NON_BILLABLE_LOCAL_FIXTURE') }).strict(),
+    z.object({ evidenceStatus: z.literal('MEASURED'), measurementSource: z.literal('PROVIDER_RESPONSE'), inputTokens: z.number().int().nonnegative(), cachedInputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative(), totalTokens: z.number().int().nonnegative() }).strict(),
+  ]),
+  attemptCount: z.number().int().min(1).max(3), fallbackUsed: z.boolean(), latencyMs: z.number().int().nonnegative(), completedAt: z.iso.datetime(),
+}).strict();
+const PlatformEngineeringRecommendationSchema = z.object({
+  id: z.string().regex(/^EREC-[A-Za-z0-9_-]{1,120}$/), domain: PlatformEngineeringPlanDomainSchema,
+  disposition: z.enum(['RECOMMENDED', 'CONDITIONAL', 'NOT_RECOMMENDED', 'NEEDS_DECISION']),
+  title: z.string().min(8).max(200), recommendation: z.string().min(20).max(3_000), rationale: z.string().min(20).max(3_000),
+  benefits: z.array(z.string().min(10).max(1_000)).min(1).max(12), tradeoffs: z.array(z.string().min(10).max(1_000)).min(1).max(12),
+  risks: z.array(z.object({ risk: z.string().min(12).max(1_000), impact: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']), mitigation: z.string().min(12).max(1_000) }).strict()).min(1).max(12),
+  alternatives: z.array(z.object({ name: z.string().min(2).max(200), whyNotNow: z.string().min(12).max(1_000), reconsiderWhen: z.string().min(12).max(1_000) }).strict()).min(1).max(8),
+  implementationActions: z.array(z.string().min(10).max(1_000)).min(1).max(20),
+  verification: z.object({ method: z.string().min(15).max(2_000), evidenceExpected: z.string().min(15).max(2_000) }).strict(),
+  sourceEntityIds: z.array(z.string().min(2).max(160)).min(1).max(100), referenceIds: z.array(PlatformEngineeringReferenceIdSchema).min(1).max(10),
+  truthStatus: z.literal('AI_SUGGESTED'),
+}).strict();
+export const PlatformEngineeringPlanPreviewSchema = z.object({
+  id: z.string().regex(/^EPLAN-[A-Za-z0-9_-]{1,120}$/), version: z.number().int().positive(), status: z.literal('DRAFT'),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  plan: z.object({
+    id: z.string().regex(/^EPLAN-[A-Za-z0-9_-]{1,120}$/), schemaVersion: z.literal('engineering-plan-v1'),
+    promptVersion: z.literal('engineering-plan-grounded-v1'), workflowVersion: z.literal('engineering-plan-workflow-v1'),
+    referenceCatalogVersion: z.literal('engineering-reference-catalog-2026-07-24'), projectId: PlatformProjectIdSchema,
+    sourceGraphVersion: z.number().int().positive(), artifactApprovalId: z.string().min(2).max(160), architectureDecisionId: z.string().min(2).max(160), architectureOptionId: z.string().min(2).max(160),
+    executiveSummary: z.string().min(30).max(4_000), recommendations: z.array(PlatformEngineeringRecommendationSchema).min(12).max(48),
+    unknowns: z.array(z.object({ id: z.string().regex(/^EUNKNOWN-[A-Za-z0-9_-]{1,116}$/), domain: PlatformEngineeringPlanDomainSchema, question: z.string().min(12).max(1_000), whyItMatters: z.string().min(12).max(1_000), affectedSourceEntityIds: z.array(z.string().min(2).max(160)).max(100), blocking: z.boolean() }).strict()).max(100),
+    nextGates: z.array(z.object({ sequence: z.number().int().positive(), title: z.string().min(5).max(200), exitCriteria: z.array(z.string().min(10).max(1_000)).min(1).max(12), evidenceRequired: z.array(z.string().min(10).max(1_000)).min(1).max(12) }).strict()).min(3).max(20),
+    truthStatus: z.literal('AI_SUGGESTED'), generatedAt: z.iso.datetime(),
+  }).strict(),
+  qualityReport: z.object({
+    evaluatorVersion: z.literal('engineering-plan-quality-v1'), passed: z.boolean(),
+    findings: z.array(z.object({ code: z.enum(['SCHEMA_INVALID', 'MISSING_DOMAIN', 'INVALID_SOURCE_REFERENCE', 'PROHIBITED_EVIDENCE_CLAIM']), severity: z.enum(['ERROR', 'WARNING']), message: z.string().min(1).max(1_000), recommendationId: z.string().nullable() }).strict()).max(500),
+    metrics: z.object({ schemaValid: z.boolean(), requiredDomainCount: z.number().int().nonnegative(), coveredDomainCount: z.number().int().nonnegative(), recommendationCount: z.number().int().nonnegative(), validSourceReferenceRate: z.number().min(0).max(1), prohibitedClaimCount: z.number().int().nonnegative() }).strict(),
+  }).strict(),
+  provenance: PlatformGenerationProvenanceSchema.nullable(),
+  references: z.array(z.object({ id: PlatformEngineeringReferenceIdSchema, title: z.string().min(3).max(200), authority: z.string().min(2).max(100), url: z.url(), versionLabel: z.string().min(1).max(100) }).strict()).max(20),
+  replayed: z.boolean(),
+}).strict();
+export const PlatformGenerateEngineeringPlanRequestSchema = z.object({ sourceGraphVersion: z.number().int().positive(), tier: z.enum(['ECONOMY', 'BALANCED', 'BEST']) }).strict();
+export type PlatformEngineeringPlanPreview = z.infer<typeof PlatformEngineeringPlanPreviewSchema>;
+
 export const PlatformModelProviderCodeSchema = z.enum(['LOCAL_FIXTURE', 'OPENAI', 'GROQ']);
 export const PlatformModelProviderIdSchema = z.string().regex(/^MPROV-[A-Za-z0-9_-]{1,121}$/);
 export const PlatformModelDefinitionIdSchema = z.string().regex(/^MODEL-[A-Za-z0-9_-]{1,122}$/);

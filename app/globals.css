@@ -258,6 +258,63 @@ textarea, input { box-sizing: border-box; font: inherit; }
   .wireframe-toolbar .status-pill { display: none; }.wireframe-layout { grid-template-columns: 1fr; }.wireframe-screens, .wireframe-inspector { display: none; }.wireframe-viewport { padding: 1rem; }.wireframe-toolbar-actions .btn { display: none; }
 }
 
+/* Commercial Engineering Plan */
+.engineering-plan-card { max-width: 1380px; }
+.engineering-plan-workflow { display: grid; gap: 1.25rem; margin-top: 1.5rem; }
+.engineering-plan-control, .engineering-plan-proof, .engineering-plan-provenance, .engineering-plan-empty, .engineering-next-gates, .engineering-plan-unknowns, .engineering-plan-references { border: 1px solid var(--line, #dbe3ea); border-radius: 18px; padding: 1.25rem; background: #fff; color: #183448; }
+.engineering-plan-control h2, .engineering-plan-proof h2, .engineering-plan-provenance h2, .engineering-plan-empty h2, .engineering-next-gates h2, .engineering-plan-unknowns h2, .engineering-plan-references h2,
+.engineering-plan-control label, .engineering-plan-proof dd, .engineering-plan-provenance dd { color: #183448; }
+.engineering-plan-control p, .engineering-plan-proof p, .engineering-plan-provenance p, .engineering-plan-empty p, .engineering-next-gates p, .engineering-plan-unknowns p, .engineering-plan-references p { color: #526579; }
+.engineering-plan-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; }
+.engineering-plan-control h2, .engineering-plan-section-heading h2, .engineering-next-gates h2, .engineering-plan-references h2 { margin: .25rem 0; }
+.engineering-plan-actions { display: grid; grid-template-columns: auto minmax(130px, auto) auto; gap: .6rem; align-items: center; }
+.engineering-plan-actions label { font-weight: 700; }
+.engineering-plan-actions select { min-height: 42px; border: 1px solid #becbd6; border-radius: 9px; padding: 0 .7rem; background: #fff; }
+.engineering-plan-readonly { max-width: 34rem; }
+.engineering-plan-proof { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; border-color: #9ed8c0; background: linear-gradient(135deg, #f1fbf7, #fff); }
+.engineering-plan-proof > div > span, .engineering-plan-section-heading > span, .engineering-next-gates > div > span { color: #087a55; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.engineering-plan-proof > strong { align-self: start; color: #087a55; border: 1px solid #8ccdb5; border-radius: 999px; padding: .4rem .75rem; }
+.engineering-plan-proof dl, .engineering-plan-provenance dl { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.engineering-plan-proof dl div, .engineering-plan-provenance dl div { padding: .75rem; border-radius: 12px; background: rgba(255,255,255,.8); }
+.engineering-plan-proof dt, .engineering-plan-provenance dt { color: #617181; font-size: .78rem; }
+.engineering-plan-proof dd, .engineering-plan-provenance dd { margin: .25rem 0 0; font-weight: 800; overflow-wrap: anywhere; }
+.engineering-plan-proof > code { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.engineering-plan-provenance { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; background: #f7f8fb; }
+.engineering-plan-section-heading { max-width: 850px; margin: .75rem 0 1rem; }
+.engineering-recommendations { display: grid; gap: 1rem; padding: 0; list-style: none; }
+.engineering-recommendations > li > article { border: 1px solid #dbe3ea; border-radius: 18px; padding: 1.25rem; background: #fff; box-shadow: 0 12px 32px rgba(26, 43, 59, .05); }
+.engineering-recommendations article > header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; border-bottom: 1px solid #edf1f4; padding-bottom: 1rem; }
+.engineering-recommendations article > header span { color: #526579; font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.engineering-recommendations article > header h3 { margin: .3rem 0; }
+.engineering-recommendations article > header strong { color: #087a55; background: #e8f7f1; border-radius: 999px; padding: .4rem .7rem; white-space: nowrap; }
+.engineering-recommendation-lead { font-size: 1.05rem; font-weight: 650; color: #183448; }
+.engineering-recommendations h4 { margin-bottom: .4rem; }
+.engineering-recommendations ul { padding-left: 1.2rem; }
+.engineering-recommendations li + li { margin-top: .35rem; }
+.engineering-recommendations li span { display: block; margin-top: .25rem; }
+.engineering-plan-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.engineering-plan-columns > section, .engineering-alternative { border-radius: 12px; padding: .85rem; background: #f7f9fb; }
+.engineering-alternative + .engineering-alternative { margin-top: .6rem; }
+.engineering-recommendations article > footer { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; border-top: 1px solid #edf1f4; margin-top: 1rem; padding-top: 1rem; }
+.engineering-recommendations article > footer span { color: #8b5700; background: #fff4d8; border-radius: 999px; padding: .35rem .6rem; }
+.engineering-recommendations article code, .engineering-plan-proof code { font-size: .78rem; overflow-wrap: anywhere; }
+.engineering-next-gates > ol { display: grid; gap: .75rem; padding: 0; list-style: none; }
+.engineering-next-gates > ol > li { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: .85rem; }
+.engineering-next-gates > ol > li > strong { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #183448; color: #fff; }
+.engineering-next-gates h3 { margin: .35rem 0; }
+.engineering-plan-unknowns ul, .engineering-plan-references ul { display: grid; gap: .65rem; padding: 0; list-style: none; }
+.engineering-plan-unknowns li, .engineering-plan-references li { border: 1px solid #e2e8ed; border-radius: 12px; padding: .85rem; }
+.engineering-plan-references li { display: flex; justify-content: space-between; gap: 1rem; }
+.engineering-plan-references a { font-weight: 750; }
+.engineering-plan-references span { color: #617181; text-align: right; }
+@media (max-width: 820px) {
+  .engineering-plan-control, .engineering-plan-columns { grid-template-columns: 1fr; }
+  .engineering-plan-actions { grid-template-columns: 1fr; }
+  .engineering-plan-proof dl, .engineering-plan-provenance dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .engineering-recommendations article > header, .engineering-plan-references li { align-items: start; flex-direction: column; }
+  .engineering-plan-references span { text-align: left; }
+}
+
 .project-source-card { max-width: 1120px; }
 .project-access-heading nav { display: flex; gap: 1rem; flex-wrap: wrap; }
 .source-workflow { display: grid; gap: 1.25rem; margin-top: 1.5rem; }

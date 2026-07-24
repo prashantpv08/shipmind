@@ -46,6 +46,7 @@ Axiom helps teams convert source material such as product briefs, documents, dec
 - grounded requirements and non-functional requirements;
 - explicit gaps and clarification questions;
 - architecture alternatives and approved decisions;
+- full-lifecycle engineering guidance covering technology choices, UX/accessibility, data, APIs, testing, security, delivery, deployment, cloud infrastructure, reliability, observability, cost, and operations;
 - implementation-ready work items;
 - Jira issues or Trello cards after human approval;
 - controlled task packets for Axiom or external coding agents;
@@ -61,6 +62,7 @@ Source evidence
   -> canonical requirements
   -> clarified decisions
   -> approved architecture
+  -> reviewed engineering plan
   -> verified work items
   -> Jira or Trello
   -> coding-agent handoff
@@ -76,6 +78,7 @@ Source evidence
 5. Support economical hosted inference without purchasing or operating GPUs.
 6. Provide a secure multi-tenant SaaS foundation that can grow without an immediate microservice rewrite.
 7. Measure quality, cost, latency, and human acceptance for every AI workflow version.
+8. Help users understand what is recommended, what is not recommended, why, the trade-offs, the missing evidence, and when a decision should be reconsidered across the complete software delivery lifecycle.
 
 ### 2.4 Non-goals for launch
 
@@ -175,6 +178,16 @@ The system shall never fabricate source quotations, test results, coverage, scan
 6. Axiom runs only repository-approved, allowlisted verification commands.
 7. Real results become evidence linked to the original requirements.
 
+### 5.3 Approved intent to full-lifecycle engineering plan
+
+1. Axiom selects the exact approved requirement and architecture versions.
+2. A versioned Agent Kernel workflow proposes engineering guidance across every required lifecycle domain.
+3. Every recommendation states its disposition, rationale, benefits, trade-offs, risks, alternatives, why alternatives are not preferred now, reconsideration triggers, implementation actions, verification expectations, source entities, and applicable controlled reference IDs.
+4. Missing business or engineering evidence becomes an explicit unknown or decision gate rather than an invented recommendation.
+5. Deterministic validation rejects missing lifecycle domains, invalid source links, prohibited evidence claims, unsupported reference IDs, and incomplete why/why-not analysis.
+6. The exact immutable plan remains `AI_SUGGESTED` until reviewed; it cannot approve architecture, publish work, modify infrastructure, deploy, or claim verification.
+7. Material source, requirement, or architecture changes make earlier plans historical and require regeneration.
+
 ## 6. Functional requirements
 
 ### 6.1 Projects and source ingestion
@@ -241,6 +254,12 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-DOC-001 | Axiom shall compile SRS, NFR, HLD, ADR, test strategy, API contract, backlog, and task-packet views from the graph. | Launch |
 | FR-DOC-002 | Generated artifacts shall include graph version, content hash, generation provenance, and truth status. | Launch |
 | FR-DOC-003 | Axiom may publish documents to Notion or Confluence through optional connectors; those copies are not authoritative. | Next |
+| FR-PLAN-001 | Axiom shall generate a versioned Engineering Plan for product scope, UX/accessibility, architecture/technology, data, APIs/integrations, testing/quality, security/privacy, CI/CD, deployment/cloud infrastructure, reliability/observability, cost/FinOps, and operations/support. | Launch |
+| FR-PLAN-002 | Every recommendation shall state recommended, conditional, not-recommended, or needs-decision; why; benefits; trade-offs; risks; alternatives and why-not-now; reconsideration triggers; implementation actions; verification expectations; source links; and controlled reference IDs. | Launch |
+| FR-PLAN-003 | Technology, testing, security, deployment, and cloud guidance shall be bound to the exact approved requirement and architecture versions and remain `AI_SUGGESTED` until human review. | Launch |
+| FR-PLAN-004 | Axiom shall not claim certification, compliance, test success, security findings, performance, availability, or cost measurements without immutable executed evidence. | Launch |
+| FR-PLAN-005 | Axiom shall expose unknowns and next decision gates when evidence is insufficient and shall preserve earlier plans as immutable history after regeneration. | Launch |
+| FR-PLAN-006 | Engineering guidance shall use a versioned application-controlled catalog of assessed primary standards and vendor references; model-generated URLs shall not be trusted as references. | Launch |
 
 ### 6.6 Jira and Trello connectors
 
@@ -286,6 +305,16 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-AGENT-004 | Repository writes shall require explicit repository authorization and path boundaries. | Next |
 | FR-AGENT-005 | External-agent output shall remain unverified until approved commands produce evidence. | Launch |
 | FR-AGENT-006 | Axiom shall not expose provider secrets or unrelated organization context to an agent. | Launch |
+| FR-CODE-001 | Axiom shall maintain versioned organization, project, and repository coding profiles covering approved languages and frameworks, formatting and linting, architecture boundaries, dependency and license policy, secure-coding controls, generated-file paths, and forbidden patterns. | Launch |
+| FR-CODE-002 | Coding-profile inheritance and conflicts shall be resolved deterministically; an AI may suggest a rule change, but only an authorized human may approve the effective profile. | Launch |
+| FR-CODE-003 | Every coding task shall bind the exact approved work-item versions, architecture decision, coding-profile version, repository revision, allowed paths, and verification commands. | Launch |
+| FR-CODE-004 | Native or external code generation shall produce a reviewable patch or branch and shall not write directly to a protected branch. | Next |
+| FR-CODE-005 | Generated code, commits, pull requests, review comments, and verification evidence shall retain typed trace links to the originating decisions and work items. | Next |
+| FR-GH-001 | GitHub connectivity shall use a GitHub App or approved enterprise OAuth installation with least-privilege repository selection; personal access tokens are not the commercial default. | Next |
+| FR-GH-002 | Before creating a branch, commit, pull request, review, or check, Axiom shall show the exact side-effect preview and require explicit approval. | Next |
+| FR-GH-003 | GitHub writes shall be idempotent, auditable, branch-policy aware, and reconciled using recorded provider IDs and authenticated deduplicated webhooks. | Next |
+| FR-SEC-001 | Axiom shall maintain a versioned secure-engineering rule catalog that can map applicable requirements to OWASP ASVS 5.0.0, OWASP API Security Top 10 2023, OWASP AISVS 1.0, and NIST SSDF 1.1. | Launch |
+| FR-SEC-002 | Axiom shall explain rule applicability, implementation guidance, verification method, exceptions, and missing evidence; catalog mappings shall never be presented as certification or compliance proof. | Launch |
 
 ### 6.9 Verification, traceability, and explanation
 
@@ -326,13 +355,15 @@ The system shall never fabricate source quotations, test results, coverage, scan
 
 ### 7.1 Workflow design
 
-Ticket generation shall use bounded stages rather than an unconstrained agent conversation:
+All AI engineering workflows shall use bounded stages rather than an unconstrained agent conversation. Ticket generation is one downstream workflow, not the product boundary:
 
 ```text
 Context selection
   -> requirement/gap analysis
   -> clarification gate
-  -> normalized work-item generation
+  -> architecture and full-lifecycle engineering guidance
+  -> human decision/approval gates
+  -> normalized work-item generation and delivery planning
   -> deterministic validation
   -> semantic review when required
   -> human approval
@@ -355,6 +386,11 @@ The evaluation set shall include:
 - Jira and Trello field-mapping cases;
 - malformed and incomplete model responses;
 - known good and known bad tickets reviewed by humans.
+- technology-stack fit and anti-pattern cases;
+- test-strategy completeness and unverifiable quality claims;
+- security/privacy threat, control, and false-certification cases;
+- deployment, cloud, reliability, observability, cost, and operational-readiness cases;
+- full-lifecycle plans with missing domains, invalid references, weak why-not analysis, or unsupported recommendations.
 
 Production customer content shall not enter a shared evaluation set without a lawful basis, explicit policy, de-identification, and access controls.
 
@@ -372,6 +408,9 @@ These are release targets, not claims about the current prototype:
 | Critical deterministic validation bypasses | 0 |
 | Human acceptance without material rewrite | at least 90% on the approved launch dataset |
 | Approved-requirement coverage by backlog | at least 95%, with every omission explicitly identified |
+| Required Engineering Plan lifecycle-domain coverage | 100% |
+| Unsupported standards or vendor-reference IDs in persisted AI output | 0 |
+| Fabricated certification, test, scan, performance, availability, deployment, or cost claims | 0 |
 
 No model is promoted solely because it is cheaper, faster, or scores well on public benchmarks. It must satisfy Axiom’s task-specific evaluation thresholds.
 
@@ -652,6 +691,8 @@ Engineering decisions shall use primary standards and vendor documentation. The 
 - [OWASP API Security Project](https://owasp.org/www-project-api-security/)
 - [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/)
 - [NIST AI Risk Management Framework and Generative AI Profile](https://www.nist.gov/itl/ai-risk-management-framework)
+- [NIST Secure Software Development Framework SP 800-218](https://csrc.nist.gov/pubs/sp/800/218/final)
+- [OWASP Artificial Intelligence Security Verification Standard](https://owasp.org/www-project-artificial-intelligence-security-verification-standard-aisvs-docs/)
 - [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)
 - [AWS SaaS Lens](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/saas-lens.html)
 - [AWS Agentic AI Lens](https://docs.aws.amazon.com/wellarchitected/latest/agentic-ai-lens/agentic-ai-lens.html)
