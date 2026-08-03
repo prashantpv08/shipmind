@@ -1,12 +1,17 @@
 # Axiom — AI Engineering Operating System
 
-Axiom converts source-grounded business intent into requirements, architecture decisions, implementation-ready work items, controlled delivery handoffs, real verification evidence, and traceable Why / Why Not / Proof answers.
+Axiom converts source-grounded business intent into business context, approved product experiences, requirements, architecture decisions, implementation-ready work items, controlled delivery handoffs, real verification evidence, and traceable Why / Why Not / Proof answers.
+
+It is designed as a governed AI-native Forward Deployed Engineering capability spanning business discovery, product design, architecture, full-stack delivery, and proof—not as an unconstrained autonomous coding agent.
 
 The authoritative commercial product contract is [SRS.md](SRS.md). Ordered implementation work is in [IMPLEMENTATION_BACKLOG.md](IMPLEMENTATION_BACKLOG.md).
 
 ## Product direction
 
 - Axiom owns the canonical project graph, Agent Kernel, ticket-quality workflow, traceability, approvals, and evidence.
+- Axiom begins with business outcomes, actors, operating workflows, policies, constraints, risks, and success measures before it recommends a product or implementation.
+- Experience-relevant projects use source-linked user journeys, editable wireframes, interaction flows, deterministic design-quality gates, and an exact approved Experience Baseline before downstream scope is finalized.
+- The Experience Studio is a governed product-design editor and evidence surface, not a general-purpose replacement for every visual-design tool. Canvas edits cannot silently redefine canonical truth.
 - Customers publish approved work to Jira, Trello, both, or neither. Axiom does not provide a project-management board.
 - Groq and OpenAI are the initial hosted model-provider candidates. Models must pass Axiom’s task-specific evaluations before production use.
 - The commercial source of truth is PostgreSQL: Docker PostgreSQL locally and Amazon RDS for PostgreSQL in AWS.
@@ -24,12 +29,14 @@ Its durable capabilities include:
 - workspace and project intake for bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-note sources;
 - immutable source references, grounded project intelligence, contextual clarifications, deterministic readiness, and approval invalidation;
 - requirements, SRS, NFR, HLD, ADR, OpenAPI, test-strategy, backlog, task-packet, and constitution views;
-- optional wireflows compiled into an embedded Excalidraw canvas;
+- prototype wireflows compiled into an embedded Excalidraw canvas, with editable scenes, interaction preview, exports, and bounded revisions;
 - architecture comparison and human-approved decisions;
 - Jira plan preview and explicit publication using the current prototype adapter;
 - controlled NotifyFlow code generation, fixed-command verification, evidence, traceability, Why answers, and export.
 
 Prototype filesystem storage, Vercel infrastructure adapters, single-workspace credentials, and Groq-only configuration are migration targets. They are not the commercial architecture and must not be deployed.
+
+The prototype Wireframe Studio is also migration input rather than completed commercial Experience Studio evidence. SRS 2.2 requires business-context entities, semantic journey and screen mapping, responsive and accessible structured design, deterministic experience-quality evaluation, organization-scoped platform APIs, exact Experience Baseline approval, and downstream stale-version gates. The decision is recorded in [ADR 0026](docs/decisions/0026-business-first-experience-baseline.md), and the ordered work is [Milestone 4.5](IMPLEMENTATION_BACKLOG.md#milestone-45--business-discovery-and-commercial-experience-studio).
 
 The repository split and safe migration sequence are documented in [ADR 0012](docs/decisions/0012-web-platform-infrastructure-repository-split.md) and [the repository split implementation note](docs/implementation/repository-split-foundation.md).
 
@@ -108,6 +115,8 @@ Generation now stops before Agent Kernel execution when the current graph contai
 Authorized owners, administrators, product analysts, and architects can record the exact confirmed answer from that blocker. The platform transaction creates a new human-confirmed graph version with stable IDs, provenance, ETag protection, idempotent retries, redacted audit evidence, and a persisted deterministic readiness calculation. Authorized readers see the exact eight-category calculation for the current graph; the web rejects stale graph scores. Earlier approvals and backlog drafts remain immutable historical evidence; they cannot be reviewed for the new graph, and the UI states that documents and architecture must be regenerated and reapproved. The answer flow performs no model, connector, or cloud side effect. See [commercial clarification answers](docs/implementation/commercial-clarification-answers.md).
 
 The same local backlog view now exposes the commercial current-graph Requirements/SRS/NFR workflow. Authorized decision-makers can deterministically compile immutable versions, inspect every byte and SHA-256 hash, and approve exactly those three versions with a rationale. Regeneration preserves prior approval evidence but makes it stale immediately; both generation and backlog acceptance recheck the latest hashes. Imported hackathon rows with incomplete provenance remain preserved but are not presented as a commercial baseline. This workflow uses no hosted model and does not open the backlog gate until the separate architecture workflow is approved. See [versioned requirement artifacts](docs/implementation/versioned-requirement-artifacts.md).
+
+Authorized organization members can now open `/account/organizations/:organizationId/projects/:projectId/business-context` after source analysis. The platform compiles a deterministic, content-hashed preview of source-linked business outcomes, actors, operating workflows, success measures, explicit unknowns, critical gaps, and experience applicability. Authorized product roles can persist that exact preview as an immutable version; product decision-makers and Reviewers can approve it, reject it, or record accept-with-edits feedback as bounded proposed graph mutations. Exact approval fails closed while unknowns, critical gaps, or applicability decisions remain. ETags, idempotency, tenant scope, immutable audit evidence, regeneration invalidation, and graph-version invalidation protect the workflow. It remains Business Context—not an Experience Baseline—and performs no model, connector, billing, or cloud side effect. See [Business Context preview](docs/implementation/business-context-preview.md) and [versioned Business Context review](docs/implementation/versioned-business-context-review.md).
 
 After exact requirement approval, the backlog view can compile three immutable Lean, Balanced, and Distributed architecture options. It shows complete why/why-not, components, flows, assumptions, risks, failure modes, explicit `UNKNOWN` monetary cost, reconsideration triggers, score rationales, grounded entities, IDs, and hashes. Owner, Administrator, or Architect approval of one exact option atomically records the decision and deterministic versioned ADR/HLD views. Regeneration preserves history but closes backlog eligibility until the latest generation is approved. No model, connector, or cloud call occurs. See [versioned architecture decisions](docs/implementation/versioned-architecture-decision.md).
 

@@ -11,6 +11,8 @@ This backlog implements `SRS.md` in dependency order. Do not begin a later miles
 
 Existing filesystem storage, Vercel adapters, single-workspace integration credentials, fixture assumptions, and Groq-only configuration are migration targets rather than commercial architecture.
 
+The prototype Wireframe Studio, curated templates, Excalidraw adapter, and revision records are also migration inputs. They do not satisfy the SRS 2.2 commercial Experience Baseline, authorization, quality, evaluation, or platform-boundary requirements by themselves.
+
 ## Milestone 0 — Contract and baseline
 
 ### Outcome
@@ -105,7 +107,7 @@ Multiple organizations can use Axiom without crossing data or authority boundari
 - [ ] Require organization scope in shared repositories and application services.
 - [x] Require organization scope in the migrated project metadata repository and service, with repository-level and API-level tenant-isolation tests. Evidence: `docs/implementation/organization-scoped-project-reads.md`.
 - [x] Require organization scope and explicit create permission for migrated project creation, with cross-tenant, idempotency, rollback, and audit integration tests. Evidence: `docs/implementation/organization-scoped-project-creation.md`.
-- [ ] Add owner, administrator, contributor, reviewer, and viewer permissions.
+- [ ] Add owner, administrator, product analyst, experience designer, architect, developer, QA/reviewer, and viewer permissions.
 - [x] Implement database-enforced immutable audit events for the current platform security-sensitive actions; extend action coverage with each new workflow.
 - [x] Add recoverable project archive and restore for owners and administrators, including stale-write, concurrency, tenant-isolation, and audit tests. Evidence: `docs/implementation/project-archive-restore.md`.
 - [ ] Add organization lifecycle plus project/organization retention and explicit deletion workflows.
@@ -169,6 +171,39 @@ Axiom owns a provider-neutral, measurable, budget-aware agent runtime.
 - Domain code has no provider SDK dependency.
 - No launch path requires an Axiom-owned GPU.
 
+## Milestone 4.5 — Business discovery and commercial Experience Studio
+
+### Outcome
+
+Business, product, design, and engineering stakeholders can move from the exact approved business context to a source-linked, editable, reviewable Experience Baseline before downstream implementation scope is finalized. This milestone was added by SRS 2.2 after portions of Milestones 5 and 5.5 were already implemented. Preserve that valid work, but treat this milestone as the next product-contract priority and require compatible Experience Baseline checks before declaring later experience-relevant flows complete.
+
+- [ ] Define and version the commercial Business Context and Experience Design schemas for outcomes, actors, jobs, operating workflows, success measures, information architecture, journeys, screens, states, nodes, interactions, tokens, components, reviews, and baselines.
+- [ ] Add organization-scoped normalized PostgreSQL tables, migrations, repositories, optimistic concurrency, stable IDs, hashes, ranked order, immutable revisions, and rollback/forward tests.
+- [x] Implement the first deterministic current-graph Business Context preview and three-state experience-applicability decision so explicit non-visual scope is marked not applicable, explicit experience scope is applicable, and silent evidence requires a human decision instead of invented screens. This read-only slice does not yet create a versioned or approved Business Context. Evidence: `docs/implementation/business-context-preview.md`.
+- [ ] Extract grounded business outcomes, actors, operating workflows, policies, constraints, risks, and success measures through a bounded Agent Kernel workflow with exact source spans and explicit unknowns.
+- [ ] Generate information architecture and user journeys from the exact current graph, blocking unsupported personas, critical unknowns, contradictions, and unmeasurable outcomes.
+- [ ] Move the engine-neutral wireframe compiler, revision persistence, and all wireframe business rules from legacy Next.js routes into the platform; keep the web as presentation and thin BFF only.
+- [ ] Replace round-robin template mapping with evaluated semantic mapping from outcomes, actors, journeys, requirements, data, roles, permissions, gaps, and architecture constraints.
+- [ ] Generate complete screen sets with applicable default, loading, queued, empty, partial-failure, failure, validation, permission, cancellation, recovery, and success states plus explicit design hypotheses.
+- [ ] Build the commercial Experience Studio editor with dependable selection, multi-selection, text editing, grouping, ordering, alignment, duplication, copy/paste, undo/redo, keyboard operation, pan/zoom, reusable components, and bounded import/export.
+- [ ] Add project-controlled design tokens, component definitions, responsive desktop/tablet/mobile variants, accessible semantic annotations, and a structured non-canvas review fallback.
+- [ ] Implement connected prototype transitions and reachable alternate, permission, failure, cancellation, and recovery paths without presenting simulated interaction as executed evidence.
+- [ ] Add an evidence inspector for exact business outcomes, requirements, source spans, truth status, gaps, assumptions, architecture constraints, and downstream coverage.
+- [ ] Implement deterministic design-quality gates for schema, references, outcome/requirement coverage, critical-flow continuity, state coverage, reachability, responsive completeness, accessibility metadata, prohibited claims, and unresolved blockers.
+- [ ] Build a human-reviewed experience evaluation corpus with good, bad, incomplete, contradictory, inaccessible, adversarial, dead-end, and silent-requirement-mutation cases; qualify models per experience task.
+- [ ] Implement explicit graph-change proposals for behavior-changing design edits; never let a canvas revision silently rewrite canonical requirements or human decisions.
+- [x] Add exact immutable preview and authorized accept, accept-with-edits, reject, categorized feedback, approval, regeneration, stale-baseline invalidation, ETags, idempotency, and immutable audit evidence. Accept-with-edits records a proposed graph mutation and remains unapproved until canonical truth changes. Evidence: `docs/implementation/versioned-business-context-review.md`.
+- [ ] Compile a versioned design handoff manifest for downstream Engineering Plan, work-item, coding-profile, and export workflows without making an external copy authoritative.
+- [ ] Add tenant-isolation, authorization, budget, cancellation, bounded-payload, concurrency, stale-write, idempotency, accessibility, unit, integration, contract, and browser E2E tests.
+
+### Exit criteria
+
+- Every approved business outcome and experience-relevant requirement maps to a reachable journey and screen or has an explicit approved not-applicable decision.
+- Critical flows include all applicable asynchronous, empty, permission, failure, cancellation, recovery, success, and responsive states and pass deterministic quality gates.
+- Business, product, design, and engineering reviewers approve the exact same immutable Experience Baseline with source and graph traceability.
+- Editing a design cannot silently alter canonical truth, cross an organization boundary, bypass a blocker, or make an external side effect.
+- The current Experience Baseline is a required compatible input for later architecture, Engineering Plan, work-item, and coding-task workflows where experience applies.
+
 ## Milestone 5 — Ticket Quality Engine
 
 ### Outcome
@@ -186,6 +221,7 @@ Axiom produces grounded, complete, testable work items that pass measurable qual
 - [x] Implement the authorized commercial answer path for a stored blocking clarification, creating a human-confirmed graph version and preserving prior approvals and drafts as historical evidence. Downstream document and architecture regeneration remain separate workflows. Evidence: `docs/decisions/0021-versioned-human-clarification-mutations.md` and `docs/implementation/commercial-clarification-answers.md`.
 - [ ] Add an optional independent semantic review stage behind policy.
 - [x] Implement exact immutable review previews and categorized accept, accept-with-edits, and reject feedback with ETags, idempotency, edited WorkItem versions, deterministic revalidation, organization authorization, and audit evidence. Evidence: `docs/implementation/work-item-human-review.md`.
+- [ ] Bind experience-relevant work items to the exact approved Experience Baseline and validate journey, screen, interaction, state, and design-handoff coverage without making the design artifact canonical truth.
 - [ ] Version prompts, schemas, rubrics, policies, and generations.
 - [ ] Build the launch evaluation dataset with reviewed good, bad, contradictory, incomplete, and adversarial cases.
 - [ ] Implement evaluation runs, comparison reports, thresholds, and model promotion rules.
@@ -210,6 +246,7 @@ Authorized users receive grounded advice across the complete software delivery l
 - [x] Persist immutable plan versions with tenant scope, content hash, Agent Kernel provenance, audit evidence, and idempotency claimed before model execution.
 - [x] Add the local thin-BFF and accessible Engineering Plan view with honest loading, failure, empty, success, and read-only states.
 - [x] Add controlled primary references including OWASP ASVS/API/AISVS, NIST SSDF/AI RMF, WCAG, AWS Well-Architected/SaaS Lens, OpenAPI, OpenTelemetry, and PostgreSQL.
+- [ ] Require the exact compatible Experience Baseline where the scope is experience-relevant and carry its user journeys, screen states, interaction constraints, responsive decisions, and accessibility annotations into the plan.
 - [ ] Add human plan review, categorized revision feedback, and exact approval before downstream coding tasks.
 - [ ] Add evaluated hosted-model execution; OpenAI and Groq remain disabled until task-specific qualification and verified price/data-policy controls pass.
 

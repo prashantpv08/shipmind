@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build the commercial version of **Axiom**, an AI Engineering Operating System that converts source-grounded business intent into approved engineering decisions, high-quality work items, Jira or Trello publications, controlled implementation handoffs, real verification evidence, and grounded Why / Why Not / Proof answers.
+Build the commercial version of **Axiom**, an AI Engineering Operating System that converts source-grounded business intent into approved product experiences and engineering decisions, high-quality work items, Jira or Trello publications, controlled implementation handoffs, real verification evidence, and grounded Why / Why Not / Proof answers.
 
 The authoritative product contract is `SRS.md`.
 
@@ -19,6 +19,8 @@ The authoritative product contract is `SRS.md`.
 - Keep all development and verification local unless the user explicitly authorizes an AWS deployment.
 - Never deploy to Vercel.
 - Axiom does not provide a Jira- or Trello-style work-management interface.
+- Business discovery and a governed Experience Baseline are first-class stages for experience-relevant projects; non-visual scope uses an explicit not-applicable decision.
+- Axiom provides a governed product-design editor and evidence surface, not an unrestricted general-purpose replacement for every visual-design tool.
 - Jira and Trello are connector targets selected by the customer.
 - PostgreSQL is the commercial source of truth. Local development uses Docker PostgreSQL; AWS production targets RDS PostgreSQL.
 - Maintain three repository boundaries: Next.js web, Node.js TypeScript platform, and Terraform infrastructure.
@@ -36,6 +38,7 @@ The authoritative product contract is `SRS.md`.
 - Model, connector, billing, storage, and coding-agent implementations must be isolated behind interfaces.
 - Every model response must pass Zod validation and grounding checks before persistence.
 - The canonical project graph is authoritative; documents and external work items are compiled or synchronized views.
+- Experience artifacts are versioned structured views; a design edit may propose a graph mutation but may not silently redefine canonical truth.
 - Stable IDs must survive regeneration and external publication.
 - Truth-status transitions must be centralized and audited.
 - External writes require explicit approval, idempotency, and recorded provider results.
@@ -69,6 +72,7 @@ The authoritative product contract is `SRS.md`.
 - Do not show fake progress.
 - Do not communicate status by color alone.
 - Traceability must have a non-graph fallback.
+- The Experience Studio must expose keyboard-operable editing and a structured non-canvas review fallback.
 - Show the exact preview before any Jira, Trello, billing, repository, or agent side effect.
 
 ## Expected commands

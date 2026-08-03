@@ -57,6 +57,121 @@ export const PlatformProjectListQuerySchema = z.object({
 
 export type PlatformProject = z.infer<typeof PlatformProjectSchema>;
 
+export const PlatformBusinessContextItemSchema = z.object({
+  id: z.string().regex(/^BC-(?:OUT|ACT|FLOW|MEASURE)-[A-F0-9]{16}$/),
+  kind: z.enum(['OUTCOME', 'ACTOR', 'WORKFLOW', 'SUCCESS_MEASURE']),
+  statement: z.string().min(1).max(5_000),
+  truthStatus: z.enum(['SOURCE_GROUNDED', 'HUMAN_CONFIRMED']),
+  sourceEntityId: z.string().min(1).max(200),
+  sourceId: z.string().min(1).max(200).nullable(),
+}).strict();
+export const PlatformBusinessContextPreviewSchema = z.object({
+  schemaVersion: z.literal('business-context-preview-v1'),
+  compilerVersion: z.literal('business-context-compiler-v1'),
+  projectId: PlatformProjectIdSchema,
+  sourceGraphVersion: z.number().int().positive(),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  compiledAt: z.iso.datetime(),
+  applicability: z.object({
+    status: z.enum(['APPLICABLE', 'NOT_APPLICABLE', 'NEEDS_DECISION']),
+    rationale: z.string().min(1).max(2_000),
+    sourceEntityIds: z.array(z.string().min(1).max(200)).max(1_000),
+    decisionRequired: z.boolean(),
+  }).strict(),
+  outcomes: z.array(PlatformBusinessContextItemSchema).max(1_000),
+  actors: z.array(PlatformBusinessContextItemSchema).max(1_000),
+  workflows: z.array(PlatformBusinessContextItemSchema).max(1_000),
+  successMeasures: z.array(PlatformBusinessContextItemSchema).max(1_000),
+  unknowns: z.array(z.object({
+    code: z.enum(['UNKNOWN_BUSINESS_OUTCOME', 'UNKNOWN_ACTOR', 'UNKNOWN_OPERATING_WORKFLOW', 'UNKNOWN_SUCCESS_MEASURE', 'UNKNOWN_EXPERIENCE_APPLICABILITY']),
+    question: z.string().min(1).max(1_000),
+    whyItMatters: z.string().min(1).max(1_000),
+  }).strict()).max(5),
+  blockingGapIds: z.array(z.string().min(1).max(200)).max(1_000),
+  coverage: z.object({
+    eligibleEntityCount: z.number().int().nonnegative(),
+    classifiedEntityCount: z.number().int().nonnegative(),
+    unclassifiedEntityIds: z.array(z.string().min(1).max(200)).max(1_000),
+  }).strict(),
+}).strict();
+export type PlatformBusinessContextPreview = z.infer<typeof PlatformBusinessContextPreviewSchema>;
+
+export const PlatformBusinessContextVersionIdSchema = z.string().regex(/^BCV-[A-Za-z0-9_-]{1,123}$/);
+export const PlatformBusinessContextReviewIdSchema = z.string().regex(/^BCREV-[A-Za-z0-9_-]{1,121}$/);
+export const PlatformBusinessContextReviewDecisionSchema = z.enum(['ACCEPT', 'ACCEPT_WITH_EDITS', 'REJECT']);
+export const PlatformBusinessContextFeedbackCategorySchema = z.enum([
+  'APPROVAL', 'BUSINESS_OUTCOME', 'ACTOR', 'WORKFLOW', 'SUCCESS_MEASURE', 'EXPERIENCE_APPLICABILITY', 'SOURCE_GROUNDING', 'OTHER',
+]);
+export const PlatformBusinessContextProposedGraphChangeSchema = z.object({
+  target: z.enum(['OUTCOME', 'ACTOR', 'WORKFLOW', 'SUCCESS_MEASURE', 'EXPERIENCE_APPLICABILITY']),
+  targetItemId: z.string().min(1).max(200).nullable(),
+  proposedValue: z.string().trim().min(1).max(5_000),
+  rationale: z.string().trim().min(10).max(2_000),
+  status: z.literal('PROPOSED_GRAPH_MUTATION'),
+}).strict();
+export const PlatformBusinessContextVersionSchema = z.object({
+  id: PlatformBusinessContextVersionIdSchema,
+  projectId: PlatformProjectIdSchema,
+  version: z.number().int().positive(),
+  sourceGraphVersion: z.number().int().positive(),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  compilerVersion: z.literal('business-context-compiler-v1'),
+  payload: PlatformBusinessContextPreviewSchema,
+  generatedByUserId: z.string().min(1).max(160),
+  generatedAt: z.iso.datetime(),
+}).strict();
+export const PlatformBusinessContextReviewSchema = z.object({
+  id: PlatformBusinessContextReviewIdSchema,
+  projectId: PlatformProjectIdSchema,
+  sourceGraphVersion: z.number().int().positive(),
+  contextVersionId: PlatformBusinessContextVersionIdSchema,
+  contextContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  decision: PlatformBusinessContextReviewDecisionSchema,
+  feedbackCategory: PlatformBusinessContextFeedbackCategorySchema,
+  comment: z.string().min(10).max(2_000),
+  proposedGraphChanges: z.array(PlatformBusinessContextProposedGraphChangeSchema).max(20),
+  truthStatus: z.enum(['HUMAN_APPROVED', 'HUMAN_REVIEWED']),
+  reviewedByUserId: z.string().min(1).max(160),
+  reviewedAt: z.iso.datetime(),
+}).strict();
+export const PlatformBusinessContextBaselineSchema = z.object({
+  projectId: PlatformProjectIdSchema,
+  graphVersion: z.number().int().nonnegative(),
+  version: PlatformBusinessContextVersionSchema.nullable(),
+  review: PlatformBusinessContextReviewSchema.nullable(),
+}).strict();
+export const PlatformGenerateBusinessContextRequestSchema = z.object({
+  sourceGraphVersion: z.number().int().positive(),
+  previewContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+export const PlatformReviewBusinessContextRequestSchema = z.object({
+  sourceGraphVersion: z.number().int().positive(),
+  contextVersionId: PlatformBusinessContextVersionIdSchema,
+  contextContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  decision: PlatformBusinessContextReviewDecisionSchema,
+  feedbackCategory: PlatformBusinessContextFeedbackCategorySchema,
+  comment: z.string().trim().min(10).max(2_000),
+  proposedGraphChanges: z.array(PlatformBusinessContextProposedGraphChangeSchema.omit({ status: true })).max(20),
+}).strict().superRefine((value, context) => {
+  if (value.decision === 'ACCEPT' && (value.feedbackCategory !== 'APPROVAL' || value.proposedGraphChanges.length !== 0)) {
+    context.addIssue({ code: 'custom', message: 'Accept requires approval category and no edits' });
+  }
+  if (value.decision === 'ACCEPT_WITH_EDITS' && (value.feedbackCategory === 'APPROVAL' || value.proposedGraphChanges.length === 0)) {
+    context.addIssue({ code: 'custom', message: 'Accept-with-edits requires categorized proposed changes' });
+  }
+  if (value.decision === 'REJECT' && (value.feedbackCategory === 'APPROVAL' || value.proposedGraphChanges.length !== 0)) {
+    context.addIssue({ code: 'custom', message: 'Reject requires categorized feedback and no edits' });
+  }
+});
+export const PlatformBusinessContextMutationResponseSchema = z.object({
+  project: PlatformProjectSchema,
+  baseline: PlatformBusinessContextBaselineSchema,
+  replayed: z.boolean(),
+}).strict();
+export type PlatformBusinessContextBaseline = z.infer<typeof PlatformBusinessContextBaselineSchema>;
+export type PlatformBusinessContextReviewDecision = z.infer<typeof PlatformBusinessContextReviewDecisionSchema>;
+export type PlatformBusinessContextFeedbackCategory = z.infer<typeof PlatformBusinessContextFeedbackCategorySchema>;
+
 export const PlatformCreateProjectRequestSchema = z.object({
   workspaceId: PlatformWorkspaceIdSchema,
   name: z.string().trim().min(2).max(160),

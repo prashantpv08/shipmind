@@ -307,10 +307,38 @@ textarea, input { box-sizing: border-box; font: inherit; }
 .engineering-plan-references li { display: flex; justify-content: space-between; gap: 1rem; }
 .engineering-plan-references a { font-weight: 750; }
 .engineering-plan-references span { color: #617181; text-align: right; }
+.business-context-card { max-width: 1380px; }.business-context-workflow { display:grid; gap:1.25rem; }.business-context-applicability,.business-context-panel,.business-context-unknowns,.business-context-unclassified,.business-context-provenance { border:1px solid #dbe3ea; border-radius:16px; background:#fff; padding:1.1rem; }.business-context-applicability { display:grid; gap:.9rem; border-color:#9ccfc0; background:linear-gradient(135deg,#effaf6,#fff); }.business-context-applicability>div>span { color:#087a55; font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }.business-context-applicability h2 { margin:.25rem 0; }.business-context-applicability dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:0; }.business-context-applicability dl div { border-radius:10px; background:#fff; padding:.65rem; }.business-context-applicability dt { color:#617181; font-size:.72rem; }.business-context-applicability dd { margin:.2rem 0 0; font-weight:800; }.business-context-applicability>code { overflow-wrap:anywhere; }.business-context-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }.business-context-panel h2,.business-context-unknowns h2,.business-context-unclassified h2 { margin-top:0; }.business-context-panel ol,.business-context-unknowns ol { display:grid; gap:.7rem; padding:0; list-style:none; }.business-context-panel li,.business-context-unknowns li { border:1px solid #e2e8ed; border-radius:10px; padding:.8rem; }.business-context-panel li p,.business-context-unknowns li p { margin:.1rem 0 .55rem; }.business-context-panel footer { display:flex; justify-content:space-between; gap:.6rem; color:#617181; font-size:.72rem; }.business-context-panel footer code { overflow-wrap:anywhere; text-align:right; }.business-context-unclassified code,.business-context-provenance code { overflow-wrap:anywhere; }.business-context-provenance { display:flex; justify-content:space-between; gap:1rem; background:#f7f8fb; color:#526579; }
+.business-context-version,.business-context-governance { border:1px solid #dbe3ea; border-radius:16px; background:#fff; padding:1.1rem; }
+.business-context-version>div:first-child>span,.business-context-governance>div:first-child>span { color:#5d4ac7; font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.business-context-version h2,.business-context-governance h2 { margin:.25rem 0; }
+.business-context-version>code { display:block; margin:.8rem 0; overflow-wrap:anywhere; }
+.business-context-review-decision { border-left:4px solid #708090; border-radius:10px; background:#f7f8fb; padding:.85rem; }
+.business-context-review-decision.decision-accept { border-color:#087a55; background:#effaf6; }
+.business-context-review-decision.decision-accept-with-edits { border-color:#b06b00; background:#fff8e8; }
+.business-context-review-decision.decision-reject { border-color:#b53a3a; background:#fff2f2; }
+.business-context-review-decision>p { margin:.35rem 0; }
+.business-context-review-decision ol { display:grid; gap:.55rem; padding-left:1.25rem; }
+.business-context-review-decision li p { margin:.25rem 0; }
+.business-context-governance { display:grid; gap:1rem; border-color:#cfc8f2; background:linear-gradient(135deg,#f8f6ff,#fff); }
+.business-context-generation-action { display:grid; justify-items:start; gap:.45rem; }
+.business-context-governance button { border:0; border-radius:9px; background:#183448; color:#fff; cursor:pointer; font:inherit; font-weight:800; padding:.75rem 1rem; }
+.business-context-governance button:disabled { cursor:not-allowed; opacity:.55; }
+.business-context-governance form { display:grid; gap:.9rem; border-top:1px solid #ded9f4; padding-top:1rem; }
+.business-context-governance fieldset { display:grid; gap:.6rem; margin:0; border:0; padding:0; }
+.business-context-governance fieldset label { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.7rem; align-items:start; border:1px solid #dbe3ea; border-radius:10px; background:#fff; padding:.75rem; }
+.business-context-governance fieldset span,.business-context-governance form>label,.business-context-proposed-change label { display:grid; gap:.35rem; }
+.business-context-governance textarea,.business-context-governance select { width:100%; box-sizing:border-box; border:1px solid #aebbc5; border-radius:8px; background:#fff; color:#183448; font:inherit; padding:.65rem; }
+.business-context-governance textarea { min-height:96px; resize:vertical; }
+.business-context-governance form>div:last-of-type { display:flex; align-items:center; gap:.75rem; }
+.business-context-proposed-change { display:grid!important; gap:.75rem; border:1px dashed #b06b00; border-radius:12px; background:#fffaf0; padding:.9rem; }
+.business-context-proposed-change h3 { margin:0; }
+.business-context-approval-blocked { border-radius:10px; background:#fff4d8; color:#684300; padding:.8rem; }
 @media (max-width: 820px) {
   .engineering-plan-control, .engineering-plan-columns { grid-template-columns: 1fr; }
   .engineering-plan-actions { grid-template-columns: 1fr; }
   .engineering-plan-proof dl, .engineering-plan-provenance dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-context-grid { grid-template-columns:1fr; }.business-context-provenance { flex-direction:column; }
+  .business-context-governance form>div:last-of-type { align-items:stretch; flex-direction:column; }
   .engineering-recommendations article > header, .engineering-plan-references li { align-items: start; flex-direction: column; }
   .engineering-plan-references span { text-align: left; }
 }

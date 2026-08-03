@@ -2,22 +2,22 @@
 
 **Document ID:** AX-SRS-COM-001
 
-**Version:** 2.1
+**Version:** 2.2
 
-**Date:** 2026-07-20
+**Date:** 2026-08-03
 
 **Status:** Approved product contract
 
 **Classification:** Internal / Commercial product
 
-**Supersedes:** Axiom Hackathon MVP SRS 1.0
+**Supersedes:** Axiom Commercial SRS 2.1 dated 2026-07-20 and Axiom Hackathon MVP SRS 1.0
 
 ## 1. Document control
 
 | Field | Decision |
 |---|---|
 | Product | Axiom, an AI Engineering Operating System |
-| Product thesis | Convert ambiguous intent into grounded engineering decisions, high-quality delivery work, controlled execution, and verifiable evidence |
+| Product thesis | Convert business intent into grounded product experience, engineering decisions, high-quality delivery work, controlled execution, and verifiable evidence |
 | Initial customers | SMEs, product teams, engineering organizations, and enterprise pilots |
 | Source of truth | The canonical project graph in PostgreSQL |
 | Delivery architecture | Separate Next.js web, Node.js TypeScript platform, and Terraform repositories; the platform remains a modular monolith with independently extractable modules |
@@ -41,10 +41,14 @@
 
 ### 2.1 Purpose
 
+Axiom is a governed AI-native Forward Deployed Engineering capability: it works from the customer's business reality through product design, architecture, delivery, and proof while preserving human authority over consequential decisions and side effects.
+
 Axiom helps teams convert source material such as product briefs, documents, decisions, and meeting notes into:
 
+- a source-grounded model of business outcomes, actors, operating workflows, policies, constraints, risks, and success measures;
 - grounded requirements and non-functional requirements;
 - explicit gaps and clarification questions;
+- reviewable user journeys, information architecture, editable wireframes, interaction flows, and an approved Experience Baseline;
 - architecture alternatives and approved decisions;
 - full-lifecycle engineering guidance covering technology choices, UX/accessibility, data, APIs, testing, security, delivery, deployment, cloud infrastructure, reliability, observability, cost, and operations;
 - implementation-ready work items;
@@ -59,8 +63,10 @@ Axiom is not a generic chatbot and is not another project-management board. Its 
 
 ```text
 Source evidence
+  -> business outcomes and operating context
   -> canonical requirements
   -> clarified decisions
+  -> reviewed user journeys and editable experience design
   -> approved architecture
   -> reviewed engineering plan
   -> verified work items
@@ -79,12 +85,14 @@ Source evidence
 6. Provide a secure multi-tenant SaaS foundation that can grow without an immediate microservice rewrite.
 7. Measure quality, cost, latency, and human acceptance for every AI workflow version.
 8. Help users understand what is recommended, what is not recommended, why, the trade-offs, the missing evidence, and when a decision should be reconsidered across the complete software delivery lifecycle.
+9. Let business, product, design, and engineering stakeholders review the same source-linked user journeys and wireframes before implementation scope is approved.
 
 ### 2.4 Non-goals for launch
 
 Axiom shall not:
 
 - provide a Jira-, Trello-, Linear-, or Notion-style work-management interface;
+- replace a general-purpose visual-design suite for unrelated design work;
 - train a proprietary foundation model;
 - operate a GPU cluster;
 - promise autonomous end-to-end software delivery without review;
@@ -104,6 +112,7 @@ Axiom shall not:
 | Organization Owner | Billing, retention, providers, connectors, organization deletion |
 | Administrator | Members, roles, model policies, budgets, integrations |
 | Product/Business Analyst | Sources, requirements, clarifications, work-item review |
+| Product/Experience Designer | Business workflows, user journeys, wireframe editing, design review |
 | Architect/Engineering Lead | Architecture review, approval, engineering policies |
 | Developer | Approved tasks, coding-agent handoff, implementation evidence |
 | QA/Reviewer | Evaluation, verification, evidence review |
@@ -161,14 +170,27 @@ The system shall never fabricate source quotations, test results, coverage, scan
 5. Deterministic validation rejects invalid references and incomplete output.
 6. Axiom asks prioritized clarification questions instead of inventing critical facts.
 7. Authorized users confirm answers and approve the requirement baseline.
-8. Axiom generates architecture options where architecture decisions are required.
-9. An authorized user approves the relevant decision.
-10. Axiom generates implementation-ready work items.
-11. Quality gates score coverage, grounding, testability, duplication, and completeness.
-12. A human reviews the exact publication preview.
-13. Axiom publishes the approved version to Jira or Trello.
+8. Where the scope includes a user experience, Axiom generates and an authorized user approves the exact Experience Baseline.
+9. Axiom generates architecture options where architecture decisions are required.
+10. An authorized user approves the relevant decision.
+11. Axiom generates implementation-ready work items from the compatible approved baselines.
+12. Quality gates score coverage, grounding, testability, duplication, design alignment, and completeness.
+13. A human reviews the exact publication preview.
+14. Axiom publishes the approved version to Jira or Trello.
 
-### 5.2 Approved work to implementation evidence
+### 5.2 Business intent to approved Experience Baseline
+
+1. Axiom selects the exact current source, requirement, clarification, and business-context versions.
+2. The bounded workflow identifies business outcomes, actors, jobs, operating workflows, policies, constraints, success measures, and unresolved product decisions.
+3. Axiom proposes information architecture, user journeys, screens, states, and interactions only where the approved product scope requires a user experience.
+4. Every generated design claim is linked to canonical entities or marked as a design hypothesis with `AI_SUGGESTED` or `UNKNOWN` truth status.
+5. Deterministic validation checks requirement coverage, critical-flow continuity, required asynchronous and failure states, role and permission boundaries, accessibility expectations, contradictions, and invalid entity references.
+6. Authorized users edit the generated wireframes and interaction flows in the governed Experience Studio without silently changing canonical requirements.
+7. A proposed design change that alters business behavior creates an explicit graph-change proposal and requires the normal clarification or approval workflow.
+8. Authorized reviewers inspect the exact immutable design version, source coverage, open gaps, and interaction preview before approval.
+9. Approval creates a versioned Experience Baseline bound to the current graph; material graph changes make it historical and block stale downstream use.
+
+### 5.3 Approved work to implementation evidence
 
 1. User selects an approved work item.
 2. Axiom compiles a versioned task packet from approved graph entities.
@@ -178,9 +200,9 @@ The system shall never fabricate source quotations, test results, coverage, scan
 6. Axiom runs only repository-approved, allowlisted verification commands.
 7. Real results become evidence linked to the original requirements.
 
-### 5.3 Approved intent to full-lifecycle engineering plan
+### 5.4 Approved intent to full-lifecycle engineering plan
 
-1. Axiom selects the exact approved requirement and architecture versions.
+1. Axiom selects the exact approved requirement, applicable Experience Baseline, and architecture versions.
 2. A versioned Agent Kernel workflow proposes engineering guidance across every required lifecycle domain.
 3. Every recommendation states its disposition, rationale, benefits, trade-offs, risks, alternatives, why alternatives are not preferred now, reconsideration triggers, implementation actions, verification expectations, source entities, and applicable controlled reference IDs.
 4. Missing business or engineering evidence becomes an explicit unknown or decision gate rather than an invented recommendation.
@@ -216,7 +238,30 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-REQ-007 | Readiness shall be deterministic and shall expose its calculation. | Launch |
 | FR-REQ-008 | Material source or clarification changes shall invalidate stale downstream approvals. | Launch |
 
-### 6.3 Work-item and ticket generation
+### 6.3 Business discovery and experience design
+
+| ID | Requirement | Priority |
+|---|---|---:|
+| FR-DISC-001 | Axiom shall model source-grounded business outcomes, actors, jobs, operating workflows, policies, constraints, risks, and measurable success criteria before proposing implementation scope. | Launch |
+| FR-DISC-002 | Business-model, market, process, or user assumptions without source or human confirmation shall remain `AI_SUGGESTED` or `UNKNOWN` and shall expose the decision required. | Launch |
+| FR-DISC-003 | Axiom shall preserve typed trace links from business outcomes and operating workflows to requirements, user journeys, design artifacts, architecture decisions, work items, and evidence. | Launch |
+| FR-DISC-004 | Axiom shall identify business outcomes or critical workflows that are unsupported, contradictory, unmeasurable, or not covered by the proposed product experience. | Launch |
+| FR-UX-001 | Where the approved scope includes a user experience, Axiom shall generate versioned information architecture, user journeys, editable wireframe sets, and interaction flows from the exact current graph. | Launch |
+| FR-UX-002 | Each screen shall state its purpose, authorized actors, mapped requirements and outcomes, design hypotheses, interactions, data needs, permission boundaries, and applicable default, loading, queued, empty, partial-failure, failure, validation, cancellation, recovery, and success states. | Launch |
+| FR-UX-003 | Generated screens, nodes, interactions, and examples shall carry stable IDs, truth status, source or graph links, generation provenance, and explicit unresolved gaps. | Launch |
+| FR-UX-004 | The Experience Studio shall support dependable selection, multi-selection, text editing, grouping, ordering, alignment, duplication, copy/paste, undo/redo, keyboard operation, pan/zoom, reusable components, and bounded scene import/export. | Launch |
+| FR-UX-005 | The Experience Studio shall support connected multi-screen prototype preview, explicit transitions, and review of alternate, permission, error, and recovery paths without treating simulated behavior as executed evidence. | Launch |
+| FR-UX-006 | Axiom shall support project-controlled design tokens, reusable component definitions, responsive viewport variants, and accessible semantic annotations while keeping the canonical graph authoritative. | Launch |
+| FR-UX-007 | Deterministic design-quality gates shall check schema validity, entity references, outcome and requirement coverage, critical-flow continuity, required-state coverage, interaction reachability, responsive completeness, accessibility metadata, prohibited claims, and unresolved blockers. | Launch |
+| FR-UX-008 | An optional independent experience-review model may critique hierarchy, consistency, usability risks, and omissions but shall not override deterministic failures or approve a design. | Launch |
+| FR-UX-009 | Design editing shall create bounded immutable revisions; review shall record accept, accept-with-edits, reject, categorized feedback, reviewer, time, exact content hash, and graph version. | Launch |
+| FR-UX-010 | Approval shall create an immutable Experience Baseline, and material source, requirement, clarification, architecture, token, component, or interaction changes shall invalidate incompatible downstream approvals. | Launch |
+| FR-UX-011 | A design edit that changes product behavior shall create an explicit proposed graph mutation and shall never silently redefine a requirement, policy, architecture decision, or source-grounded claim. | Launch |
+| FR-UX-012 | Users shall export reviewed design artifacts and a versioned engineering handoff manifest without making an external design copy authoritative. | Launch |
+| FR-UX-013 | Optional Figma publication or import shall use an approved connector with exact preview, explicit authorization, stable mapping, idempotency, and reconciliation. | Next |
+| FR-UX-014 | Multi-user presence, threaded comments, and advanced brand or design-system administration may be added after the single-reviewer commercial gates are stable. | Next |
+
+### 6.4 Work-item and ticket generation
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -231,7 +276,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-WORK-009 | Regeneration shall create a new version and preserve the previously approved version and publication history. | Launch |
 | FR-WORK-010 | Organization templates may add validated fields and policies without bypassing core quality gates. | Next |
 
-### 6.4 Ticket quality verification
+### 6.5 Ticket quality verification
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -244,7 +289,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-QUAL-007 | Axiom shall maintain a versioned evaluation dataset containing representative good, bad, contradictory, incomplete, and adversarial examples. | Launch |
 | FR-QUAL-008 | Model promotion shall require evaluation evidence against the current dataset. | Launch |
 
-### 6.5 Architecture and artifacts
+### 6.6 Architecture and artifacts
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -254,14 +299,15 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-DOC-001 | Axiom shall compile SRS, NFR, HLD, ADR, test strategy, API contract, backlog, and task-packet views from the graph. | Launch |
 | FR-DOC-002 | Generated artifacts shall include graph version, content hash, generation provenance, and truth status. | Launch |
 | FR-DOC-003 | Axiom may publish documents to Notion or Confluence through optional connectors; those copies are not authoritative. | Next |
+| FR-DOC-004 | Axiom shall compile business-context, user-journey, Experience Baseline, design-handoff, and experience-coverage views from canonical graph and design versions. | Launch |
 | FR-PLAN-001 | Axiom shall generate a versioned Engineering Plan for product scope, UX/accessibility, architecture/technology, data, APIs/integrations, testing/quality, security/privacy, CI/CD, deployment/cloud infrastructure, reliability/observability, cost/FinOps, and operations/support. | Launch |
 | FR-PLAN-002 | Every recommendation shall state recommended, conditional, not-recommended, or needs-decision; why; benefits; trade-offs; risks; alternatives and why-not-now; reconsideration triggers; implementation actions; verification expectations; source links; and controlled reference IDs. | Launch |
-| FR-PLAN-003 | Technology, testing, security, deployment, and cloud guidance shall be bound to the exact approved requirement and architecture versions and remain `AI_SUGGESTED` until human review. | Launch |
+| FR-PLAN-003 | Technology, testing, security, deployment, and cloud guidance shall be bound to the exact approved requirement, applicable Experience Baseline, and architecture versions and remain `AI_SUGGESTED` until human review. | Launch |
 | FR-PLAN-004 | Axiom shall not claim certification, compliance, test success, security findings, performance, availability, or cost measurements without immutable executed evidence. | Launch |
 | FR-PLAN-005 | Axiom shall expose unknowns and next decision gates when evidence is insufficient and shall preserve earlier plans as immutable history after regeneration. | Launch |
 | FR-PLAN-006 | Engineering guidance shall use a versioned application-controlled catalog of assessed primary standards and vendor references; model-generated URLs shall not be trusted as references. | Launch |
 
-### 6.6 Jira and Trello connectors
+### 6.7 Jira and Trello connectors
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -277,7 +323,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-CONN-010 | Webhook updates shall be authenticated, deduplicated, replay-safe, and audited. | Next |
 | FR-CONN-011 | Axiom shall not implement a general-purpose board or sprint-management interface. | Launch |
 
-### 6.7 Axiom Agent Kernel and model catalog
+### 6.8 Axiom Agent Kernel and model catalog
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -295,7 +341,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-AI-012 | Additional providers such as AWS Bedrock, Google, Anthropic, Azure OpenAI, or compatible private endpoints shall use the same qualification process. | Next |
 | FR-AI-013 | Axiom shall not require owned GPUs or a self-hosted foundation model for launch. | Launch |
 
-### 6.8 Coding-agent adapters and controlled execution
+### 6.9 Coding-agent adapters and controlled execution
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -316,7 +362,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-SEC-001 | Axiom shall maintain a versioned secure-engineering rule catalog that can map applicable requirements to OWASP ASVS 5.0.0, OWASP API Security Top 10 2023, OWASP AISVS 1.0, and NIST SSDF 1.1. | Launch |
 | FR-SEC-002 | Axiom shall explain rule applicability, implementation guidance, verification method, exceptions, and missing evidence; catalog mappings shall never be presented as certification or compliance proof. | Launch |
 
-### 6.9 Verification, traceability, and explanation
+### 6.10 Verification, traceability, and explanation
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -328,7 +374,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-TRACE-002 | Why, Why Not, Proof, and Reconsider answers shall cite graph entities and shall distinguish suggestion from evidence. | Launch |
 | FR-TRACE-003 | Traceability shall have accessible non-graph presentation. | Launch |
 
-### 6.10 Subscriptions, quotas, and cost governance
+### 6.11 Subscriptions, quotas, and cost governance
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -342,7 +388,7 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-BILL-008 | No background agent loop may spend beyond its approved reservation. | Launch |
 | FR-BILL-009 | Subscription webhooks shall be authenticated, idempotent, replay-safe, and auditable. | Launch |
 
-### 6.11 Audit, export, and deletion
+### 6.12 Audit, export, and deletion
 
 | ID | Requirement | Priority |
 |---|---|---:|
@@ -359,8 +405,10 @@ All AI engineering workflows shall use bounded stages rather than an unconstrain
 
 ```text
 Context selection
+  -> business-outcome, actor, and operating-workflow analysis
   -> requirement/gap analysis
   -> clarification gate
+  -> user-journey and Experience Baseline generation or explicit not-applicable decision
   -> architecture and full-lifecycle engineering guidance
   -> human decision/approval gates
   -> normalized work-item generation and delivery planning
@@ -385,12 +433,17 @@ The evaluation set shall include:
 - cross-ticket dependencies;
 - Jira and Trello field-mapping cases;
 - malformed and incomplete model responses;
-- known good and known bad tickets reviewed by humans.
+- known good and known bad tickets reviewed by humans;
 - technology-stack fit and anti-pattern cases;
 - test-strategy completeness and unverifiable quality claims;
 - security/privacy threat, control, and false-certification cases;
 - deployment, cloud, reliability, observability, cost, and operational-readiness cases;
-- full-lifecycle plans with missing domains, invalid references, weak why-not analysis, or unsupported recommendations.
+- full-lifecycle plans with missing domains, invalid references, weak why-not analysis, or unsupported recommendations;
+- business-discovery cases with unsupported personas, outcomes, metrics, or process assumptions;
+- user journeys with dead ends, missing permission paths, contradictory interactions, and uncovered approved outcomes;
+- wireframe sets with missing loading, empty, partial-failure, failure, validation, cancellation, recovery, or responsive states where applicable;
+- design edits that attempt to silently redefine approved requirements, policies, or source-grounded claims;
+- accessible editor, keyboard-operation, prototype-transition, revision, and stale-Experience-Baseline cases.
 
 Production customer content shall not enter a shared evaluation set without a lawful basis, explicit policy, de-identification, and access controls.
 
@@ -409,6 +462,10 @@ These are release targets, not claims about the current prototype:
 | Human acceptance without material rewrite | at least 90% on the approved launch dataset |
 | Approved-requirement coverage by backlog | at least 95%, with every omission explicitly identified |
 | Required Engineering Plan lifecycle-domain coverage | 100% |
+| Approved business outcomes and experience-relevant requirements mapped to journeys/screens or explicitly marked not applicable | 100% |
+| Required critical-flow state and reachable-transition coverage | 100% |
+| Silent canonical graph mutations caused by design edits | 0 |
+| Deterministic design-quality failures bypassed by semantic review | 0 |
 | Unsupported standards or vendor-reference IDs in persisted AI output | 0 |
 | Fabricated certification, test, scan, performance, availability, deployment, or cost claims | 0 |
 
@@ -431,6 +488,9 @@ The schema shall include at least:
 - Plan, Subscription, Entitlement, UsageReservation, UsageLedgerEntry
 - Project, SourceArtifact, SourceVersion, SourceSpan
 - Requirement, NFRDetail, Gap, ClarificationQuestion, ClarificationAnswer
+- BusinessOutcome, Actor, OperatingWorkflow, SuccessMeasure
+- InformationArchitecture, UserJourney, JourneyStep, ExperienceGeneration
+- DesignArtifact, DesignVersion, DesignScreen, DesignNode, DesignInteraction, DesignToken, DesignComponent, DesignReview, ExperienceBaseline
 - ArchitectureOption, ArchitectureDecision, ConstitutionRule
 - Artifact, WorkItem, WorkItemVersion, Approval
 - ConnectorInstallation, FieldMapping, Publication, PublicationItem, WebhookEvent
@@ -481,6 +541,7 @@ The platform repository shall remain one modular monolith with independently tes
 - identity and organizations;
 - projects and canonical graph;
 - requirements and clarification;
+- business discovery and experience design;
 - architecture and artifacts;
 - work-item quality;
 - agent kernel and model providers;
@@ -569,6 +630,7 @@ Extraction requires an ADR, an owned API/event contract, timeouts, retries, idem
 | NFR-A11Y-001 | Launch user journeys shall target WCAG 2.2 Level AA. | Launch |
 | NFR-A11Y-002 | Automated scans shall be combined with keyboard and human review; scans alone shall not claim conformance. | Launch |
 | NFR-A11Y-003 | Status shall not rely on color alone and every graph shall have an accessible alternative. | Launch |
+| NFR-A11Y-004 | The Experience Studio shall expose screen structure, properties, annotations, interactions, trace links, and review actions through keyboard-operable controls and a structured non-canvas presentation. | Launch |
 
 ### 10.5 Maintainability and delivery
 
@@ -599,9 +661,10 @@ Extraction requires an ADR, an owned API/event contract, timeouts, retries, idem
 - Repository integration tests against PostgreSQL.
 - Contract tests for model providers, Jira, Trello, subscription webhooks, and coding-agent adapters.
 - AI evaluation tests using immutable datasets and stored results.
+- Experience Studio unit and browser tests for editing, keyboard operation, revisions, prototype transitions, stale baselines, responsive variants, traceability, and deterministic design-quality gates.
 - Tenant-isolation and authorization tests.
 - Idempotency, retry, partial-failure, webhook replay, and outbox tests.
-- E2E tests for source-to-approved-ticket and Jira/Trello publication journeys.
+- E2E tests for source-to-approved-Experience-Baseline, source-to-approved-ticket, and Jira/Trello publication journeys.
 - Backup restoration, migration, and rollback exercises before general availability.
 - Security, accessibility, and load evidence appropriate to each release.
 
@@ -618,6 +681,9 @@ The first commercial release is accepted only when all of the following are evid
 - [ ] Source ingestion and exact-span grounding work for supported launch formats.
 - [ ] Ticket generation passes the Section 7 quality gates on the approved dataset.
 - [ ] Critical unknowns produce clarification questions rather than invented answers.
+- [ ] Business outcomes, actors, operating workflows, and success measures are grounded or explicitly marked as suggestions or unknowns.
+- [ ] Experience-relevant approved requirements are covered by an exact approved Experience Baseline with no unresolved blocker or silent graph mutation.
+- [ ] The Experience Studio passes editing, revision, prototype-flow, required-state, responsive, traceability, authorization, accessibility, and stale-baseline tests.
 - [ ] Jira and Trello each pass sandbox/tenant contract tests, idempotency tests, and partial-failure tests.
 - [ ] No Jira-style or Trello-style work-management board exists in Axiom.
 - [ ] Groq and OpenAI adapters are evaluated, budgeted, observable, and independently disableable.
@@ -647,23 +713,28 @@ The first commercial release is accepted only when all of the following are evid
 - Authentication, organizations, roles, audit, retention foundations.
 - Plans, entitlements, usage reservation, usage ledger, and hard limits.
 
-### Milestone C — Ticket Quality Engine
+### Milestone C — Business discovery and Experience Studio
+
+- Business outcomes, actors, operating workflows, success measures, information architecture, and user journeys.
+- Source-linked editable wireframes, governed revisions, interaction prototypes, design-quality gates, and exact Experience Baseline approval.
+
+### Milestone D — Ticket Quality Engine
 
 - Agent Kernel, prompt/schema versioning, model catalog, evaluation harness.
 - Grounded work-item generation, deterministic validators, review feedback.
 - Groq and OpenAI qualification.
 
-### Milestone D — Jira and Trello
+### Milestone E — Jira and Trello
 
 - OAuth installations and field mapping.
 - Exact preview, approval, idempotent publication, reconciliation, status refresh.
 
-### Milestone E — AWS private beta
+### Milestone F — AWS private beta
 
 - Docker release images, ECS Fargate, RDS PostgreSQL, S3, SQS, telemetry, secrets, backups, alerts.
 - Staging, production migration, rollback, security, accessibility, and load evidence.
 
-### Milestone F — Agent execution ecosystem
+### Milestone G — Agent execution ecosystem
 
 - Customer-authorized repository boundary.
 - Native and external coding-agent adapters.
@@ -677,11 +748,12 @@ The first commercial release is accepted only when all of the following are evid
 4. Replace internal Jira credentials with organization installations and add Trello.
 5. Generalize the Groq-only provider into the Agent Kernel and model catalog.
 6. Retain fixture providers only for deterministic tests and explicitly labelled local demonstrations.
-7. Migrate Next.js API routes to the dedicated platform API one bounded vertical slice at a time; keep the current application runnable until each replacement passes contract and end-to-end tests.
-8. Move reusable domain and application code into `axiom-platform`; replace direct frontend imports with the generated OpenAPI client and presentation-only web types.
-9. Keep the platform modular monolith; extract services only against Section 9.5 triggers.
-10. Keep Terraform isolated from application repositories and never commit state, plans containing secrets, credentials, or environment secrets.
-11. Do not migrate fabricated, stale, or unverifiable prototype evidence into commercial customer records.
+7. Preserve the engine-neutral wireframe compiler, curated templates, Excalidraw adapter, and valid revision history only as migration inputs; re-authorize them through organization-scoped platform contracts and the Experience Baseline quality gates before commercial use.
+8. Migrate Next.js API routes to the dedicated platform API one bounded vertical slice at a time; keep the current application runnable until each replacement passes contract and end-to-end tests.
+9. Move reusable domain and application code into `axiom-platform`; replace direct frontend imports with the generated OpenAPI client and presentation-only web types.
+10. Keep the platform modular monolith; extract services only against Section 9.5 triggers.
+11. Keep Terraform isolated from application repositories and never commit state, plans containing secrets, credentials, or environment secrets.
+12. Do not migrate fabricated, stale, or unverifiable prototype evidence into commercial customer records.
 
 ## 15. Normative engineering references
 
