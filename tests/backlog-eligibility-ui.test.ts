@@ -40,6 +40,7 @@ describe('backlog clarification eligibility UI', () => {
         createElement(BlockReviewTrigger),
         createElement(ReviewBacklogAction, {
           organizationId: 'ORG-ONE', projectId: 'PROJ-ONE', generationId: 'WIGEN-ONE', generationContentHash: 'a'.repeat(64),
+          acceptanceBlockingReason: null,
           workItems: [{
             id: 'WI-ONE', version: 1, type: 'STORY', parentId: null, title: 'Grounded story', priority: 'P0', estimate: 'S',
             outcome: 'Deliver a grounded outcome.', context: 'Approved context.', scope: ['Approved scope.'], outOfScope: [],
@@ -73,5 +74,27 @@ describe('backlog clarification eligibility UI', () => {
     expect(container.querySelector('button')?.disabled).toBe(true);
     expect(container.querySelector('select')?.disabled).toBe(true);
     expect(container.textContent).toContain('exact current requirement baseline and latest architecture option');
+  });
+
+  it('blocks backlog acceptance when Business Context is not approved but preserves rejection', () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => root?.render(createElement(BacklogEligibilityProvider, null,
+      createElement(ReviewBacklogAction, {
+        organizationId: 'ORG-ONE', projectId: 'PROJ-ONE', generationId: 'WIGEN-ONE', generationContentHash: 'a'.repeat(64),
+        workItems: [], acceptanceBlockingReason: 'Generate and approve the exact current Business Context before downstream planning.',
+      }),
+    )));
+
+    const accept = container.querySelector<HTMLInputElement>('input[type="radio"]');
+    const reject = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="radio"]')).at(-1);
+    const submit = container.querySelector<HTMLButtonElement>('section.backlog-review-action > button');
+    expect(accept?.disabled).toBe(true);
+    expect(submit?.disabled).toBe(true);
+    expect(container.textContent).toContain('Acceptance blocked by Business Context');
+    act(() => reject?.click());
+    expect(submit?.disabled).toBe(false);
+    expect(submit?.textContent).toBe('Reject backlog');
   });
 });

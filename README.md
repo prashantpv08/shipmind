@@ -1,157 +1,103 @@
-# Axiom — AI Engineering Operating System
+# Axiom web and migration workspace
 
-Axiom converts source-grounded business intent into business context, approved product experiences, requirements, architecture decisions, implementation-ready work items, controlled delivery handoffs, real verification evidence, and traceable Why / Why Not / Proof answers.
+Axiom is a governed AI Engineering Operating System that turns source-grounded business intent into approved product experiences, engineering decisions, implementation-ready work, controlled handoffs, and real evidence.
 
-It is designed as a governed AI-native Forward Deployed Engineering capability spanning business discovery, product design, architecture, full-stack delivery, and proof—not as an unconstrained autonomous coding agent.
+The sole product, architecture-decision, implementation-status, and roadmap authority is [SRS.md](SRS.md). Read [AGENTS.md](AGENTS.md) for repository working rules.
 
-The authoritative commercial product contract is [SRS.md](SRS.md). Ordered implementation work is in [IMPLEMENTATION_BACKLOG.md](IMPLEMENTATION_BACKLOG.md).
+This repository is the working migration source for the future `axiom-web` boundary. It contains the Next.js UI and thin BFF plus legacy prototype modules that remain runnable while commercial domain ownership moves into the sibling `axiom-platform` NestJS/Fastify modular monolith. Do not add new commercial business rules to Next.js route handlers.
 
-## Product direction
+## Local prerequisites
 
-- Axiom owns the canonical project graph, Agent Kernel, ticket-quality workflow, traceability, approvals, and evidence.
-- Axiom begins with business outcomes, actors, operating workflows, policies, constraints, risks, and success measures before it recommends a product or implementation.
-- Experience-relevant projects use source-linked user journeys, editable wireframes, interaction flows, deterministic design-quality gates, and an exact approved Experience Baseline before downstream scope is finalized.
-- The Experience Studio is a governed product-design editor and evidence surface, not a general-purpose replacement for every visual-design tool. Canvas edits cannot silently redefine canonical truth.
-- Customers publish approved work to Jira, Trello, both, or neither. Axiom does not provide a project-management board.
-- Groq and OpenAI are the initial hosted model-provider candidates. Models must pass Axiom’s task-specific evaluations before production use.
-- The commercial source of truth is PostgreSQL: Docker PostgreSQL locally and Amazon RDS for PostgreSQL in AWS.
-- The commercial product uses separate web, platform, and infrastructure repositories. The Node.js TypeScript platform remains a modular monolith until measured extraction triggers justify a domain service.
-- Next.js is the user interface and thin browser-specific BFF. NestJS with Fastify is the authoritative commercial API and worker platform.
-- AWS ECS Fargate is the initial production orchestrator. Kubernetes/EKS is later scope.
-- Axiom does not require owned GPUs and must not be deployed to Vercel.
+- Node.js 22
+- Corepack with pnpm
+- Docker Desktop or a compatible Docker engine
+- The sibling `../axiom-platform` repository
 
-## Current repository state
+Keep all development local unless an AWS deployment is explicitly authorized. Never deploy this project to Vercel.
 
-This repository contains the working migration source for the future `axiom-web` repository. It still includes prototype Next.js API routes and framework-independent domain code so the product remains runnable while bounded slices move to `axiom-platform`.
+## Environment
 
-Its durable capabilities include:
+Copy `.env.example` to `.env.local`. Keep credentials and local session tokens out of version control.
 
-- workspace and project intake for bounded PDF, DOCX, Markdown, text, CSV, JSON, YAML, folder-file, and pasted-note sources;
-- immutable source references, grounded project intelligence, contextual clarifications, deterministic readiness, and approval invalidation;
-- requirements, SRS, NFR, HLD, ADR, OpenAPI, test-strategy, backlog, task-packet, and constitution views;
-- prototype wireflows compiled into an embedded Excalidraw canvas, with editable scenes, interaction preview, exports, and bounded revisions;
-- architecture comparison and human-approved decisions;
-- Jira plan preview and explicit publication using the current prototype adapter;
-- controlled NotifyFlow code generation, fixed-command verification, evidence, traceability, Why answers, and export.
+```bash
+AXIOM_AI_MODE=fixture
+AXIOM_PROJECT_STORE=postgres
+DATABASE_URL=postgresql://axiom:axiom-local-only@127.0.0.1:54329/axiom
+DATABASE_SSL_MODE=disable
+DATABASE_POOL_MAX=10
+AXIOM_PLATFORM_URL=http://127.0.0.1:4100
+AXIOM_LOCAL_AUTH_ENABLED=true
+AXIOM_LOCAL_SESSION_TOKEN_FILE=../axiom-platform/.local/session-token
+```
 
-Prototype filesystem storage, Vercel infrastructure adapters, single-workspace credentials, and Groq-only configuration are migration targets. They are not the commercial architecture and must not be deployed.
+`AXIOM_AI_MODE=fixture` is deterministic and non-billable. Hosted model candidates remain disabled until the SRS evaluation, pricing, data-policy, region, and budget gates pass.
 
-The prototype Wireframe Studio is also migration input rather than completed commercial Experience Studio evidence. SRS 2.2 requires business-context entities, semantic journey and screen mapping, responsive and accessible structured design, deterministic experience-quality evaluation, organization-scoped platform APIs, exact Experience Baseline approval, and downstream stale-version gates. The decision is recorded in [ADR 0026](docs/decisions/0026-business-first-experience-baseline.md), and the ordered work is [Milestone 4.5](IMPLEMENTATION_BACKLOG.md#milestone-45--business-discovery-and-commercial-experience-studio).
+`AXIOM_LOCAL_AUTH_ENABLED=true` is local-development-only. Production ignores the local session installer and requires a real identity-provider adapter.
 
-The repository split and safe migration sequence are documented in [ADR 0012](docs/decisions/0012-web-platform-infrastructure-repository-split.md) and [the repository split implementation note](docs/implementation/repository-split-foundation.md).
+## Start the commercial local flow
 
-## Local commands
+From `../axiom-platform`:
+
+```bash
+pnpm install
+pnpm db:up
+pnpm db:migrate
+pnpm auth:local-session
+pnpm dev
+```
+
+In another platform terminal, start the durable source-analysis worker when testing ingestion:
+
+```bash
+pnpm dev:worker
+```
+
+From this repository:
 
 ```bash
 pnpm install
 pnpm dev
-pnpm start
+```
+
+Open `http://127.0.0.1:3000/account` and use the local-session action. The web runs on port `3000`, the platform on `4100`, and Docker PostgreSQL is exposed on `54329`.
+
+## Verification commands
+
+Web and migration workspace:
+
+```bash
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
-pnpm demo:reset
+pnpm db:test
 pnpm sandbox:build
 pnpm sandbox:test
 pnpm sandbox:coverage
-pnpm db:up
-pnpm db:migrate
-pnpm db:seed
-pnpm db:import:dry-run
-pnpm db:import
-pnpm db:verify-import
-pnpm db:test
-pnpm db:reset
-pnpm db:down
 ```
 
-After `pnpm build`, `pnpm start` serves the local production build. Keep development and verification local unless an AWS deployment is explicitly authorized.
-
-The PostgreSQL setup and migration safety procedure are documented in [docs/implementation/postgresql-foundation.md](docs/implementation/postgresql-foundation.md). `db:reset` is intentionally restricted to local `axiom`/`axiom_test*` databases. AI evaluations, security checks, and release container commands arrive in their ordered commercial milestones.
-
-## Current local environment
-
-Copy `.env.example` to `.env.local` and keep credentials out of version control.
+Platform:
 
 ```bash
-AXIOM_AI_MODE=fixture
-GROQ_API_KEY=
-GROQ_MODEL=openai/gpt-oss-120b
-AXIOM_DATA_DIR=
-AXIOM_PROJECT_STORE=postgres
-DATABASE_URL=postgresql://axiom:axiom-local-only@localhost:54329/axiom
-DATABASE_SSL_MODE=disable
-DATABASE_POOL_MAX=10
-NOTION_ACCESS_TOKEN=
-NOTION_PARENT_PAGE_ID=
-JIRA_BASE_URL=
-JIRA_EMAIL=
-JIRA_API_TOKEN=
-JIRA_PROJECT_KEY=
-AXIOM_PLATFORM_URL=http://127.0.0.1:4100
-AXIOM_LOCAL_AUTH_ENABLED=false
-AXIOM_LOCAL_SESSION_TOKEN_FILE=../axiom-platform/.local/session-token
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:contract
+pnpm test:providers
+pnpm test:db
+pnpm eval:tickets
+pnpm build
 ```
 
-`AXIOM_AI_MODE=fixture` is the deterministic offline mode. Set it to `live` with a server-only Groq key only when intentionally testing the existing live adapter. A live failure is shown honestly and does not silently fall back to fixture output.
+`db:reset` is destructive and restricted to explicitly named local `axiom` or `axiom_test*` databases. Use a disposable test database for forward/rollback migration verification.
 
-`AXIOM_PROJECT_STORE=postgres` selects the commercial local store. `json` exists only as the prototype migration and rollback adapter. Start and migrate PostgreSQL before switching the local application. Source binary files remain local until the S3 adapter milestone; PostgreSQL owns their metadata and references.
+## Repository boundaries
 
-The current Jira credentials are prototype-only. The commercial connector will use organization-scoped authorization, idempotent publication, field mapping, reconciliation, and audit. Trello will use the same normalized work-item contract.
+- `app/`: Next.js presentation and browser-specific BFF routes.
+- `src/platform/`: validated platform client contracts and BFF helpers.
+- `src/projects/`, `src/artifacts/`, `src/ai/`, `src/integrations/`, `src/codegen/`, and `src/runner/`: prototype migration sources; move commercial ownership into `axiom-platform` one tested vertical slice at a time.
+- `drizzle/`: legacy migration source retained until the commercial schema transition is complete. New commercial migrations belong to `axiom-platform`.
+- `sample-inputs/`: bounded local product fixtures, not product documentation.
 
-For the commercial identity slice, start the local platform on `127.0.0.1:4100`, generate its private local session fixture, and set `AXIOM_LOCAL_AUTH_ENABLED=true` only in local development. The `/account` route installs that fixture into an HTTP-only, same-site cookie and reads organization access through the Next.js BFF. Production ignores the local cookie and the local installer returns 404; a real identity-provider adapter is still required before deployment.
-
-Authenticated organization members can continue from `/account` to the commercial project view. The web validates and forwards list, detail, workspace-discovery, create, archive, and restore requests through its thin BFF; the platform re-authorizes membership and every PostgreSQL query requires organization scope. Owners, administrators, product analysts, and architects can create a project with a retry-safe idempotency key. Owners and administrators can archive or restore a project using its current ETag. The platform preserves the exact pre-archive lifecycle status and commits each lifecycle transition, row-version increment, and immutable audit event in one transaction. The legacy `/api/projects` route remains only for prototype journey parity until full project-aggregate reads and the remaining mutations have migrated.
-
-Owners and administrators can also open `/account/organizations/:organizationId/members` to list members, create local-development invitations, and revoke pending invitations. The browser never receives the platform session credential. Invitation plaintext is returned only when the platform's explicit local manual-delivery flag is enabled; PostgreSQL stores only its SHA-256 hash. Production identity-provider onboarding and email delivery remain separate, unfinished adapters.
-
-The commercial platform also contains the first Ticket Quality Foundation. `WorkItem v1` represents Initiative, Epic, Story, Task, and Defect independently of Jira or Trello. `pnpm eval:tickets` in `axiom-platform` locally verifies deterministic schema, hierarchy, grounding, coverage, acceptance-criteria, overlap, dependency, clarification, and evidence-integrity gates without using a paid model.
-
-Authorized owners, administrators, product analysts, and architects can now generate a non-billable fixture backlog from the current approved graph. The platform quality-gates it before transactionally storing stable work-item identities and immutable versions. Every project row links to `/account/organizations/:organizationId/projects/:projectId/backlog`, where authorized members see the exact persisted draft, its content hash, evaluator metrics, sources, scope, acceptance criteria, risks, dependencies, and evidence expectations. The draft is explicitly unapproved and cannot yet be published.
-
-Generation now stops before Agent Kernel execution when the current graph contains an unresolved blocker, contradiction/conflict, or high-severity untestable requirement. The response and backlog page show the exact stored gap and linked clarification question; no replacement question or answer is invented, and the last valid preview remains visible. The deterministic fixture also retains each approved statement in the story outcome, scope, and acceptance criteria instead of producing generic “approved intent” tickets. See [the ticket clarification gate](docs/implementation/ticket-clarification-gate.md).
-
-Authorized owners, administrators, product analysts, and architects can record the exact confirmed answer from that blocker. The platform transaction creates a new human-confirmed graph version with stable IDs, provenance, ETag protection, idempotent retries, redacted audit evidence, and a persisted deterministic readiness calculation. Authorized readers see the exact eight-category calculation for the current graph; the web rejects stale graph scores. Earlier approvals and backlog drafts remain immutable historical evidence; they cannot be reviewed for the new graph, and the UI states that documents and architecture must be regenerated and reapproved. The answer flow performs no model, connector, or cloud side effect. See [commercial clarification answers](docs/implementation/commercial-clarification-answers.md).
-
-The same local backlog view now exposes the commercial current-graph Requirements/SRS/NFR workflow. Authorized decision-makers can deterministically compile immutable versions, inspect every byte and SHA-256 hash, and approve exactly those three versions with a rationale. Regeneration preserves prior approval evidence but makes it stale immediately; both generation and backlog acceptance recheck the latest hashes. Imported hackathon rows with incomplete provenance remain preserved but are not presented as a commercial baseline. This workflow uses no hosted model and does not open the backlog gate until the separate architecture workflow is approved. See [versioned requirement artifacts](docs/implementation/versioned-requirement-artifacts.md).
-
-Authorized organization members can now open `/account/organizations/:organizationId/projects/:projectId/business-context` after source analysis. The platform compiles a deterministic, content-hashed preview of source-linked business outcomes, actors, operating workflows, success measures, explicit unknowns, critical gaps, and experience applicability. Authorized product roles can persist that exact preview as an immutable version; product decision-makers and Reviewers can approve it, reject it, or record accept-with-edits feedback as bounded proposed graph mutations. Exact approval fails closed while unknowns, critical gaps, or applicability decisions remain. ETags, idempotency, tenant scope, immutable audit evidence, regeneration invalidation, and graph-version invalidation protect the workflow. It remains Business Context—not an Experience Baseline—and performs no model, connector, billing, or cloud side effect. See [Business Context preview](docs/implementation/business-context-preview.md) and [versioned Business Context review](docs/implementation/versioned-business-context-review.md).
-
-After exact requirement approval, the backlog view can compile three immutable Lean, Balanced, and Distributed architecture options. It shows complete why/why-not, components, flows, assumptions, risks, failure modes, explicit `UNKNOWN` monetary cost, reconsideration triggers, score rationales, grounded entities, IDs, and hashes. Owner, Administrator, or Architect approval of one exact option atomically records the decision and deterministic versioned ADR/HLD views. Regeneration preserves history but closes backlog eligibility until the latest generation is approved. No model, connector, or cloud call occurs. See [versioned architecture decisions](docs/implementation/versioned-architecture-decision.md).
-
-Once the exact requirement and architecture baselines are approved, authorized users can open `/account/organizations/:organizationId/projects/:projectId/engineering-plan`. The platform generates and persists a quality-gated `Engineering Plan v1` across the complete delivery lifecycle, including secure coding, testing, AWS infrastructure, reliability, cost, and operations guidance. Every recommendation exposes why, why-not-now, risks, actions, proof expectations, grounded source IDs, controlled primary references, and Agent Kernel provenance. It remains `AI_SUGGESTED` and performs no code, GitHub, connector, or cloud side effect. See [full-lifecycle Engineering Plan](docs/implementation/full-lifecycle-engineering-plan.md).
-
-That generation now runs through the shared Agent Kernel. The user chooses Economy, Balanced, or Best; PostgreSQL policy resolves the tier to the only enabled local fixture. Every new draft records immutable AgentRun and ModelCall evidence, prompt/workflow and policy versions, validation outcome, attempts, latency, and explicit non-billable usage status. OpenAI and Groq remain disabled and hosted execution fails closed before spending. See [the Agent Kernel ticket-generation slice](docs/implementation/agent-kernel-ticket-generation.md).
-
-Owners, administrators, product analysts, architects, and reviewers can record one exact human decision on the latest draft. Accept-with-edits creates new immutable versions only for materially changed items and reruns deterministic quality gates; rejection records a categorized reason without destroying the draft. Exact hashes, selected versions, reviewer identity, audit evidence, stale-write protection, and idempotent unknown-result retries are preserved. Approval makes the selected versions eligible for future connector preparation, but Jira and Trello publication are still unavailable from this flow.
-
-Owners and administrators can inspect local plan and immutable usage evidence at `/account/organizations/:organizationId/billing`. The commercial platform enforces plan-bounded per-request, billing-period, organization-daily, user-daily, and project-daily product-credit limits before chargeable work. The view provides exact-preview, ETag- and idempotency-protected policy controls plus safe expired-reservation recovery. The local fixture generator remains non-billable; no fake usage is created. See [scoped budget controls](docs/implementation/scoped-budget-controls.md).
-
-The platform also owns a provider-neutral subscription adapter and authenticated webhook inbox. Its disabled-by-default local fixture verifies raw-body signatures, deduplicates exact replays, rejects changed retries, preserves ordering and tenant scope, provisions safe period balances, and audits outcomes. It is not a payment-provider integration. See [subscription webhook foundation](docs/implementation/subscription-webhook-foundation.md).
-
-Every authorized organization member can inspect `/account/organizations/:organizationId/models`. PostgreSQL owns the provider lifecycle, immutable local fixture definition, and Economy/Balanced/Best policy. Documentation-verified OpenAI GPT-5.6 Luna/Terra/Sol and Groq GPT-OSS 20B/120B identifiers are visible only as disabled candidates. Their prices remain `UNVERIFIED`, their evaluation state is `NOT_EVALUATED`, and no hosted credential or provider result is fabricated. Offline-tested Responses API adapters exist, but the only executable policy target remains the deterministic non-billable local fixture. See [model catalog foundation](docs/implementation/model-catalog-foundation.md) and [hosted model provider adapters](docs/implementation/hosted-model-provider-adapters.md).
-
-## Architecture boundaries during migration
-
-- Domain and application logic currently lives under `src/` and must remain independent of React, Next.js route handlers, and NestJS controllers until migrated into `axiom-platform`.
-- New commercial business endpoints belong in `axiom-platform`; do not add new domain ownership to Next.js route handlers.
-- The final `axiom-web` repository consumes the versioned OpenAPI client and keeps only presentation-specific types.
-- Model-provider behavior is isolated under `src/ai` and validated with Zod.
-- Project graph and intelligence behavior lives under `src/projects`.
-- External integrations live under `src/integrations`.
-- Controlled code generation lives under `src/codegen`.
-- Fixed-command execution and evidence parsing live under `src/runner`.
-- Traceability and grounded explanations live under `src/traceability`.
-- Compiled artifacts and exports are views; they do not replace canonical structured data.
-
-## Development rules
-
-Read these files before making product changes:
-
-1. [AGENTS.md](AGENTS.md)
-2. [SRS.md](SRS.md)
-3. [IMPLEMENTATION_BACKLOG.md](IMPLEMENTATION_BACKLOG.md)
-4. This README
-
-Never fabricate provider outcomes, source quotations, ticket publication, test results, scans, costs, or performance. External writes require explicit approval, and verification must preserve failed and unknown states honestly.
+PostgreSQL and the canonical project graph remain authoritative. Markdown, wireframes, Jira/Trello items, exports, and agent packets are compiled or synchronized views. Never fabricate source grounding, provider outcomes, publication, tests, scans, performance, costs, or evidence.

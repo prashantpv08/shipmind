@@ -106,6 +106,40 @@ test.describe('commercial web session boundary', () => {
     expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   });
 
+  test('renders the current source-grounded Business Context through the commercial boundaries', async ({ page }) => {
+    await page.goto('/account');
+    await page.getByRole('button', { name: 'Connect local session' }).click();
+    await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
+
+    const projectsResponse = await page.request.get('/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects?limit=50');
+    expect(projectsResponse.status()).toBe(200);
+    const projectPage = await projectsResponse.json() as {
+      projects: Array<{ id: string; status: string; graphVersion: number }>;
+    };
+    let selectedProjectId: string | null = null;
+    const candidates = projectPage.projects.filter((project) =>
+      project.graphVersion > 0
+      && !['DRAFT', 'SOURCES_READY', 'ARCHIVED'].includes(project.status),
+    );
+    for (const project of candidates) {
+      await page.goto(`/account/organizations/ORG-LOCAL-DEVELOPMENT/projects/${encodeURIComponent(project.id)}/business-context`);
+      try {
+        await page.getByRole('heading', { name: 'Business Context preview' }).waitFor({ state: 'visible', timeout: 5_000 });
+        await page.getByText('Experience applicability', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
+        selectedProjectId = project.id;
+        break;
+      } catch {
+        // This project's graph may predate the deterministic Business Context compiler contract.
+      }
+    }
+
+    expect(selectedProjectId).not.toBeNull();
+    await expect(page.getByRole('heading', { name: 'Business Context preview' })).toBeVisible();
+    await expect(page.getByText('Experience applicability', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Generate and review the exact context' })).toBeVisible();
+    await expect(page.getByText('Deterministic preview · no model or external side effect')).toBeVisible();
+  });
+
   test('shows organization access and preserves an invitation retry key', async ({ page }) => {
     await page.goto('/account');
     await page.getByRole('button', { name: 'Connect local session' }).click();
@@ -137,71 +171,37 @@ test.describe('commercial web session boundary', () => {
     expect(keys[1]).toBe(keys[0]);
   });
 
-  test('renders the exact quality-gated backlog and preserves generation retries', async ({ page }) => {
+  test('renders the exact quality-gated backlog and visibly enforces Business Context', async ({ page }) => {
     await page.goto('/account');
     await page.getByRole('button', { name: 'Connect local session' }).click();
     await expect(page.getByRole('heading', { name: 'Authenticated' })).toBeVisible();
     const projectsResponse = await page.request.get('/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects?limit=50');
-    const projectPage = await projectsResponse.json() as { projects: Array<{ id: string }> };
+    const projectPage = await projectsResponse.json() as {
+      projects: Array<{ id: string; status: string }>;
+    };
     let selected: { projectId: string; preview: Record<string, unknown> } | null = null;
-    for (const project of projectPage.projects) {
+    for (const project of projectPage.projects.filter((candidate) => candidate.status === 'BACKLOG_READY')) {
       const previewResponse = await page.request.get(`/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${encodeURIComponent(project.id)}/work-item-generations`);
       if (previewResponse.status() !== 200) continue;
-      selected = { projectId: project.id, preview: await previewResponse.json() as Record<string, unknown> };
-      break;
+      await page.goto(`/account/organizations/ORG-LOCAL-DEVELOPMENT/projects/${encodeURIComponent(project.id)}/backlog`);
+      try {
+        await page.getByRole('heading', { name: 'Agile backlog preview' }).waitFor({ state: 'visible', timeout: 5_000 });
+        selected = { projectId: project.id, preview: await previewResponse.json() as Record<string, unknown> };
+        break;
+      } catch {
+        // Keep searching for a fully compatible current baseline in the local fixture database.
+      }
     }
     expect(selected).not.toBeNull();
-    await page.goto(`/account/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/backlog`);
     await expect(page.getByRole('heading', { name: 'Agile backlog preview' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Deterministic quality result' })).toBeVisible();
     await expect(page.getByText('DRAFT · awaiting human review')).toBeVisible();
     await expect(page.locator('.backlog-items article').first()).toBeVisible();
-
-    const keys: string[] = [];
-    let attempts = 0;
-    await page.route(`**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/work-item-generations`, async (route) => {
-      if (route.request().method() !== 'POST') return route.continue();
-      attempts += 1;
-      keys.push(route.request().headers()['idempotency-key'] ?? '');
-      if (attempts === 1) return route.abort('failed');
-      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(selected!.preview) });
-    });
-    await page.getByRole('button', { name: 'Regenerate draft version' }).click();
-    await expect(page.getByText('The result is unknown. Retry without changing the graph so the same idempotency key is reused.')).toBeVisible();
-    await page.getByRole('button', { name: 'Regenerate draft version' }).click();
-    expect(keys).toHaveLength(2);
-    expect(keys[0]).toBeTruthy();
-    expect(keys[1]).toBe(keys[0]);
-
-    const preview = selected!.preview as { id: string; contentHash: string; generationContentHash: string };
-    const reviewKeys: string[] = [];
-    const reviewEtags: string[] = [];
-    let reviewAttempts = 0;
-    await page.route(`**/api/platform/organizations/ORG-LOCAL-DEVELOPMENT/projects/${selected!.projectId}/work-item-generations/${preview.id}/reviews`, async (route) => {
-      if (route.request().method() !== 'POST') return route.continue();
-      reviewAttempts += 1;
-      reviewKeys.push(route.request().headers()['idempotency-key'] ?? '');
-      reviewEtags.push(route.request().headers()['if-match'] ?? '');
-      if (reviewAttempts === 1) return route.abort('failed');
-      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
-        ...selected!.preview,
-        status: 'APPROVED',
-        review: {
-          id: 'WIREVIEW-UI-RETRY', generationId: preview.id, decision: 'ACCEPT', reasonCategory: 'MEETS_REQUIREMENTS',
-          comment: 'The exact grounded backlog is ready for controlled connector preparation.',
-          generationContentHash: preview.generationContentHash, reviewedContentHash: preview.contentHash,
-          reviewedByUserId: 'USER-LOCAL-OWNER', reviewedAt: '2026-07-23T01:00:00.000Z',
-        },
-      }) });
-    });
-    await page.getByLabel('Approval explanation').fill('The exact grounded backlog is ready for controlled connector preparation.');
-    await page.getByRole('button', { name: 'Accept exact backlog' }).click();
-    await expect(page.getByText('The result is unknown. Retry the unchanged decision so the same idempotency key is reused.')).toBeVisible();
-    await page.getByRole('button', { name: 'Accept exact backlog' }).click();
-    expect(reviewKeys).toHaveLength(2);
-    expect(reviewKeys[0]).toBeTruthy();
-    expect(reviewKeys[1]).toBe(reviewKeys[0]);
-    expect(reviewEtags).toEqual([`"${preview.id}:${preview.generationContentHash}"`, `"${preview.id}:${preview.generationContentHash}"`]);
+    await expect(page.getByText('Business Context gate · BLOCKED')).toBeVisible();
+    await expect(page.getByText('Generate and approve the exact current Business Context before downstream planning.')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Regenerate draft version' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Accept exact backlog' })).toBeDisabled();
+    await expect(page.getByLabel('Reject draft')).toBeEnabled();
   });
 
   test('requires archive confirmation and reconciles a stale project version', async ({ page }) => {

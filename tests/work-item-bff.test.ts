@@ -40,6 +40,9 @@ const artifactBaseline = {
 const architectureBaseline = {
   projectId: 'PROJ-ONE', graphVersion: 3, generation: null, decision: null, artifacts: [],
 };
+const businessContextBaseline = {
+  projectId: 'PROJ-ONE', graphVersion: 3, version: null, review: null,
+};
 
 const preview = {
   id: 'WIGEN-ONE', projectId: 'PROJ-ONE', sourceGraphVersion: 2, status: 'DRAFT', contentHash: 'a'.repeat(64),
@@ -143,6 +146,7 @@ describe('work-item generation BFF', () => {
       .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
       .mockResolvedValueOnce({ status: 200, body: project })
       .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 3, readiness } })
+      .mockResolvedValueOnce({ status: 200, body: businessContextBaseline })
       .mockResolvedValueOnce({ status: 200, body: artifactBaseline })
       .mockResolvedValueOnce({ status: 200, body: architectureBaseline })
       .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
@@ -151,6 +155,8 @@ describe('work-item generation BFF', () => {
       status: 'ready',
       project,
       readiness,
+      businessContextBaseline,
+      businessContextBlockingReason: 'Generate and approve the exact current Business Context before downstream planning.',
       artifactBaseline,
       architectureBaseline,
       preview: null,
@@ -168,6 +174,7 @@ describe('work-item generation BFF', () => {
       .mockResolvedValueOnce({ status: 200, body: { id: 'ORG-ONE', slug: 'one', name: 'Organization One', status: 'ACTIVE', role: 'VIEWER' } })
       .mockResolvedValueOnce({ status: 200, body: project })
       .mockResolvedValueOnce({ status: 200, body: { projectId: 'PROJ-ONE', graphVersion: 2, readiness } })
+      .mockResolvedValueOnce({ status: 200, body: businessContextBaseline })
       .mockResolvedValueOnce({ status: 200, body: artifactBaseline })
       .mockResolvedValueOnce({ status: 200, body: architectureBaseline })
       .mockResolvedValueOnce({ status: 404, body: { error: { code: 'NOT_FOUND' } } });

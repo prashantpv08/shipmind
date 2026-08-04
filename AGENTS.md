@@ -10,8 +10,7 @@ The authoritative product contract is `SRS.md`.
 
 1. `AGENTS.md`
 2. `SRS.md`
-3. `IMPLEMENTATION_BACKLOG.md`
-4. `README.md`
+3. `README.md`
 
 ## Active product decisions
 
@@ -107,7 +106,7 @@ A task is complete only when:
 6. No fake evidence or provider outcome is displayed.
 7. `pnpm lint`, `pnpm typecheck`, relevant tests, and the production build pass.
 8. Migrations and rollback behavior are verified when data changes.
-9. README, SRS, backlog, or implementation notes are updated where the contract changes.
+9. `SRS.md` is updated when the product contract, active decisions, implementation ledger, or roadmap changes; `README.md` is updated only when local operation changes.
 
 ## Working method
 
@@ -119,7 +118,7 @@ For each milestone:
 4. Run proportionate checks and fix failures before expanding scope.
 5. Summarize changed files, evidence, known gaps, and the next milestone.
 
-Do not silently reinterpret `SRS.md`. Record material decisions in `docs/decisions/`.
+Do not silently reinterpret `SRS.md`. Record material product, scope, architecture, and roadmap decisions directly in the SRS decision register and change log. Do not create separate repository product ADRs, backlogs, or implementation-status documents.
 
 ## Engineering discipline
 

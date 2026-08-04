@@ -37,12 +37,14 @@ export function ReviewBacklogAction({
   generationId,
   generationContentHash,
   workItems,
+  acceptanceBlockingReason,
 }: {
   organizationId: string;
   projectId: string;
   generationId: string;
   generationContentHash: string;
   workItems: PlatformWorkItem[];
+  acceptanceBlockingReason: string | null;
 }) {
   const router = useRouter();
   const { clarificationBlocked } = useBacklogEligibility();
@@ -95,6 +97,11 @@ export function ReviewBacklogAction({
 
   async function submitReview() {
     if (inFlight.current) return;
+    if (mode !== 'REJECT' && acceptanceBlockingReason !== null) {
+      setState('blocked');
+      setMessage(acceptanceBlockingReason);
+      return;
+    }
     const trimmedComment = comment.trim();
     if (trimmedComment.length < 10) {
       setState('error');
@@ -161,10 +168,11 @@ export function ReviewBacklogAction({
     <section className="backlog-review-action" aria-labelledby="human-review-heading">
       <div><h2 id="human-review-heading">Human review decision</h2><p>Review the exact versions below. This decision does not publish anything externally.</p></div>
       <fieldset className="backlog-review-modes"><legend>Decision</legend>
-        <label><input type="radio" name="review-decision" checked={mode === 'ACCEPT'} onChange={() => chooseMode('ACCEPT')} /> Accept exact draft</label>
-        <label><input type="radio" name="review-decision" checked={mode === 'ACCEPT_WITH_EDITS'} onChange={() => chooseMode('ACCEPT_WITH_EDITS')} /> Accept with edits</label>
+        <label><input type="radio" name="review-decision" checked={mode === 'ACCEPT'} disabled={acceptanceBlockingReason !== null} onChange={() => chooseMode('ACCEPT')} /> Accept exact draft</label>
+        <label><input type="radio" name="review-decision" checked={mode === 'ACCEPT_WITH_EDITS'} disabled={acceptanceBlockingReason !== null} onChange={() => chooseMode('ACCEPT_WITH_EDITS')} /> Accept with edits</label>
         <label><input type="radio" name="review-decision" checked={mode === 'REJECT'} onChange={() => chooseMode('REJECT')} /> Reject draft</label>
       </fieldset>
+      {acceptanceBlockingReason !== null ? <div className="backlog-notice" role="status"><b>Acceptance blocked by Business Context</b><p>{acceptanceBlockingReason}</p><small>Rejection remains available so an invalid or stale draft can be recorded honestly.</small></div> : null}
       {mode !== 'ACCEPT' ? <label className="backlog-review-field"><span>Reason category</span><select value={reasonCategory} onChange={(event) => { retryKey.current = null; setReasonCategory(event.target.value); }}>{reasons.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label> : null}
       {mode === 'ACCEPT_WITH_EDITS' ? <div className="backlog-edit-list"><h3>Editable work-item fields</h3><p>Only changed items receive a new immutable version. Source links, hierarchy, acceptance criteria, dependencies, risks, and evidence expectations remain protected in this slice.</p>{workItems.map((item) => {
         const draft = drafts[item.id]!;
@@ -179,7 +187,7 @@ export function ReviewBacklogAction({
         </div></details>;
       })}</div> : null}
       <label className="backlog-review-field"><span>{mode === 'ACCEPT' ? 'Approval explanation' : 'Decision explanation'}</span><textarea value={comment} maxLength={2_000} onChange={(event) => { retryKey.current = null; setComment(event.target.value); }} placeholder="Explain why this exact backlog should be accepted or rejected." /></label>
-      <button type="button" onClick={submitReview} disabled={state === 'loading'} aria-busy={state === 'loading'}>{state === 'loading' ? 'Validating and recording…' : mode === 'ACCEPT' ? 'Accept exact backlog' : mode === 'ACCEPT_WITH_EDITS' ? 'Validate edits and accept' : 'Reject backlog'}</button>
+      <button type="button" onClick={submitReview} disabled={state === 'loading' || (mode !== 'REJECT' && acceptanceBlockingReason !== null)} aria-busy={state === 'loading'}>{state === 'loading' ? 'Validating and recording…' : mode === 'ACCEPT' ? 'Accept exact backlog' : mode === 'ACCEPT_WITH_EDITS' ? 'Validate edits and accept' : 'Reject backlog'}</button>
       {state === 'success' ? <p role="status">{message}</p> : null}
       {['blocked', 'stale', 'error', 'unknown'].includes(state) ? <p role="alert">{message}</p> : null}
     </section>

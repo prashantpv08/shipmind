@@ -2,15 +2,15 @@
 
 **Document ID:** AX-SRS-COM-001
 
-**Version:** 2.2
+**Version:** 3.1
 
-**Date:** 2026-08-03
+**Date:** 2026-08-04
 
 **Status:** Approved product contract
 
 **Classification:** Internal / Commercial product
 
-**Supersedes:** Axiom Commercial SRS 2.1 dated 2026-07-20 and Axiom Hackathon MVP SRS 1.0
+**Supersedes:** Axiom Commercial SRS 2.2 dated 2026-08-03, the separate implementation backlog, and repository product decision/implementation notes
 
 ## 1. Document control
 
@@ -25,7 +25,7 @@
 | Local development | Docker Compose; no cloud deployment required |
 | Work management | Jira and Trello connectors; Axiom does not replace either product |
 | AI strategy | Axiom-owned agent workflows using hosted model providers; no Axiom-trained foundation model or owned GPU fleet at launch |
-| Change control | Material scope or architecture changes require an ADR and an SRS version change |
+| Change control | Material product, scope, architecture, or roadmap decisions shall update this SRS, its decision register, and its change log in the same change; repository product ADRs and implementation-status documents are not authoritative |
 
 ### 1.1 Priority convention
 
@@ -246,6 +246,10 @@ The system shall never fabricate source quotations, test results, coverage, scan
 | FR-DISC-002 | Business-model, market, process, or user assumptions without source or human confirmation shall remain `AI_SUGGESTED` or `UNKNOWN` and shall expose the decision required. | Launch |
 | FR-DISC-003 | Axiom shall preserve typed trace links from business outcomes and operating workflows to requirements, user journeys, design artifacts, architecture decisions, work items, and evidence. | Launch |
 | FR-DISC-004 | Axiom shall identify business outcomes or critical workflows that are unsupported, contradictory, unmeasurable, or not covered by the proposed product experience. | Launch |
+| FR-DISC-005 | Axiom shall model applicable customer segments, jobs-to-be-done, pains, gains, value propositions, stakeholder decision rights, and adoption or change impacts as structured, versioned business-context entities rather than ungoverned prose. | Launch |
+| FR-DISC-006 | Axiom shall model applicable revenue or funding assumptions, pricing, cost drivers, unit-economics measures, market conditions, and competitor or alternative-solution assumptions; unsupported values shall remain `AI_SUGGESTED` or `UNKNOWN`. | Launch |
+| FR-DISC-007 | Business discovery shall use bounded project-type and industry profiles so irrelevant questions are explicitly not applicable and "gather everything" cannot become an unbounded model prompt. | Launch |
+| FR-DISC-008 | Every measurable business outcome shall identify an owner, metric definition, baseline or explicit unknown, target or explicit unknown, timeframe, and source or human-confirmation status before it can gate downstream scope. | Launch |
 | FR-UX-001 | Where the approved scope includes a user experience, Axiom shall generate versioned information architecture, user journeys, editable wireframe sets, and interaction flows from the exact current graph. | Launch |
 | FR-UX-002 | Each screen shall state its purpose, authorized actors, mapped requirements and outcomes, design hypotheses, interactions, data needs, permission boundaries, and applicable default, loading, queued, empty, partial-failure, failure, validation, cancellation, recovery, and success states. | Launch |
 | FR-UX-003 | Generated screens, nodes, interactions, and examples shall carry stable IDs, truth status, source or graph links, generation provenance, and explicit unresolved gaps. | Launch |
@@ -788,3 +792,123 @@ A product change is done only when:
 8. Traceability and cost usage are recorded where required.
 9. Security, privacy, accessibility, and data-loss protections are preserved.
 10. Operational documentation, migrations, and rollback instructions are current.
+
+## 17. Active decision register
+
+This section is the authoritative decision register. Historical prototype choices that conflict with it are superseded and shall not guide implementation.
+
+| ID | Active decision | Consequence |
+|---|---|---|
+| DR-001 | Axiom is a commercial AI Engineering Operating System, not a hackathon submission or generic chatbot. | Commercial security, tenancy, evidence, quality, and operability gates are mandatory. |
+| DR-002 | The canonical project graph in PostgreSQL is authoritative. | Documents, designs, tickets, connectors, and agent packets are versioned views or synchronized copies. |
+| DR-003 | Business Discovery and an applicable approved Experience Baseline precede architecture and delivery scope. | Downstream generation shall fail closed when the compatible current baseline is absent, stale, rejected, or unresolved. |
+| DR-004 | Non-visual scope requires an explicit approved `NOT_APPLICABLE` decision. | Axiom shall neither invent screens nor silently skip experience governance. |
+| DR-005 | The Experience Studio is a structured governed product-design editor, not a general-purpose Figma replacement. | Build the traceable journey/screen/state model and deterministic quality gates before advanced canvas capabilities. |
+| DR-006 | Next.js owns presentation and thin browser-specific BFF behavior; NestJS/Fastify owns the authoritative API and business rules. | New commercial domain logic shall not be added to Next.js route handlers. |
+| DR-007 | The platform begins as a Node.js TypeScript modular monolith. | Network services require measured extraction triggers, an owned contract, and an update to this register. |
+| DR-008 | PostgreSQL is the commercial source of truth; local development uses Docker PostgreSQL and production targets Amazon RDS PostgreSQL. | Filesystem and Blob stores are migration adapters, not commercial authority. |
+| DR-009 | AWS ECS Fargate is the initial production orchestrator; Kubernetes is later scope and Vercel deployment is prohibited. | No cloud deployment or billable resource may be created without explicit user authorization. |
+| DR-010 | Model, billing, connector, storage, subscription, and coding-agent providers remain behind interfaces. | OpenAI and Groq remain disabled until task-specific evaluation, pricing, data-policy, region, and budget gates pass. |
+| DR-011 | External writes require exact preview, explicit approval, idempotency, provider-result recording, reconciliation, and audit. | Jira, Trello, repository, agent, billing, and deployment side effects fail closed. |
+| DR-012 | Exact measured evidence cannot be replaced by model prose. | Failed or unexecuted operations remain `FAILED` or `UNKNOWN`; customer content never silently enters shared training or evaluation data. |
+| DR-013 | Repository product documentation has one authority: this SRS. | `AGENTS.md` contains working rules, `README.md` contains local operation, and neither duplicates product scope or roadmap. |
+
+## 18. Current implementation ledger
+
+This ledger records the honest repository state at SRS 3.1. A capability is not commercially complete merely because a deterministic fixture or prototype screen exists.
+
+| Capability | State | Current evidence and boundary |
+|---|---|---|
+| Contract, truth model, and architecture boundaries | Foundation complete | Commercial principles, canonical graph, truth statuses, provider boundaries, and local-only development rules are established. |
+| PostgreSQL foundation and migrations | Substantial foundation | The main local database is migrated through `0019`; the complete 77-test PostgreSQL suite verifies forward behavior and ordered rollback on disposable databases. Clean-checkout CI evidence remains required. |
+| Organization identity and authorization | Partial | Organization-scoped opaque local sessions, roles, invitations, ETags, tenant filtering, and audit exist; production IdP, MFA, lifecycle, retention, and deletion remain open. |
+| Source ingestion and analysis | Partial | Bounded local ingestion, immutable hashes, extraction states, durable analysis runs, source offsets, graph commits, and deterministic readiness exist; production object storage, scanning, richer extraction, and model qualification remain open. |
+| Requirements and clarification | Substantial foundation | Exact requirement artifacts, human clarification mutations, graph versions, readiness, approvals, and invalidation exist. |
+| Business Context | Partial | Deterministic outcomes, actors, workflows, success measures, applicability, exact versions, reviews, audit, ETags, idempotency, visible web review, and fail-closed downstream enforcement exist. Current heuristic classification is not semantically qualified for commercial use; jobs, policies, constraints, risks, business-model entities, exact source-span inspection, and Agent Kernel extraction remain open. |
+| Experience Baseline | Not implemented | No commercial IA, journey, screen, state, interaction, component, token, design revision, quality report, or immutable Experience Baseline domain exists. |
+| Wireframe Studio | Prototype migration input | Curated templates, an engine-neutral compiler, Excalidraw editing, transitions, exports, and revisions exist in legacy web code. They are not commercial approval evidence. |
+| Architecture decisions | Substantial foundation | Deterministic options, exact selection, versioned ADR/HLD views, hashes, ETags, idempotency, audit, and the current Business Context/Experience fail-closed gate exist. Commercial Experience Baselines remain unavailable. |
+| Engineering Plan | Partial | Versioned fixture plans, recommendations, controlled references, quality validation, Agent Kernel provenance, non-billable evidence, and the current Business Context/Experience fail-closed gate exist; Experience Baseline binding and hosted-model qualification remain open. |
+| Work items | Partial | Connector-neutral hierarchy, deterministic quality gates, immutable versions, exact human review, retry safety, and the current Business Context/Experience fail-closed gate exist. The web visibly blocks generation and acceptance while preserving rejection; Experience Baseline coverage, semantic review, and connectors remain open. |
+| Model catalog, Agent Kernel, and cost controls | Partial | Provider-neutral contracts, local fixtures, model lifecycle, run/call evidence, reservations, balances, and scoped budgets exist. Hosted execution remains disabled and unqualified. |
+| Jira and Trello | Not commercially implemented | Prototype Jira behavior is migration input; commercial OAuth/installations, mappings, outbox publication, reconciliation, webhooks, and Trello are open. |
+| Security, privacy, and operability | Not launch-ready | ASVS/API mapping, scans, retention/deletion jobs, SLOs, runbooks, backup restore, WCAG review, and incident evidence remain open. |
+| AWS private beta | Not started | Terraform environments, ECS/RDS/S3/SQS, observability, secrets, migration, rollback, and disaster-recovery evidence remain open. |
+| Coding-agent ecosystem | Prototype only | Controlled local fixture generation and verification exist; repository authorization, coding profiles, sandboxed adapters, PR lifecycle, and commercial evidence import remain open. |
+
+### 18.1 Verification snapshot
+
+On 2026-08-04, the web lint, typecheck, production build, 141 tests, and six commercial browser tests passed; five web tests remained skipped by their configured environment gates. Platform lint, typecheck, production build, 54 non-database tests, and the complete 77-test PostgreSQL suite passed; the database tests remain intentionally skipped in the ordinary non-database command and passed under the dedicated database command. The main local database is migrated through `0019`, local billing and a revocable session are provisioned, and the browser-to-BFF-to-platform-to-PostgreSQL Business Context and fail-closed backlog paths are verified. This is point-in-time evidence, not a substitute for clean-checkout CI.
+
+### 18.2 Active product and delivery flags
+
+| Severity | Flag | Required resolution |
+|---|---|---|
+| AMBER | The platform now has a first reviewable local baseline commit, but no remote CI evidence or clean-checkout reproduction has been recorded. | Configure the intended Git identity/remote and run lint, typecheck, tests, migrations, and build in CI from a clean checkout before treating the baseline as release evidence. |
+| RED | No commercial Experience Baseline domain exists. Every `APPLICABLE` project is therefore correctly blocked before new architecture, Engineering Plan, work-item generation, or acceptance. | Deliver P2 schemas, quality gates, editor/review surfaces, compatible-version rules, and immutable approval before claiming an end-to-end applicable experience flow. |
+| RED | Current Business Context classification is structurally traceable but semantically over-broad; technical requirements can be misclassified as actors, workflows, or success measures. | Replace unqualified heuristics with evaluated typed extraction, evidence inspection, discovery profiles, and human-confirmation gates in P1. |
+| AMBER | Existing projects predate Business Context versions and remain migration-required. Their historical artifacts stay inspectable but cannot receive silent new downstream approvals. | Provide an explicit batch/aided review workflow; never auto-approve applicability or business meaning. |
+| AMBER | Browser evidence covers the current missing-baseline gate, source-grounded preview, authorization, retry, billing, and lifecycle paths, but not the full applicability/staleness decision matrix. | Add deterministic fixtures for applicable, not-applicable, needs-decision, stale, rejected, cross-tenant, and successful compatible-baseline paths. |
+
+## 19. Master implementation roadmap
+
+This is the only authoritative implementation order. Checked foundation counts from the retired backlog were 79 complete and 86 open; those counts are not a commercial-readiness score.
+
+### P0 — Restore integrity and enforce the business-first lifecycle
+
+P0 is complete only when all of the following are satisfied:
+
+- [x] The master SRS is the sole product/roadmap authority; obsolete repository product ADRs, implementation notes, and the separate backlog are removed.
+- [ ] The platform repository has reviewable version-control history and CI can reproduce its lint, typecheck, test, migration, and build evidence from a clean checkout.
+- [x] Local PostgreSQL is migrated through the current platform migration, rollback is verified on a disposable database, and a revocable local session enables the browser-to-BFF-to-platform-to-database journey.
+- [ ] Every current project has an explicit, current Business Context applicability decision before new architecture, Engineering Plan, work-item generation, or work-item approval can proceed.
+- [x] Downstream gates require an exact current approved Business Context and, when applicability is `APPLICABLE`, an exact compatible approved Experience Baseline.
+- [x] Existing pre-baseline projects are preserved as historical data but are marked migration-required and cannot silently create new downstream approvals.
+- [ ] Browser E2E proves applicable, not-applicable, needs-decision, stale, rejected, unauthorized, cross-tenant, retry, and success paths without fabricated progress or evidence.
+
+### P1 — Complete Business Discovery
+
+- [ ] Define normalized versioned entities for outcomes, customer segments, actors, jobs, pains/gains, value propositions, workflows, policies, constraints, risks, measures, stakeholders, market assumptions, revenue/funding, pricing, cost drivers, unit economics, adoption impacts, and applicability.
+- [ ] Add bounded project-type and industry discovery profiles with explicit required, optional, and not-applicable fields.
+- [ ] Extract through the Agent Kernel with immutable source spans, typed trace links, explicit contradictions, assumptions, unknowns, confidence/evaluation evidence, and human confirmations.
+- [ ] Provide an evidence inspector and a governed graph-change proposal lifecycle with ownership, resolution, re-analysis, and closure evidence.
+- [ ] Add deterministic business-quality gates for measurability, ownership, traceability, workflow coverage, contradictions, unsupported claims, and downstream coverage.
+
+### P2 — Commercial Experience Baseline and Studio
+
+- [ ] Implement organization-scoped schemas, repositories, migrations, and APIs for information architecture, journeys, screens, states, nodes, interactions, tokens, components, revisions, reviews, quality reports, and baselines.
+- [ ] Replace round-robin templates with evaluated semantic mapping from approved business context, requirements, data, permissions, risks, and architecture constraints.
+- [ ] Generate applicable default, loading, queued, empty, permission, validation, partial-failure, failure, cancellation, recovery, and success states with stable traceable IDs.
+- [ ] Implement deterministic coverage, continuity, reachability, responsive, accessibility, contradiction, blocker, and prohibited-claim quality gates before canvas polish.
+- [ ] Migrate the engine-neutral compiler and editor business rules into the platform; retain Excalidraw only as a replaceable adapter.
+- [ ] Deliver keyboard-operable structured editing, multi-screen prototype review, responsive variants, reusable tokens/components, bounded import/export, immutable revisions, exact approval, and a non-canvas review fallback.
+- [ ] Build a human-reviewed experience evaluation corpus covering good, bad, incomplete, contradictory, inaccessible, adversarial, dead-end, and silent-mutation examples.
+
+### P3 — Commercial delivery loop
+
+- [ ] Bind Engineering Plan and work items to exact requirement, Experience, and architecture baselines with complete traceability and stale-version invalidation.
+- [ ] Qualify OpenAI and Groq per task with immutable evaluation, verified price/data/region policy, budgets, cancellation, retry, and measured usage evidence.
+- [ ] Implement Jira and Trello installations, mappings, exact previews, transactional outbox publication, idempotency, reconciliation, rate limits, authenticated webhooks, partial failures, and audit.
+- [ ] Implement production identity, MFA, organization lifecycle, retention, export, deletion, and legal-hold extension points.
+
+### P4 — Commercial hardening and AWS private beta
+
+- [ ] Map controls to OWASP ASVS and API risks; add owned secret, dependency, static, container, tenant-isolation, accessibility, load, and penetration-test gates.
+- [ ] Establish SLOs, telemetry, incident roles, runbooks, backups, restoration, disaster recovery, and cost alerts.
+- [ ] Build reviewed Terraform for AWS environments using ECS Fargate, RDS PostgreSQL, S3, SQS, approved secrets, least privilege, and rollback-safe migrations.
+- [ ] Execute staging migration, rollback, backup restoration, security, accessibility, load, and cost evidence before any production tenant.
+
+### P5 — Controlled coding-agent ecosystem
+
+- [ ] Add organization/project/repository coding profiles, authorization, branch and path policies, dependency/license controls, and approved verification commands.
+- [ ] Implement sandboxed native and external coding-agent adapters with bounded task packets, secrets, filesystem access, timeouts, cancellation, concurrency, and output.
+- [ ] Require exact previews and approvals before branch, commit, push, or pull-request effects; import only real provider IDs, checks, diffs, and verification evidence.
+
+## 20. SRS change log
+
+| Version | Date | Change |
+|---|---|---|
+| 3.1 | 2026-08-04 | Recorded P0 documentation consolidation, the first local platform baseline commit, local migration and rollback evidence, repaired local billing provisioning, fail-closed Business Context enforcement across architecture/plans/work items, visible backlog gating, browser evidence, and unresolved product/delivery flags. |
+| 3.0 | 2026-08-04 | Consolidated active product decisions, implementation status, and roadmap into the master SRS; expanded structured business discovery; made Business Context and applicable Experience Baseline enforcement the first P0 lifecycle gate; superseded separate repository product ADRs, implementation notes, and backlog. |
+| 2.2 | 2026-08-03 | Added business-first discovery and governed Experience Baseline requirements. |
+| 2.1 | 2026-07-20 | Established the commercial platform contract and migration from the prototype. |
