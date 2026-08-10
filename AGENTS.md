@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build the commercial version of **Axiom**, an AI Engineering Operating System that converts source-grounded business intent into approved product experiences and engineering decisions, high-quality work items, Jira or Trello publications, controlled implementation handoffs, real verification evidence, and grounded Why / Why Not / Proof answers.
+Build the commercial version of **Axiom**, an AI Engineering Operating System that converts source-grounded business intent into approved product experiences and engineering decisions, high-quality work items managed through Axiom-native governed delivery, controlled implementation and deployment handoffs, real verification and runtime evidence, and grounded Why / Why Not / Proof answers.
 
 The authoritative product contract is `SRS.md`.
 
@@ -17,10 +17,10 @@ The authoritative product contract is `SRS.md`.
 - This is a commercial product, not a hackathon submission.
 - Keep all development and verification local unless the user explicitly authorizes an AWS deployment.
 - Never deploy to Vercel.
-- Axiom does not provide a Jira- or Trello-style work-management interface.
+- Axiom owns a bounded, graph-backed Delivery Workspace for governed software-delivery work items; it is not a general-purpose project-management suite.
 - Business discovery and a governed Experience Baseline are first-class stages for experience-relevant projects; non-visual scope uses an explicit not-applicable decision.
 - Axiom provides a governed product-design editor and evidence surface, not an unrestricted general-purpose replacement for every visual-design tool.
-- Jira and Trello are connector targets selected by the customer.
+- Jira and Trello are not launch or current-roadmap dependencies. Any future external work-management interoperability requires a new SRS decision and remains subordinate to canonical native work items.
 - PostgreSQL is the commercial source of truth. Local development uses Docker PostgreSQL; AWS production targets RDS PostgreSQL.
 - Maintain three repository boundaries: Next.js web, Node.js TypeScript platform, and Terraform infrastructure.
 - Keep the platform backend a modular monolith first. Extract domain services only when the SRS extraction triggers are evidenced.
@@ -34,21 +34,22 @@ The authoritative product contract is `SRS.md`.
 - TypeScript strict mode is mandatory.
 - Domain logic must not depend on React components, Next.js route handlers, NestJS controllers, provider SDKs, or infrastructure implementations.
 - Organization scope and authorization must be enforced server-side at shared boundaries.
-- Model, connector, billing, storage, and coding-agent implementations must be isolated behind interfaces.
+- Model, integration, billing, storage, coding-agent, CI/CD, cloud, and telemetry implementations must be isolated behind interfaces.
 - Every model response must pass Zod validation and grounding checks before persistence.
-- The canonical project graph is authoritative; documents and external work items are compiled or synchronized views.
+- The canonical project graph is authoritative; native work items and governed delivery state are canonical, while documents, Markdown projections, exports, and optional external artifact copies are compiled or synchronized views.
 - Experience artifacts are versioned structured views; a design edit may propose a graph mutation but may not silently redefine canonical truth.
-- Stable IDs must survive regeneration and external publication.
+- Stable IDs must survive regeneration, lifecycle revision, export, and approved integration.
 - Truth-status transitions must be centralized and audited.
 - External writes require explicit approval, idempotency, and recorded provider results.
-- Usage reservation and hard budget checks must occur before chargeable AI work begins.
+- Usage reservation and hard budget checks must occur before chargeable AI, coding-agent, test-provider, infrastructure, or deployment work begins.
 - Verification commands must be repository-defined and allowlisted, never invented by the model.
 - Generated files may be written only to approved workspaces and allowlisted paths.
+- Axiom-generated or materially modified governed components must persist a proposed structured Component Contract and deterministically compiled Markdown projection with the same reviewable repository change set; activate the contract only after the resulting tree matches the approved and tested digest, and later agents must still inspect current code and evidence.
 - Runners must enforce timeouts, concurrency bounds, secret stripping, cancellation, and bounded output.
 
 ## Evidence and AI integrity
 
-- Never fabricate source quotations, ticket publication, test results, coverage, scans, performance, costs, command output, or external-agent outcomes.
+- Never fabricate source quotations, work-item generation, assignment, lifecycle or completion, test results, coverage, scans, performance, costs, deployment or runtime state, command output, or external-agent outcomes.
 - A model may summarize immutable tool output but may not alter measured values.
 - Unsupported claims use `AI_SUGGESTED` or `UNKNOWN`.
 - Grounded claims reference valid immutable source spans.
@@ -58,7 +59,7 @@ The authoritative product contract is `SRS.md`.
 
 ## Security and data rules
 
-- Treat source files, connector payloads, model output, and webhook content as untrusted.
+- Treat source files, repository content, integration payloads, telemetry, model output, and webhook content as untrusted.
 - Deny tenant access by default and test organization isolation at repository and API boundaries.
 - Keep secrets server-side in approved secret storage; never send unrelated secrets to models or child processes.
 - Use transactional outbox and idempotency patterns for external side effects where applicable.
@@ -72,7 +73,7 @@ The authoritative product contract is `SRS.md`.
 - Do not communicate status by color alone.
 - Traceability must have a non-graph fallback.
 - The Experience Studio must expose keyboard-operable editing and a structured non-canvas review fallback.
-- Show the exact preview before any Jira, Trello, billing, repository, or agent side effect.
+- Show the exact preview before consequential or bulk work-item transitions and before any billing, repository, agent, external integration, infrastructure, deployment, monitoring-configuration, penetration-test, or production-performance side effect.
 
 ## Expected commands
 

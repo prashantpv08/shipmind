@@ -99,5 +99,3 @@ pnpm build
 - `src/projects/`, `src/artifacts/`, `src/ai/`, `src/integrations/`, `src/codegen/`, and `src/runner/`: prototype migration sources; move commercial ownership into `axiom-platform` one tested vertical slice at a time.
 - `drizzle/`: legacy migration source retained until the commercial schema transition is complete. New commercial migrations belong to `axiom-platform`.
 - `sample-inputs/`: bounded local product fixtures, not product documentation.
-
-PostgreSQL and the canonical project graph remain authoritative. Markdown, wireframes, Jira/Trello items, exports, and agent packets are compiled or synchronized views. Never fabricate source grounding, provider outcomes, publication, tests, scans, performance, costs, or evidence.
