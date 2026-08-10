@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "dev": "next dev",
-    "start": "next start",
+    "dev": "node api.js && next dev",
+    "start": "node api.js && next start",
     "lint": "eslint .",
     "architecture:check": "node --import tsx scripts/check-architecture-boundaries.ts",
     "contracts:sync": "node --import tsx scripts/sync-platform-openapi.ts",
