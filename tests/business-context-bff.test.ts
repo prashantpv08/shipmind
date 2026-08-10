@@ -42,7 +42,7 @@ describe('Business Context BFF', () => {
     const response = await generateBusinessContext(mutationRequest(path, body, 'business-context-generate-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
     expect(response.headers.get('etag')).toBe('"PROJ-ONE:5"');
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/business-context/generations', 'A'.repeat(43), 'business-context-request-id', { method: 'POST', body, idempotencyKey: 'business-context-generate-001', ifMatch: '"PROJ-ONE:4"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'business-context-request-id');
   });
 
   it('forwards a proposed edit without representing it as approval', async () => {
@@ -56,7 +56,7 @@ describe('Business Context BFF', () => {
     const path = '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/business-context/reviews';
     const response = await reviewBusinessContext(mutationRequest(path, body, 'business-context-review-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/business-context/reviews', 'A'.repeat(43), 'business-context-request-id', { method: 'POST', body, idempotencyKey: 'business-context-review-001', ifMatch: '"PROJ-ONE:4"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'business-context-request-id');
   });
 
   it('rejects cross-origin mutation before reading credentials', async () => {

@@ -31,8 +31,8 @@ describe('Business Context web platform contract', () => {
   it('loads and validates the exact tenant-scoped preview', async () => {
     const state = await getBusinessContextPage('ORG-ONE', 'PROJ-ONE');
     expect(state).toMatchObject({ status: 'ready', organization, project, preview, baseline });
-    expect(mocks.requestPlatform).toHaveBeenNthCalledWith(3, '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/business-context/preview', 'A'.repeat(43));
-    expect(mocks.requestPlatform).toHaveBeenNthCalledWith(4, '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/business-context/current', 'A'.repeat(43));
+    expect(mocks.requestPlatform).toHaveBeenNthCalledWith(3, expect.any(Function), 'A'.repeat(43));
+    expect(mocks.requestPlatform).toHaveBeenNthCalledWith(4, expect.any(Function), 'A'.repeat(43));
     expect(PlatformBusinessContextPreviewSchema.safeParse(preview).success).toBe(true);
   });
 

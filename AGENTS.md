@@ -123,6 +123,13 @@ Do not silently reinterpret `SRS.md`. Record material product, scope, architectu
 
 ## Engineering discipline
 
+- Apply KISS and YAGNI: implement the smallest complete design required by current acceptance criteria, and require an SRS decision or measured extraction trigger before adding speculative layers, services, providers, flags, or extension points.
+- Apply DRY by the Rule of Three: tolerate two small, semantically distinct repetitions; on the third equivalent implementation, extract the narrowest shared policy or mechanism without erasing domain differences.
+- Preserve single responsibility and dependency inversion: domain and application policy own interfaces; web, framework, provider, persistence, and infrastructure code implement or translate at boundaries.
+- Keep one source of truth for each contract. Platform Zod schemas generate the reviewed OpenAPI artifact and web client; handwritten copies of platform request or response shapes are forbidden.
+- Prefer explicit, cohesive modules over generic utility layers. Split files when independent reasons to change are evidenced, not to satisfy an arbitrary line-count target.
+- Fail closed at trust boundaries. Authentication, organization scope, permissions, validation, concurrency, idempotency, budgets, and external side effects must be enforced centrally and covered by negative tests.
+- Architecture rules that can be checked mechanically belong in active lint, contract, architecture, migration, or CI checks; prose alone is not enforcement.
 - Reuse an existing repository pattern, platform feature, standard-library capability, or installed dependency before adding an abstraction or dependency.
 - Fix shared root causes at the narrowest correct boundary.
 - Avoid speculative flexibility, unrelated cleanup, and placeholder modules.

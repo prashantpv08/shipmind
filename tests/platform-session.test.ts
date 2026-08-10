@@ -14,6 +14,7 @@ import {
   PlatformWorkspaceListSchema,
 } from '../src/platform/contracts';
 import { requestPlatform, safeRequestId } from '../src/platform/request';
+import * as platformSdk from '../src/platform/generated/sdk.gen';
 import { validatedSessionToken } from '../src/platform/session';
 
 const temporaryDirectories: string[] = [];
@@ -101,28 +102,23 @@ describe('platform session boundary', () => {
     vi.stubEnv('AXIOM_PLATFORM_URL', 'http://127.0.0.1:4100');
 
     const response = await requestPlatform(
-      '/api/v1/organizations/ORG-ONE/projects',
+      (client) => platformSdk.createProject({
+        client,
+        path: { organizationId: 'ORG-ONE' },
+        headers: { 'Idempotency-Key': 'project-create-001' },
+        body: { name: 'New project', workspaceId: 'WS-TEAM' },
+      }),
       'A'.repeat(43),
       'project-request-001',
-      {
-        method: 'POST',
-        body: { name: 'New project', workspaceId: 'WS-TEAM' },
-        idempotencyKey: 'project-create-001',
-      },
     );
 
     expect(response).toMatchObject({ status: 201, etag: '"PROJ-ONE:1"', idempotencyReplayed: 'false' });
-    expect(fetchMock).toHaveBeenCalledWith(
-      new URL('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects'),
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ name: 'New project', workspaceId: 'WS-TEAM' }),
-        headers: expect.objectContaining({
-          authorization: `Bearer ${'A'.repeat(43)}`,
-          'idempotency-key': 'project-create-001',
-        }),
-      }),
-    );
+    const forwarded = fetchMock.mock.calls[0]?.[0] as Request;
+    expect(forwarded.url).toBe('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects');
+    expect(forwarded.method).toBe('POST');
+    expect(forwarded.headers.get('authorization')).toBe(`Bearer ${'A'.repeat(43)}`);
+    expect(forwarded.headers.get('idempotency-key')).toBe('project-create-001');
+    await expect(forwarded.clone().json()).resolves.toEqual({ name: 'New project', workspaceId: 'WS-TEAM' });
   });
 
   it('forwards project lifecycle preconditions without exposing credentials to the browser', async () => {
@@ -134,23 +130,21 @@ describe('platform session boundary', () => {
     vi.stubEnv('AXIOM_PLATFORM_URL', 'http://127.0.0.1:4100');
 
     const response = await requestPlatform(
-      '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive',
+      (client) => platformSdk.archiveProject({
+        client,
+        path: { organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' },
+        headers: { 'If-Match': '"PROJ-ONE:1"' },
+      }),
       'A'.repeat(43),
       'project-archive-001',
-      { method: 'POST', ifMatch: '"PROJ-ONE:1"' },
     );
 
     expect(response).toMatchObject({ status: 200, etag: '"PROJ-ONE:2"' });
-    expect(fetchMock).toHaveBeenCalledWith(
-      new URL('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive'),
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          authorization: `Bearer ${'A'.repeat(43)}`,
-          'if-match': '"PROJ-ONE:1"',
-        }),
-      }),
-    );
+    const forwarded = fetchMock.mock.calls[0]?.[0] as Request;
+    expect(forwarded.url).toBe('http://127.0.0.1:4100/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive');
+    expect(forwarded.method).toBe('POST');
+    expect(forwarded.headers.get('authorization')).toBe(`Bearer ${'A'.repeat(43)}`);
+    expect(forwarded.headers.get('if-match')).toBe('"PROJ-ONE:1"');
   });
 
   it('preserves a safe request ID and replaces untrusted values', () => {

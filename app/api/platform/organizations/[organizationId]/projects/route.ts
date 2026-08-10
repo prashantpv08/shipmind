@@ -1,131 +1,83 @@
-import { NextResponse } from 'next/server';
-
 import {
-  OrganizationIdSchema,
   PlatformCreateProjectRequestSchema,
-  PlatformIdempotencyKeySchema,
   PlatformProjectListQuerySchema,
   PlatformProjectListSchema,
   PlatformProjectSchema,
 } from '@/src/platform/contracts';
-import { isSameOriginMutation } from '@/src/platform/local-session';
-import { requestPlatform, safeRequestId } from '@/src/platform/request';
-import { currentSessionToken } from '@/src/platform/session';
+import { authenticateBff, bffError, bffRequestId, forwardPlatformResponse, parseIdempotencyKey, parseOrganizationId, rejectCrossOriginMutation } from '@/src/platform/bff';
+import * as platformSdk from '@/src/platform/generated/sdk.gen';
+import { requestPlatform } from '@/src/platform/request';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ organizationId: string }> },
-): Promise<NextResponse> {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
+){
+  const requestId = bffRequestId(request);
   const { organizationId: rawOrganizationId } = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(rawOrganizationId);
+  const organizationId = parseOrganizationId(rawOrganizationId);
   const query = PlatformProjectListQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
 
   if (!organizationId.success) {
-    return NextResponse.json(
-      { error: { code: 'NOT_FOUND', message: 'Organization was not found.' } },
-      { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(404, 'NOT_FOUND', 'Organization was not found.', requestId);
   }
   if (!query.success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_REQUEST', message: 'Project list query is invalid.' } },
-      { status: 400, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(400, 'INVALID_REQUEST', 'Project list query is invalid.', requestId);
   }
 
-  const token = await currentSessionToken();
-  if (!token) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } },
-      { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
 
-  const search = new URLSearchParams({ limit: String(query.data.limit) });
-  if (query.data.cursor !== undefined) search.set('cursor', query.data.cursor);
-  if (query.data.workspaceId !== undefined) search.set('workspaceId', query.data.workspaceId);
   const platformResponse = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/projects?${search.toString()}`,
-    token,
+    (client) => platformSdk.listProjects({ client, path: { organizationId: organizationId.data }, query: query.data }),
+    authentication.token,
     requestId,
   );
 
   if (platformResponse.status === 200 && !PlatformProjectListSchema.safeParse(platformResponse.body).success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } },
-      { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId } },
-    );
+    return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', platformResponse.requestId);
   }
-
-  return NextResponse.json(platformResponse.body, {
-    status: platformResponse.status,
-    headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId },
-  });
+  return forwardPlatformResponse(platformResponse);
 }
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ organizationId: string }> },
-): Promise<NextResponse> {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
-  if (!isSameOriginMutation(request)) {
-    return NextResponse.json(
-      { error: { code: 'FORBIDDEN', message: 'This project creation request is not allowed.' } },
-      { status: 403, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
+){
+  const requestId = bffRequestId(request);
+  const originError = rejectCrossOriginMutation(request, requestId, 'This project creation request is not allowed.');
+  if (originError) return originError;
 
   const { organizationId: rawOrganizationId } = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(rawOrganizationId);
-  const idempotencyKey = PlatformIdempotencyKeySchema.safeParse(request.headers.get('idempotency-key'));
+  const organizationId = parseOrganizationId(rawOrganizationId);
+  const idempotencyKey = parseIdempotencyKey(request);
   const body = await request.json().catch(() => null);
   const creation = PlatformCreateProjectRequestSchema.safeParse(body);
 
   if (!organizationId.success) {
-    return NextResponse.json(
-      { error: { code: 'NOT_FOUND', message: 'Organization was not found.' } },
-      { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(404, 'NOT_FOUND', 'Organization was not found.', requestId);
   }
   if (!idempotencyKey.success || !creation.success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_REQUEST', message: 'Project creation request is invalid.' } },
-      { status: 400, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(400, 'INVALID_REQUEST', 'Project creation request is invalid.', requestId);
   }
 
-  const token = await currentSessionToken();
-  if (!token) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } },
-      { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
 
   const platformResponse = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/projects`,
-    token,
+    (client) => platformSdk.createProject({
+      client,
+      path: { organizationId: organizationId.data },
+      headers: { 'Idempotency-Key': idempotencyKey.data },
+      body: creation.data,
+    }),
+    authentication.token,
     requestId,
-    { method: 'POST', body: creation.data, idempotencyKey: idempotencyKey.data },
   );
 
   if (platformResponse.status === 201 && !PlatformProjectSchema.safeParse(platformResponse.body).success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } },
-      { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId } },
-    );
+    return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', platformResponse.requestId);
   }
-
-  const headers: Record<string, string> = {
-    'cache-control': 'no-store',
-    'x-request-id': platformResponse.requestId,
-  };
-  if (platformResponse.etag !== null) headers.etag = platformResponse.etag;
-  if (platformResponse.idempotencyReplayed === 'true' || platformResponse.idempotencyReplayed === 'false') {
-    headers['idempotency-replayed'] = platformResponse.idempotencyReplayed;
-  }
-  return NextResponse.json(platformResponse.body, { status: platformResponse.status, headers });
+  return forwardPlatformResponse(platformResponse, { etag: true, idempotencyReplayed: 'boolean-value' });
 }

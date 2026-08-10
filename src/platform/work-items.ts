@@ -19,6 +19,7 @@ import {
   type PlatformProjectReadiness,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type WorkItemReviewState =
@@ -32,16 +33,16 @@ export async function getWorkItemReview(organizationIdInput: string, projectIdIn
   if (!organizationId.success || !projectId.success) return { status: 'not-found' };
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
-  const org = encodeURIComponent(organizationId.data);
-  const project = encodeURIComponent(projectId.data);
+  const organizationPath = { organizationId: organizationId.data };
+  const projectPath = { organizationId: organizationId.data, projectId: projectId.data };
   const [organizationResponse, projectResponse, readinessResponse, businessContextResponse, artifactResponse, architectureResponse, previewResponse] = await Promise.all([
-    requestPlatform(`/api/v1/organizations/${org}`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/readiness`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/business-context/current`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/artifacts/current`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/architecture/current`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/work-item-generations/latest`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: organizationPath }), token),
+    requestPlatform((client) => platformSdk.getProject({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getProjectReadiness({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getCurrentBusinessContext({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getCurrentArtifactBaseline({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getCurrentArchitectureBaseline({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getLatestWorkItemGeneration({ client, path: projectPath }), token),
   ]);
   const required = [organizationResponse, projectResponse, readinessResponse, businessContextResponse, artifactResponse, architectureResponse];
   if (required.some((response) => response.status === 401) || previewResponse.status === 401) return { status: 'unauthenticated' };

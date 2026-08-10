@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
-import OpenAI from 'openai';
 import { z } from 'zod';
-import { strictJsonSchema } from '../ai/structured-output';
 import { ProjectDocument, type KnowledgeEntity, type ProjectDocument as ProjectDocumentType } from './schemas';
 
 const RevisionOutput = z.object({
@@ -30,7 +28,7 @@ function replaceSection(content: string, heading: string, replacementBody: strin
 }
 
 interface RevisionProvider {
-  readonly name: 'axiom-fixture' | 'groq' | 'openai-responses';
+  readonly name: 'axiom-fixture';
   revise(input: { documentTitle: string; heading: string; currentBody: string; instruction: string; groundedContext: string }): Promise<z.infer<typeof RevisionOutput>>;
 }
 
@@ -50,44 +48,8 @@ This update is recorded as a review instruction. Any new product claim remains *
   }
 }
 
-let groqClient: OpenAI | null = null;
-
-function getGroqClient() {
-  if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY is required for Groq document revision');
-  groqClient ??= new OpenAI({
-    apiKey: process.env.GROQ_API_KEY,
-    baseURL: 'https://api.groq.com/openai/v1',
-  });
-  return groqClient;
-}
-
-class GroqRevisionProvider implements RevisionProvider {
-  readonly name = 'groq' as const;
-
-  async revise(input: { documentTitle: string; heading: string; currentBody: string; instruction: string; groundedContext: string }) {
-    const response = await getGroqClient().chat.completions.create({
-      model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
-      messages: [
-        {
-          role: 'system',
-          content: 'You revise one section of an engineering document. Preserve stable IDs, truth-status labels, exact source references, and explicit UNKNOWN values. Never invent measurements, approvals, evidence, or source quotations. Return only the replacement Markdown body for the requested section plus a short summary.',
-        },
-        {
-          role: 'user',
-          content: `Document: ${input.documentTitle}\nSection: ${input.heading}\nInstruction: ${input.instruction}\n\nCurrent section:\n${input.currentBody}\n\nGrounded project context:\n${input.groundedContext}`,
-        },
-      ],
-      response_format: strictJsonSchema(RevisionOutput, 'document_revision'),
-    });
-    const content = response.choices[0]?.message.content;
-    if (!content) throw new Error('Groq returned no validated document revision');
-    return RevisionOutput.parse(JSON.parse(content));
-  }
-}
-
 function providerForEnvironment(): RevisionProvider {
-  if (process.env.AXIOM_AI_MODE !== 'live') return new FixtureRevisionProvider();
-  return new GroqRevisionProvider();
+  return new FixtureRevisionProvider();
 }
 
 export async function reviseDocument(input: {

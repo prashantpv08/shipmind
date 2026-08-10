@@ -1,49 +1,51 @@
-import { NextResponse } from 'next/server';
-
 import {
-  OrganizationIdSchema,
   PlatformGenerateWorkItemsRequestSchema,
-  PlatformIdempotencyKeySchema,
-  PlatformProjectIdSchema,
   PlatformWorkItemGenerationBlockedResponseSchema,
   PlatformWorkItemGenerationPreviewSchema,
 } from '@/src/platform/contracts';
-import { isSameOriginMutation } from '@/src/platform/local-session';
-import { requestPlatform, safeRequestId } from '@/src/platform/request';
-import { currentSessionToken } from '@/src/platform/session';
+import { authenticateBff, bffError, bffRequestId, forwardPlatformResponse, parseIdempotencyKey, parseOrganizationProjectIds, rejectCrossOriginMutation } from '@/src/platform/bff';
+import * as platformSdk from '@/src/platform/generated/sdk.gen';
+import { requestPlatform } from '@/src/platform/request';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request, context: { params: Promise<{ organizationId: string; projectId: string }> }) {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
-  const params = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(params.organizationId);
-  const projectId = PlatformProjectIdSchema.safeParse(params.projectId);
-  if (!organizationId.success || !projectId.success) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Backlog preview was not found.' } }, { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  const token = await currentSessionToken();
-  if (!token) return NextResponse.json({ error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } }, { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  const response = await requestPlatform(`/api/v1/organizations/${encodeURIComponent(organizationId.data)}/projects/${encodeURIComponent(projectId.data)}/work-item-generations/latest`, token, requestId);
-  if (response.status === 200 && !PlatformWorkItemGenerationPreviewSchema.safeParse(response.body).success) return NextResponse.json({ error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } }, { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId } });
-  return NextResponse.json(response.body, { status: response.status, headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId } });
+  const requestId = bffRequestId(request);
+  const { organizationId, projectId } = parseOrganizationProjectIds(await context.params);
+  if (!organizationId.success || !projectId.success) return bffError(404, 'NOT_FOUND', 'Backlog preview was not found.', requestId);
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
+  const response = await requestPlatform(
+    (client) => platformSdk.getLatestWorkItemGeneration({ client, path: { organizationId: organizationId.data, projectId: projectId.data } }),
+    authentication.token,
+    requestId,
+  );
+  if (response.status === 200 && !PlatformWorkItemGenerationPreviewSchema.safeParse(response.body).success) return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', response.requestId);
+  return forwardPlatformResponse(response);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ organizationId: string; projectId: string }> }) {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
-  if (!isSameOriginMutation(request)) return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'This backlog generation request is not allowed.' } }, { status: 403, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  const params = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(params.organizationId);
-  const projectId = PlatformProjectIdSchema.safeParse(params.projectId);
-  const idempotencyKey = PlatformIdempotencyKeySchema.safeParse(request.headers.get('idempotency-key'));
+  const requestId = bffRequestId(request);
+  const originError = rejectCrossOriginMutation(request, requestId, 'This backlog generation request is not allowed.');
+  if (originError) return originError;
+  const { organizationId, projectId } = parseOrganizationProjectIds(await context.params);
+  const idempotencyKey = parseIdempotencyKey(request);
   const body = PlatformGenerateWorkItemsRequestSchema.safeParse(await request.json().catch(() => null));
-  if (!organizationId.success || !projectId.success) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Project was not found.' } }, { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  if (!idempotencyKey.success || !body.success) return NextResponse.json({ error: { code: 'INVALID_REQUEST', message: 'Backlog generation request is invalid.' } }, { status: 400, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  const token = await currentSessionToken();
-  if (!token) return NextResponse.json({ error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } }, { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } });
-  const response = await requestPlatform(`/api/v1/organizations/${encodeURIComponent(organizationId.data)}/projects/${encodeURIComponent(projectId.data)}/work-item-generations`, token, requestId, { method: 'POST', body: body.data, idempotencyKey: idempotencyKey.data });
-  if (response.status === 201 && !PlatformWorkItemGenerationPreviewSchema.safeParse(response.body).success) return NextResponse.json({ error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } }, { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId } });
-  if (response.status === 422 && (response.body as { error?: { code?: unknown } } | null)?.error?.code === 'CLARIFICATION_REQUIRED' && !PlatformWorkItemGenerationBlockedResponseSchema.safeParse(response.body).success) return NextResponse.json({ error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned invalid clarification guidance.' } }, { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId } });
-  const headers: Record<string, string> = { 'cache-control': 'no-store', 'x-request-id': response.requestId };
-  if (response.etag) headers.etag = response.etag;
-  if (response.idempotencyReplayed) headers['idempotency-replayed'] = response.idempotencyReplayed;
-  return NextResponse.json(response.body, { status: response.status, headers });
+  if (!organizationId.success || !projectId.success) return bffError(404, 'NOT_FOUND', 'Project was not found.', requestId);
+  if (!idempotencyKey.success || !body.success) return bffError(400, 'INVALID_REQUEST', 'Backlog generation request is invalid.', requestId);
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
+  const response = await requestPlatform(
+    (client) => platformSdk.generateWorkItemDraft({
+      client,
+      path: { organizationId: organizationId.data, projectId: projectId.data },
+      headers: { 'Idempotency-Key': idempotencyKey.data },
+      body: body.data,
+    }),
+    authentication.token,
+    requestId,
+  );
+  if (response.status === 201 && !PlatformWorkItemGenerationPreviewSchema.safeParse(response.body).success) return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', response.requestId);
+  if (response.status === 422 && (response.body as { error?: { code?: unknown } } | null)?.error?.code === 'CLARIFICATION_REQUIRED' && !PlatformWorkItemGenerationBlockedResponseSchema.safeParse(response.body).success) return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned invalid clarification guidance.', response.requestId);
+  return forwardPlatformResponse(response, { etag: true, idempotencyReplayed: true });
 }

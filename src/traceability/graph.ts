@@ -8,7 +8,6 @@ import {
   type RequirementTrace as RequirementTraceType,
   type TraceEdge as TraceEdgeType,
   type TraceNode as TraceNodeType,
-  type TraceabilityContext as TraceabilityContextType,
   type TraceabilityGraph as TraceabilityGraphType,
 } from './schemas';
 

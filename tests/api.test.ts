@@ -30,10 +30,10 @@ describe('analyze route', () => {
     expect(response.status).toBe(400);
   });
 
-  it('returns the canonical AnalysisResult for an explicit fixture request', async () => {
+  it('always returns the deterministic fixture AnalysisResult', async () => {
     const response = await POST(new Request('http://x/api/analyze', {
       method: 'POST',
-      body: JSON.stringify({ brief, useFixture: true }),
+      body: JSON.stringify({ brief }),
     }));
     const body = await response.json();
 

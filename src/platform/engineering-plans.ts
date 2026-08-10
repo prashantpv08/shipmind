@@ -10,6 +10,7 @@ import {
   type PlatformProject,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type EngineeringPlanPageState =
@@ -23,12 +24,12 @@ export async function getEngineeringPlanPage(organizationIdInput: string, projec
   if (!organizationId.success || !projectId.success) return { status: 'not-found' };
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
-  const org = encodeURIComponent(organizationId.data);
-  const project = encodeURIComponent(projectId.data);
+  const organizationPath = { organizationId: organizationId.data };
+  const projectPath = { organizationId: organizationId.data, projectId: projectId.data };
   const [organizationResponse, projectResponse, planResponse] = await Promise.all([
-    requestPlatform(`/api/v1/organizations/${org}`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}`, token),
-    requestPlatform(`/api/v1/organizations/${org}/projects/${project}/engineering-plans/latest`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: organizationPath }), token),
+    requestPlatform((client) => platformSdk.getProject({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getLatestEngineeringPlan({ client, path: projectPath }), token),
   ]);
   if ([organizationResponse, projectResponse, planResponse].some((response) => response.status === 401)) return { status: 'unauthenticated' };
   if ([organizationResponse, projectResponse, planResponse].some((response) => response.status === 403)) return { status: 'forbidden' };

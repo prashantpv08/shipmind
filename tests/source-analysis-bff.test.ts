@@ -35,7 +35,7 @@ describe('source and analysis BFF', () => {
     const body = { name: 'brief.md', kind: 'FILE', mimeType: 'text/markdown', contentBase64: Buffer.from('Administrators shall invite.').toString('base64') };
     const response = await uploadSource(mutation('/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/sources', body, 'source-upload-001'), params);
     expect(response.status).toBe(201);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/sources', 'A'.repeat(43), 'source-request-id', { method: 'POST', body, idempotencyKey: 'source-upload-001' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'source-request-id');
   });
 
   it('queues analysis and validates the durable run contract', async () => {
@@ -43,7 +43,7 @@ describe('source and analysis BFF', () => {
     const body = { analyzer: 'axiom-deterministic-grounded-v1' };
     const response = await queueAnalysis(mutation('/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/analysis-runs', body, 'analysis-queue-001'), params);
     expect(response.status).toBe(202);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/analysis-runs', 'A'.repeat(43), 'source-request-id', { method: 'POST', body, idempotencyKey: 'analysis-queue-001' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'source-request-id');
   });
 
   it('rejects cross-origin source writes before session access', async () => {

@@ -1,33 +1,23 @@
-import { NextResponse } from 'next/server';
-
+import { authenticateBff, bffError, bffRequestId, forwardPlatformResponse } from '@/src/platform/bff';
 import { CurrentUserOrganizationsSchema } from '@/src/platform/contracts';
-import { requestPlatform, safeRequestId } from '@/src/platform/request';
-import { currentSessionToken } from '@/src/platform/session';
+import * as platformSdk from '@/src/platform/generated/sdk.gen';
+import { requestPlatform } from '@/src/platform/request';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request): Promise<NextResponse> {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
-  const token = await currentSessionToken();
+export async function GET(request: Request) {
+  const requestId = bffRequestId(request);
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
 
-  if (!token) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } },
-      { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
-
-  const platformResponse = await requestPlatform('/api/v1/me/organizations', token, requestId);
+  const platformResponse = await requestPlatform(
+    (client) => platformSdk.listCurrentUserOrganizations({ client }),
+    authentication.token,
+    requestId,
+  );
 
   if (platformResponse.status === 200 && !CurrentUserOrganizationsSchema.safeParse(platformResponse.body).success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } },
-      { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId } },
-    );
+    return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', platformResponse.requestId);
   }
-
-  return NextResponse.json(platformResponse.body, {
-    status: platformResponse.status,
-    headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId },
-  });
+  return forwardPlatformResponse(platformResponse);
 }

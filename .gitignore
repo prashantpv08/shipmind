@@ -4,6 +4,11 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
 lerna-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)

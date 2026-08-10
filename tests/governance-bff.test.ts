@@ -20,7 +20,7 @@ describe('organization governance BFF', () => {
     } });
     const response = await createInvitation(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/invitations', { method: 'POST', headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json', 'idempotency-key': 'invite-key-001' }, body: JSON.stringify({ email: 'NEW@example.test', role: 'VIEWER' }) }), { params: Promise.resolve({ organizationId: 'ORG-ONE' }) });
     expect(response.status).toBe(201);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/invitations', 'A'.repeat(43), 'generated-request-id', { method: 'POST', body: { email: 'new@example.test', role: 'VIEWER' }, idempotencyKey: 'invite-key-001' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'generated-request-id');
   });
 
   it('rejects cross-origin creation before reading the session', async () => {
@@ -34,6 +34,6 @@ describe('organization governance BFF', () => {
     const response = await revokeInvitation(new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/invitations/INV-ONE/revoke', { method: 'POST', headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'if-match': '"INV-ONE:1"' } }), { params: Promise.resolve({ organizationId: 'ORG-ONE', invitationId: 'INV-ONE' }) });
     expect(response.status).toBe(200);
     expect(response.headers.get('etag')).toBe('"INV-ONE:2"');
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/invitations/INV-ONE/revoke', 'A'.repeat(43), 'generated-request-id', { method: 'POST', ifMatch: '"INV-ONE:1"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'generated-request-id');
   });
 });

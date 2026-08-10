@@ -9,6 +9,7 @@ import {
   type PlatformWorkspace,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type OrganizationProjectsState =
@@ -38,13 +39,11 @@ export async function getOrganizationProjects(
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
 
-  const query = new URLSearchParams({ limit: '50' });
-  if (cursor !== undefined) query.set('cursor', cursor);
-  const encodedOrganizationId = encodeURIComponent(organizationId.data);
+  const organizationPath = { organizationId: organizationId.data };
   const [organizationResponse, projectResponse, workspaceResponse] = await Promise.all([
-    requestPlatform(`/api/v1/organizations/${encodedOrganizationId}`, token),
-    requestPlatform(`/api/v1/organizations/${encodedOrganizationId}/projects?${query.toString()}`, token),
-    requestPlatform(`/api/v1/organizations/${encodedOrganizationId}/workspaces?limit=100`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: organizationPath }), token),
+    requestPlatform((client) => platformSdk.listProjects({ client, path: organizationPath, query: { limit: 50, ...(cursor === undefined ? {} : { cursor }) } }), token),
+    requestPlatform((client) => platformSdk.listWorkspaces({ client, path: organizationPath, query: { limit: 100 } }), token),
   ]);
   const responses = [organizationResponse, projectResponse, workspaceResponse];
 

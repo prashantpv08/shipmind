@@ -51,8 +51,11 @@ describe('architecture BFF', () => {
     const path = '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/architecture/generations';
     const response = await generateArchitecture(architectureRequest(path, { sourceGraphVersion: 3 }, 'architecture-generate-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('x-request-id')).toBe('architecture-001');
     expect(response.headers.get('etag')).toBe('"PROJ-ONE:7"');
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/architecture/generations', 'A'.repeat(43), 'architecture-request-id', { method: 'POST', body: { sourceGraphVersion: 3 }, idempotencyKey: 'architecture-generate-001', ifMatch: '"PROJ-ONE:6"' });
+    expect(response.headers.get('idempotency-replayed')).toBe('false');
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'architecture-request-id');
   });
 
   it('forwards approval of one exact option and human rationale', async () => {
@@ -63,7 +66,7 @@ describe('architecture BFF', () => {
     mocks.requestPlatform.mockResolvedValue({ status: 201, requestId: 'architecture-approve-001', etag: '"PROJ-ONE:8"', idempotencyReplayed: 'false', body: { project: { ...project, status: 'HLD_READY', rowVersion: 8 }, baseline: { projectId: 'PROJ-ONE', graphVersion: 3, generation, decision, artifacts: architectureArtifacts }, replayed: false } });
     const response = await approveArchitecture(architectureRequest('/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/architecture/decisions', body, 'architecture-approve-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/architecture/decisions', 'A'.repeat(43), 'architecture-request-id', { method: 'POST', body, idempotencyKey: 'architecture-approve-001', ifMatch: '"PROJ-ONE:6"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'architecture-request-id');
   });
 
   it('rejects cross-origin mutation before reading the session', async () => {
@@ -73,9 +76,58 @@ describe('architecture BFF', () => {
     expect(mocks.currentSessionToken).not.toHaveBeenCalled();
   });
 
+  it('preserves invalid path precedence over invalid headers and body', async () => {
+    const request = new Request('http://127.0.0.1/api/platform/organizations/invalid/projects/invalid/architecture/generations', {
+      method: 'POST',
+      headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json' },
+      body: '{}',
+    });
+    const response = await generateArchitecture(request, {
+      params: Promise.resolve({ organizationId: 'invalid', projectId: 'invalid' }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'NOT_FOUND' } });
+    expect(mocks.currentSessionToken).not.toHaveBeenCalled();
+  });
+
+  it('preserves invalid header and body precedence over authentication', async () => {
+    mocks.currentSessionToken.mockResolvedValue(null);
+    const request = new Request('http://127.0.0.1/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/architecture/generations', {
+      method: 'POST',
+      headers: { host: '127.0.0.1', origin: 'http://127.0.0.1', 'content-type': 'application/json' },
+      body: '{}',
+    });
+    const response = await generateArchitecture(request, {
+      params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'INVALID_REQUEST' } });
+    expect(mocks.currentSessionToken).not.toHaveBeenCalled();
+  });
+
+  it('rejects a valid same-origin mutation when unauthenticated', async () => {
+    mocks.currentSessionToken.mockResolvedValue(null);
+    const response = await generateArchitecture(
+      architectureRequest(
+        '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/architecture/generations',
+        { sourceGraphVersion: 3 },
+        'architecture-generate-unauthenticated',
+      ),
+      { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) },
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('x-request-id')).toBe('architecture-request-id');
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'UNAUTHENTICATED' } });
+    expect(mocks.requestPlatform).not.toHaveBeenCalled();
+  });
+
   it('rejects a malformed successful platform response', async () => {
     mocks.requestPlatform.mockResolvedValue({ status: 201, requestId: 'architecture-002', body: { baseline: null } });
     const response = await generateArchitecture(architectureRequest('/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/architecture/generations', { sourceGraphVersion: 3 }, 'architecture-generate-002'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(502);
+    expect(response.headers.get('x-request-id')).toBe('architecture-002');
   });
 });

@@ -9,6 +9,7 @@ import {
   type PlatformMember,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type OrganizationGovernanceState =
@@ -21,11 +22,10 @@ export async function getOrganizationGovernance(input: string): Promise<Organiza
   if (!organizationId.success) return { status: 'not-found' };
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
-  const id = encodeURIComponent(organizationId.data);
   const [organization, members, invitations] = await Promise.all([
-    requestPlatform(`/api/v1/organizations/${id}`, token),
-    requestPlatform(`/api/v1/organizations/${id}/members?limit=100`, token),
-    requestPlatform(`/api/v1/organizations/${id}/invitations?limit=100`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: { organizationId: organizationId.data } }), token),
+    requestPlatform((client) => platformSdk.listOrganizationMembers({ client, path: { organizationId: organizationId.data }, query: { limit: 100 } }), token),
+    requestPlatform((client) => platformSdk.listOrganizationInvitations({ client, path: { organizationId: organizationId.data }, query: { limit: 100 } }), token),
   ]);
   const responses = [organization, members, invitations];
   if (responses.some((response) => response.status === 401)) return { status: 'unauthenticated' };

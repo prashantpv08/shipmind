@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "axiom-platform",
+  "sourcePath": "openapi/axiom-platform-v1.json",
+  "sha256": "3b47d144ddbacbbbc62f1bd63fbbc6788f9cac6365712754bb11b06c0917a24c",
+  "bytes": 701110,
+  "generator": {
+    "package": "@hey-api/openapi-ts",
+    "version": "0.99.0"
+  }
+}

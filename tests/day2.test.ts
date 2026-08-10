@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { AnalysisResult, ArchitectureOption, ClarificationQuestion } from '../src/domain/schemas';
 import {
   answerQuestion,
@@ -6,7 +6,6 @@ import {
   brief,
   deriveSpans,
   dimensions,
-  fixtureAnalysisResult,
   initialGaps,
   makeQuestions,
   options,
@@ -16,23 +15,9 @@ import {
 } from '../src/domain/day2';
 import {
   FixtureProvider,
-  GroqProvider,
   sourceEvidenceForQuote,
   withVerifiedGrounding,
 } from '../src/ai/provider';
-
-afterEach(() => {
-  delete process.env.AXIOM_AI_MODE;
-  delete process.env.GROQ_API_KEY;
-  delete process.env.GROQ_MODEL;
-});
-
-function structuredArchitectureOptions(optionsToConvert: typeof options) {
-  return optionsToConvert.map(({ scoreBreakdown, ...option }) => ({
-    ...option,
-    scoreBreakdown: Object.entries(scoreBreakdown).map(([dimension, score]) => ({ dimension, score })),
-  }));
-}
 
 describe('day2 domain and analysis contract', () => {
   it('validates the fixture AnalysisResult and run metadata', async () => {
@@ -123,132 +108,5 @@ describe('day2 domain and analysis contract', () => {
     }, spans).truthStatus).toBe('AI_SUGGESTED');
   });
 
-  it('uses Groq strict structured output and validates the response with Zod', async () => {
-    process.env.GROQ_API_KEY = 'test-key';
-    process.env.GROQ_MODEL = 'openai/gpt-oss-120b';
-    const fixture = fixtureAnalysisResult({
-      label: 'Demo fixture',
-      providerName: 'fixture',
-      modelName: 'fixture',
-      mode: 'fixture',
-      startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      outcome: 'SUCCEEDED',
-    });
-    const discoveryPayload = {
-            productObjective: 'Groq objective',
-            findings: [{
-              id: 'FR-GROQ-001',
-              kind: 'FUNCTIONAL',
-              text: 'Support email',
-              truthStatus: 'SOURCE_GROUNDED',
-              quote: 'support email and SMS',
-              affectedEntityIds: [],
-              severity: null,
-              security: null,
-              mitigation: null,
-            }, ...fixture.gaps.map((gap) => ({
-              id: gap.id,
-              kind: 'GAP' as const,
-              text: gap.title,
-              truthStatus: 'UNKNOWN' as const,
-              quote: null,
-              affectedEntityIds: gap.affectedEntityIds,
-              severity: gap.severity,
-              security: gap.security,
-              mitigation: null,
-            }))],
-            clarificationQuestions: fixture.clarificationQuestions.map((question) => ({
-              ...question,
-              truthStatus: 'AI_SUGGESTED',
-              provenance: 'AI_SUGGESTED',
-              answer: null,
-            })),
-    };
-    const architectureOptions = structuredArchitectureOptions(fixture.architectureOptions);
-    let callIndex = 0;
-    const create = vi.fn(async (_request: unknown) => {
-      const content = JSON.stringify(callIndex === 0 ? discoveryPayload : architectureOptions[callIndex - 1]);
-      callIndex += 1;
-      return { choices: [{ message: { content } }] };
-    });
-    const client = { chat: { completions: { create } } };
 
-    const result = await new GroqProvider(client as never).analyze(brief);
-
-    expect(result.run).toMatchObject({
-      providerName: 'groq',
-      modelName: 'openai/gpt-oss-120b',
-      mode: 'live',
-      outcome: 'SUCCEEDED',
-    });
-    expect(result.functionalRequirements[0].sourceEvidence[0].quote).toBe('support email and SMS');
-    const discoveryRequest = create.mock.calls[0]?.[0] as {
-      response_format: { json_schema: { schema: Record<string, unknown> } };
-    };
-    const architectureRequest = create.mock.calls[1]?.[0] as {
-      response_format: { json_schema: { schema: Record<string, unknown> } };
-    };
-    expect(discoveryRequest.response_format).toMatchObject({
-      type: 'json_schema',
-      json_schema: { name: 'analysis_discovery', strict: true },
-    });
-    expect(architectureRequest.response_format).toMatchObject({
-      type: 'json_schema',
-      json_schema: { name: 'architecture_option', strict: true },
-    });
-    expect(create).toHaveBeenCalledTimes(4);
-    expect(discoveryRequest.response_format.json_schema.schema).not.toHaveProperty('$schema');
-  });
-
-  it('does not silently substitute the fixture after a live provider failure', async () => {
-    process.env.GROQ_API_KEY = 'test-key';
-    const client = { chat: { completions: { create: vi.fn(async () => { throw new Error('boom'); }) } } };
-
-    await expect(new GroqProvider(client as never).analyze(brief)).rejects.toThrow('boom');
-  });
-
-  it('rejects a live result with no gaps instead of inserting fixture gaps', async () => {
-    process.env.GROQ_API_KEY = 'test-key';
-    const fixture = fixtureAnalysisResult({
-      label: 'Demo fixture',
-      providerName: 'fixture',
-      modelName: 'fixture',
-      mode: 'fixture',
-      startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      outcome: 'SUCCEEDED',
-    });
-    const client = {
-      chat: {
-        completions: {
-          create: vi.fn(async () => ({
-            choices: [{ message: { content: JSON.stringify({
-            productObjective: 'Incomplete live result',
-            findings: [{
-              id: 'FR-LIVE-001',
-              kind: 'FUNCTIONAL',
-              text: 'Support email',
-              truthStatus: 'SOURCE_GROUNDED',
-              quote: 'support email and SMS',
-              affectedEntityIds: [],
-              severity: null,
-              security: null,
-              mitigation: null,
-            }],
-            clarificationQuestions: fixture.clarificationQuestions.map((question) => ({
-              ...question,
-              truthStatus: 'AI_SUGGESTED',
-              provenance: 'AI_SUGGESTED',
-              answer: null,
-            })),
-            }) } }],
-          })),
-        },
-      },
-    };
-
-    await expect(new GroqProvider(client as never).analyze(brief))
-      .rejects.toThrow('no gaps; result rejected without fixture substitution');
-  });
 });

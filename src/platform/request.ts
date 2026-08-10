@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { platformBaseUrl } from './config';
+import { createClient, type Client } from './generated/client';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
 
@@ -12,44 +13,47 @@ export type PlatformResponse = {
   idempotencyReplayed: string | null;
 };
 
-export type PlatformRequestOptions = {
-  method?: 'GET' | 'POST';
-  body?: unknown;
-  idempotencyKey?: string;
-  ifMatch?: string;
+type GeneratedOperationResult = {
+  data?: unknown;
+  error?: unknown;
+  response?: Response;
 };
+
+export type PlatformOperation = (client: Client) => Promise<GeneratedOperationResult>;
 
 export function safeRequestId(value: string | null): string {
   return value && REQUEST_ID_PATTERN.test(value) ? value : crypto.randomUUID();
 }
 
 export async function requestPlatform(
-  path: `/api/v1/${string}`,
+  operation: PlatformOperation,
   token: string,
   requestId = crypto.randomUUID(),
-  options: PlatformRequestOptions = {},
 ): Promise<PlatformResponse> {
   const safeId = safeRequestId(requestId);
 
   try {
-    const headers: Record<string, string> = {
-      accept: 'application/json',
-      authorization: `Bearer ${token}`,
-      'x-request-id': safeId,
-    };
-    if (options.body !== undefined) headers['content-type'] = 'application/json';
-    if (options.idempotencyKey !== undefined) headers['idempotency-key'] = options.idempotencyKey;
-    if (options.ifMatch !== undefined) headers['if-match'] = options.ifMatch;
-    const response = await fetch(new URL(path, platformBaseUrl()), {
-      method: options.method ?? 'GET',
-      headers,
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(5_000),
+    const client = createClient({
+      baseUrl: platformBaseUrl().origin,
+      headers: {
+        accept: 'application/json',
+        authorization: `Bearer ${token}`,
+        'x-request-id': safeId,
+      },
+      responseStyle: 'fields',
+      throwOnError: false,
+      fetch: (input, init) => fetch(input, {
+        ...init,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5_000),
+      }),
     });
-    const body = await response.json().catch(() => ({
+    const result = await operation(client);
+    const response = result.response;
+    if (!response) throw new Error('The generated platform client did not receive a response.');
+    const body = result.data ?? result.error ?? {
       error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an invalid response.' },
-    }));
+    };
 
     return {
       status: response.status,

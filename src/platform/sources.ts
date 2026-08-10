@@ -13,6 +13,7 @@ import {
   type PlatformSource,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type ProjectSourcesState =
@@ -26,13 +27,13 @@ export async function getProjectSources(organizationIdInput: string, projectIdIn
   if (!organizationId.success || !projectId.success) return { status: 'not-found' };
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
-  const organizationPath: `/api/v1/${string}` = `/api/v1/organizations/${encodeURIComponent(organizationId.data)}`;
-  const projectPath: `/api/v1/${string}` = `${organizationPath}/projects/${encodeURIComponent(projectId.data)}`;
+  const organizationPath = { organizationId: organizationId.data };
+  const projectPath = { organizationId: organizationId.data, projectId: projectId.data };
   const [organizationResponse, projectResponse, sourcesResponse, runResponse] = await Promise.all([
-    requestPlatform(organizationPath, token),
-    requestPlatform(projectPath, token),
-    requestPlatform(`${projectPath}/sources`, token),
-    requestPlatform(`${projectPath}/analysis-runs`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: organizationPath }), token),
+    requestPlatform((client) => platformSdk.getProject({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.listProjectSources({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getLatestProjectAnalysisRun({ client, path: projectPath }), token),
   ]);
   const responses = [organizationResponse, projectResponse, sourcesResponse, runResponse];
   if (responses.some((response) => response.status === 401)) return { status: 'unauthenticated' };

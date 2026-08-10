@@ -3,11 +3,11 @@ import { z } from 'zod';
 import {
   ArtifactPack,
   ArtifactCompileRequest,
-  ArtifactType,
   EngineeringConstitution,
   type AnalysisResult,
   type ArchitectureDecision,
   type Artifact,
+  type ArtifactType,
   type ArtifactPack as ArtifactPackType,
   type ConstitutionRule,
 } from '../domain/schemas';

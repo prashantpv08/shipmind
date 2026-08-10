@@ -20,7 +20,7 @@ Keep all development local unless an AWS deployment is explicitly authorized. Ne
 Copy `.env.example` to `.env.local`. Keep credentials and local session tokens out of version control.
 
 ```bash
-AXIOM_AI_MODE=fixture
+AXIOM_LEGACY_PROTOTYPE_ENABLED=false
 AXIOM_PROJECT_STORE=postgres
 DATABASE_URL=postgresql://axiom:axiom-local-only@127.0.0.1:54329/axiom
 DATABASE_SSL_MODE=disable
@@ -30,7 +30,9 @@ AXIOM_LOCAL_AUTH_ENABLED=true
 AXIOM_LOCAL_SESSION_TOKEN_FILE=../axiom-platform/.local/session-token
 ```
 
-`AXIOM_AI_MODE=fixture` is deterministic and non-billable. Hosted model candidates remain disabled until the SRS evaluation, pricing, data-policy, region, and budget gates pass.
+The web migration prototype uses deterministic, non-billable fixture behavior only. Hosted model execution belongs in the platform Agent Kernel and remains disabled until the SRS evaluation, pricing, data-policy, region, and budget gates pass.
+
+`AXIOM_LEGACY_PROTOTYPE_ENABLED=false` keeps the prototype UI and every legacy API route unavailable. For bounded migration testing only, set it to `true`, run the web app on loopback, and open `http://127.0.0.1:3000/prototype`. Next.js ignores this flag in production, and local legacy mutations also require a same-origin request. The commercial `/account`, `/api/auth/**`, and `/api/platform/**` surfaces do not depend on this flag.
 
 `AXIOM_LOCAL_AUTH_ENABLED=true` is local-development-only. Production ignores the local session installer and requires a real identity-provider adapter.
 
@@ -60,6 +62,8 @@ pnpm dev
 ```
 
 Open `http://127.0.0.1:3000/account` and use the local-session action. The web runs on port `3000`, the platform on `4100`, and Docker PostgreSQL is exposed on `54329`.
+
+The root URL redirects to `/account`; it does not expose the migration prototype.
 
 ## Verification commands
 

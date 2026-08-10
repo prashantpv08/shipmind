@@ -2,6 +2,7 @@ import 'server-only';
 
 import { CurrentUserOrganizationsSchema, type PlatformOrganization } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type CurrentUserState =
@@ -16,7 +17,7 @@ export async function getCurrentUserState(): Promise<CurrentUserState> {
     return { status: 'unauthenticated' };
   }
 
-  const response = await requestPlatform('/api/v1/me/organizations', token);
+  const response = await requestPlatform((client) => platformSdk.listCurrentUserOrganizations({ client }), token);
 
   if (response.status === 401) {
     return { status: 'unauthenticated' };

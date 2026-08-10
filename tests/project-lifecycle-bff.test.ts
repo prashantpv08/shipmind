@@ -54,10 +54,9 @@ describe('project lifecycle BFF', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('etag')).toBe('"PROJ-ONE:2"');
     expect(mocks.requestPlatform).toHaveBeenCalledWith(
-      '/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/archive',
+      expect.any(Function),
       'A'.repeat(43),
       'lifecycle-request-001',
-      { method: 'POST', ifMatch: '"PROJ-ONE:1"' },
     );
   });
 

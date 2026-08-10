@@ -9,7 +9,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: 'pnpm dev',
+        command: 'pnpm dev --hostname 127.0.0.1',
         url: localBaseUrl,
         reuseExistingServer: true,
         timeout: 120_000,

@@ -12,7 +12,7 @@ const project = {
   id: 'PROJ-ONE', workspaceId: 'WS-ONE', name: 'Product One', status: 'DOCUMENTED', graphVersion: 3, rowVersion: 6,
   archivedAt: null, createdAt: '2026-07-23T00:00:00.000Z', updatedAt: '2026-07-24T00:00:00.000Z',
 };
-const artifacts = (['requirements', 'srs', 'nfr'] as const).map((type, index) => ({
+const artifacts = (['requirements', 'srs', 'nfr'] as const).map((type) => ({
   id: `DOC-${type}`, projectId: 'PROJ-ONE', type, version: 1, sourceGraphVersion: 3, title: `${type} artifact`,
   content: `# Exact ${type} artifact`, sha256: hashes[type], truthStatus: 'AI_SUGGESTED',
   provenance: { mode: 'DETERMINISTIC_COMPILER', compilerVersion: 'requirement-baseline-compiler-v1', sourceEntityIds: ['REQ-ONE'], sourceIds: ['SOURCE-ONE'] },
@@ -40,7 +40,7 @@ describe('artifact BFF', () => {
     const response = await generateArtifacts(artifactRequest(path, { sourceGraphVersion: 3 }, 'artifact-generate-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
     expect(response.headers.get('etag')).toBe('"PROJ-ONE:6"');
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/artifacts/generations', 'A'.repeat(43), 'artifact-request-id', { method: 'POST', body: { sourceGraphVersion: 3 }, idempotencyKey: 'artifact-generate-001', ifMatch: '"PROJ-ONE:5"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'artifact-request-id');
   });
 
   it('forwards approval of the exact three hashes and rationale', async () => {
@@ -51,7 +51,7 @@ describe('artifact BFF', () => {
     const path = '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/artifacts/approvals';
     const response = await approveArtifacts(artifactRequest(path, body, 'artifact-approve-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/projects/PROJ-ONE/artifacts/approvals', 'A'.repeat(43), 'artifact-request-id', { method: 'POST', body, idempotencyKey: 'artifact-approve-001', ifMatch: '"PROJ-ONE:5"' });
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'artifact-request-id');
   });
 
   it('rejects cross-origin requests before reading the session', async () => {

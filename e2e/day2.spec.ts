@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { fixtureAnalysisResult } from '../src/domain/day2';
-
-const now = new Date().toISOString();
 let createdWorkspaceProjectId: string | undefined;
+
+test.skip(
+  process.env.AXIOM_LEGACY_PROTOTYPE_ENABLED !== 'true',
+  'Legacy migration E2E requires AXIOM_LEGACY_PROTOTYPE_ENABLED=true on loopback.',
+);
 
 test.setTimeout(180_000);
 
@@ -21,7 +23,7 @@ test('Axiom guides a project from landing through documents, optional wireflow, 
   await page.route('**/api/integrations/notion/status', async (route) => route.fulfill({ json: { configured: false, mode: 'internal-connection', missing: ['E2E_NOTION_DISABLED'] } }));
   await page.route('**/api/integrations/jira/status', async (route) => route.fulfill({ json: { configured: false, connected: false, mode: 'jira-cloud-api-token', missing: ['E2E_JIRA_DISABLED'] } }));
   await page.route('**/api/analyze', async (route) => { await new Promise((resolve) => setTimeout(resolve, 350)); await route.continue(); });
-  await page.goto('/');
+  await page.goto('/prototype');
   await expect(page.getByRole('heading', { name: /Turn raw intent into an approved product system/ })).toBeVisible();
   await page.getByRole('button', { name: /Experience Axiom/ }).click();
   await expect(page.getByRole('heading', { name: /Upload the context/ })).toBeVisible();
@@ -252,7 +254,7 @@ test('project intake reports a recoverable failure without losing the prepared s
     await route.continue();
   });
 
-  await page.goto('/');
+  await page.goto('/prototype');
   await page.getByRole('button', { name: /Experience Axiom/ }).click();
   await page.getByLabel('Project name').fill('Recoverable project');
   await page.getByRole('button', { name: 'Paste transcript' }).click();
@@ -266,7 +268,7 @@ test('project intake reports a recoverable failure without losing the prepared s
 });
 
 test('invalidates approved downstream work when a clarification changes', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/prototype');
   await page.getByRole('button', { name: /Explore the live sample/ }).click();
   await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
   await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
@@ -280,65 +282,4 @@ test('invalidates approved downstream work when a clarification changes', async 
   await expect(page.getByText(/The ADR is stale/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Generate artifact pack' })).toBeDisabled();
   await expect(page.getByText(/Generate the governed artifact pack first/)).toBeVisible();
-});
-
-test('renders server-returned live mode metadata from a mocked API response', async ({ page }) => {
-  const response = fixtureAnalysisResult({
-    label: 'Live AI',
-    providerName: 'groq',
-    modelName: 'mock-live-model',
-    mode: 'live',
-    startedAt: now,
-    completedAt: now,
-    outcome: 'SUCCEEDED',
-  });
-  response.architectureOptions = response.architectureOptions.map((option, index) => ({
-    ...option,
-    id: `ARCH-LIVE-${index + 1}`,
-  }));
-
-  await page.route('**/api/analyze', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
-  });
-  await page.goto('/');
-  await page.getByRole('button', { name: /Explore the live sample/ }).click();
-  await page.getByRole('button', { name: 'Analyze intent' }).click();
-
-  await expect(page.getByLabel('analysis mode')).toContainText('Live AI · groq · mock-live-model · SUCCEEDED');
-  await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
-});
-
-test('preserves the last valid analysis and displays failed live-run metadata', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: /Explore the live sample/ }).click();
-  await page.getByRole('button', { name: 'Run demo fixture instead' }).click();
-  await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
-
-  await page.route('**/api/analyze', async (route) => {
-    await route.fulfill({
-      status: 502,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        error: 'Mock live provider failure',
-        run: {
-          label: 'Live AI failed · no fixture substituted',
-          providerName: 'groq',
-          modelName: 'mock-live-model',
-          mode: 'live',
-          startedAt: now,
-          completedAt: now,
-          outcome: 'FAILED',
-          error: 'Mock live provider failure',
-        },
-      }),
-    });
-  });
-  await page.getByRole('button', { name: 'Analyze intent' }).click();
-
-  const analysisAlert = page.getByRole('alert').filter({ hasText: 'Analysis failed.' });
-  await expect(analysisAlert).toContainText('Mock live provider failure');
-  await expect(analysisAlert).toContainText('last valid analysis remains visible');
-  await expect(page.getByRole('heading', { name: 'Grounded requirements and evidence', exact: true })).toBeVisible();
-  await expect(page.getByLabel('analysis mode')).toContainText('Live AI failed · no fixture substituted');
-  await expect(page.getByLabel('analysis mode')).toContainText('FAILED');
 });

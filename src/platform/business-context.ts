@@ -13,6 +13,7 @@ import {
   type PlatformProject,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type BusinessContextPageState =
@@ -26,13 +27,13 @@ export async function getBusinessContextPage(organizationIdInput: string, projec
   if (!organizationId.success || !projectId.success) return { status: 'not-found' };
   const token = await currentSessionToken();
   if (!token) return { status: 'unauthenticated' };
-  const organization = encodeURIComponent(organizationId.data);
-  const project = encodeURIComponent(projectId.data);
+  const organizationPath = { organizationId: organizationId.data };
+  const projectPath = { organizationId: organizationId.data, projectId: projectId.data };
   const [organizationResponse, projectResponse, previewResponse, baselineResponse] = await Promise.all([
-    requestPlatform(`/api/v1/organizations/${organization}`, token),
-    requestPlatform(`/api/v1/organizations/${organization}/projects/${project}`, token),
-    requestPlatform(`/api/v1/organizations/${organization}/projects/${project}/business-context/preview`, token),
-    requestPlatform(`/api/v1/organizations/${organization}/projects/${project}/business-context/current`, token),
+    requestPlatform((client) => platformSdk.getOrganization({ client, path: organizationPath }), token),
+    requestPlatform((client) => platformSdk.getProject({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getBusinessContextPreview({ client, path: projectPath }), token),
+    requestPlatform((client) => platformSdk.getCurrentBusinessContext({ client, path: projectPath }), token),
   ]);
   if ([organizationResponse, projectResponse, previewResponse, baselineResponse].some((response) => response.status === 401)) return { status: 'unauthenticated' };
   if ([organizationResponse, projectResponse, previewResponse, baselineResponse].some((response) => response.status === 403)) return { status: 'forbidden' };

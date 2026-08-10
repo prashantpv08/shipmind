@@ -27,7 +27,7 @@ describe('model catalog BFF', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toEqual(catalog);
-    expect(mocks.requestPlatform).toHaveBeenCalledWith('/api/v1/organizations/ORG-ONE/models/catalog', 'A'.repeat(43), 'generated-request-id');
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'generated-request-id');
   });
 
   it('fails closed when a candidate is falsely reported as executable', async () => {

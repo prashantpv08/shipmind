@@ -6,6 +6,7 @@ import {
   type PlatformBillingOverview,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type OrganizationBillingState =
@@ -25,7 +26,7 @@ export async function getOrganizationBilling(
   if (!token) return { status: 'unauthenticated' };
 
   const response = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/billing/overview`,
+    (client) => platformSdk.getBillingOverview({ client, path: { organizationId: organizationId.data } }),
     token,
   );
   if (response.status === 401) return { status: 'unauthenticated' };

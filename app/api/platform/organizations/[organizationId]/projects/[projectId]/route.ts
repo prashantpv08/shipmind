@@ -1,52 +1,32 @@
-import { NextResponse } from 'next/server';
-
-import { OrganizationIdSchema, PlatformProjectIdSchema, PlatformProjectSchema } from '@/src/platform/contracts';
-import { requestPlatform, safeRequestId } from '@/src/platform/request';
-import { currentSessionToken } from '@/src/platform/session';
+import { authenticateBff, bffError, bffRequestId, forwardPlatformResponse, parseOrganizationProjectIds } from '@/src/platform/bff';
+import { PlatformProjectSchema } from '@/src/platform/contracts';
+import * as platformSdk from '@/src/platform/generated/sdk.gen';
+import { requestPlatform } from '@/src/platform/request';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ organizationId: string; projectId: string }> },
-): Promise<NextResponse> {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
-  const params = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(params.organizationId);
-  const projectId = PlatformProjectIdSchema.safeParse(params.projectId);
+){
+  const requestId = bffRequestId(request);
+  const { organizationId, projectId } = parseOrganizationProjectIds(await context.params);
 
   if (!organizationId.success || !projectId.success) {
-    return NextResponse.json(
-      { error: { code: 'NOT_FOUND', message: 'Project was not found.' } },
-      { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(404, 'NOT_FOUND', 'Project was not found.', requestId);
   }
 
-  const token = await currentSessionToken();
-  if (!token) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } },
-      { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
 
   const platformResponse = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/projects/${encodeURIComponent(projectId.data)}`,
-    token,
+    (client) => platformSdk.getProject({ client, path: { organizationId: organizationId.data, projectId: projectId.data } }),
+    authentication.token,
     requestId,
   );
 
   if (platformResponse.status === 200 && !PlatformProjectSchema.safeParse(platformResponse.body).success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } },
-      { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': platformResponse.requestId } },
-    );
+    return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', platformResponse.requestId);
   }
-
-  const headers: Record<string, string> = {
-    'cache-control': 'no-store',
-    'x-request-id': platformResponse.requestId,
-  };
-  if (platformResponse.etag !== null) headers.etag = platformResponse.etag;
-  return NextResponse.json(platformResponse.body, { status: platformResponse.status, headers });
+  return forwardPlatformResponse(platformResponse, { etag: true });
 }

@@ -3,13 +3,10 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir, rm } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import { Sandbox, type CommandFinished } from '@vercel/sandbox';
 import { ALLOWED_GENERATED_PATHS, FIXED_TEMPLATE_FILES } from '../codegen/contract';
 import type { CodeGenerationOutput } from '../codegen/schemas';
 import {
   fixedCommandRegistry,
-  fixedHostedCommandRegistry,
-  HOSTED_WORKSPACE_ROOT,
   VERIFICATION_ORDER,
   type FixedCommandDefinition,
 } from './commands';
@@ -149,12 +146,6 @@ async function executeFixedCommand(definition: FixedCommandDefinition) {
   return createVerificationRun(definition, result, startedAt, Date.now() - started);
 }
 
-function boundedOutput(value: string) {
-  const output = new BoundedOutput();
-  output.append(value);
-  return output.value();
-}
-
 function sha256(content: string) {
   return `sha256:${createHash('sha256').update(content).digest('hex')}`;
 }
@@ -205,11 +196,11 @@ function assertApprovedGeneration(generation: CodeGenerationOutput) {
   }
 }
 
-async function attachCoverageMetrics(run: VerificationRunType, hostedSummary?: unknown) {
+async function attachCoverageMetrics(run: VerificationRunType) {
   if (run.commandId !== 'coverage' || run.status !== 'passed') return run;
   const summaryPath = join(/* turbopackIgnore: true */ process.cwd(), 'sandbox/notification-service/workspace/coverage/coverage-summary.json');
   try {
-    const summary: unknown = hostedSummary ?? JSON.parse(await readFile(summaryPath, 'utf8'));
+    const summary: unknown = JSON.parse(await readFile(summaryPath, 'utf8'));
     const coverage = parseCoverageMetrics(summary);
     if (!coverage || coverage.lines === null) throw new Error('Coverage summary did not contain numeric line coverage');
     return VerificationRun.parse({
@@ -230,106 +221,6 @@ async function attachCoverageMetrics(run: VerificationRunType, hostedSummary?: u
       rawOutputExcerpt: `${run.rawOutputExcerpt}\nCoverage parser failure: ${cause instanceof Error ? cause.message : String(cause)}`.trim().slice(0, 40_000),
       metrics: { ...run.metrics, coverageParsed: false },
     });
-  }
-}
-
-async function readFixedTemplate() {
-  const root = join(/* turbopackIgnore: true */ process.cwd(), 'sandbox/notification-service/template');
-  const [packageJson, tsconfig, vitestConfig] = await Promise.all([
-    readFile(join(root, 'package.json'), 'utf8'),
-    readFile(join(root, 'tsconfig.json'), 'utf8'),
-    readFile(join(root, 'vitest.config.ts'), 'utf8'),
-  ]);
-  return [
-    { path: `${HOSTED_WORKSPACE_ROOT}/package.json`, content: packageJson },
-    { path: `${HOSTED_WORKSPACE_ROOT}/tsconfig.json`, content: tsconfig },
-    { path: `${HOSTED_WORKSPACE_ROOT}/vitest.config.ts`, content: vitestConfig },
-  ];
-}
-
-async function sandboxProcessResult(command: CommandFinished): Promise<ProcessResult> {
-  return {
-    exitCode: command.exitCode,
-    timedOut: false,
-    output: boundedOutput(await command.output('both')),
-  };
-}
-
-async function executeHostedCommand(sandbox: Sandbox, definition: FixedCommandDefinition) {
-  const startedAt = new Date().toISOString();
-  const started = Date.now();
-  let result: ProcessResult;
-  try {
-    const command = await sandbox.runCommand({
-      cmd: definition.program,
-      args: definition.args,
-      cwd: definition.cwd,
-      timeoutMs: definition.timeoutMs,
-    });
-    result = await sandboxProcessResult(command);
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause);
-    result = {
-      exitCode: null,
-      timedOut: /timed?\s*out|timeout/i.test(message),
-      error: message,
-      output: '',
-    };
-  }
-  return createVerificationRun(definition, result, startedAt, Date.now() - started);
-}
-
-async function executeHostedRuns(generation: CodeGenerationOutput) {
-  assertApprovedGeneration(generation);
-  const sandbox = await Sandbox.create({
-    runtime: 'node22',
-    resources: { vcpus: 1 },
-    timeout: 5 * 60_000,
-    networkPolicy: { allow: ['registry.npmjs.org'] },
-    env: {
-      CI: '1',
-      NO_COLOR: '1',
-      FORCE_COLOR: '0',
-      NODE_ENV: 'test',
-    },
-  });
-
-  try {
-    await sandbox.writeFiles([
-      ...await readFixedTemplate(),
-      ...generation.files.map((file) => ({
-        path: `${HOSTED_WORKSPACE_ROOT}/${file.path}`,
-        content: file.content,
-      })),
-    ]);
-    const install = await sandbox.runCommand({
-      cmd: 'npm',
-      args: ['install', '--no-audit', '--no-fund'],
-      cwd: HOSTED_WORKSPACE_ROOT,
-      timeoutMs: 30_000,
-    });
-    if (install.exitCode !== 0) {
-      const output = boundedOutput(await install.output('both')).slice(-4_000);
-      throw new Error(`Controlled sandbox dependency bootstrap failed with exit code ${install.exitCode}\n${output}`.trim());
-    }
-    await sandbox.updateNetworkPolicy('deny-all');
-
-    const registry = fixedHostedCommandRegistry();
-    const runs: VerificationRunType[] = [];
-    for (const id of VERIFICATION_ORDER) {
-      const run = await executeHostedCommand(sandbox, registry[id]);
-      if (id !== 'coverage' || run.status !== 'passed') {
-        runs.push(run);
-        continue;
-      }
-      const coverage = await sandbox.readFileToBuffer({
-        path: `${HOSTED_WORKSPACE_ROOT}/coverage/coverage-summary.json`,
-      });
-      runs.push(await attachCoverageMetrics(run, coverage ? JSON.parse(coverage.toString('utf8')) : undefined));
-    }
-    return runs;
-  } finally {
-    await sandbox.stop().catch(() => undefined);
   }
 }
 
@@ -364,18 +255,14 @@ function evidenceForRun(run: VerificationRunType, generation: CodeGenerationOutp
 
 async function runOnce(request: VerificationRequestType): Promise<VerificationReportType> {
   const startedAt = new Date().toISOString();
-  let runs: VerificationRunType[];
-  if (process.env.VERCEL) {
-    runs = await executeHostedRuns(request.generation);
-  } else {
-    await assertApprovedWorkspace(request.generation);
-    await rm(join(/* turbopackIgnore: true */ process.cwd(), 'sandbox/notification-service/workspace/coverage'), { recursive: true, force: true });
-    const registry = fixedCommandRegistry();
-    runs = [];
-    for (const id of VERIFICATION_ORDER) {
-      const run = await executeFixedCommand(registry[id]);
-      runs.push(id === 'coverage' ? await attachCoverageMetrics(run) : run);
-    }
+  assertApprovedGeneration(request.generation);
+  await assertApprovedWorkspace(request.generation);
+  await rm(join(/* turbopackIgnore: true */ process.cwd(), 'sandbox/notification-service/workspace/coverage'), { recursive: true, force: true });
+  const registry = fixedCommandRegistry();
+  const runs: VerificationRunType[] = [];
+  for (const id of VERIFICATION_ORDER) {
+    const run = await executeFixedCommand(registry[id]);
+    runs.push(id === 'coverage' ? await attachCoverageMetrics(run) : run);
   }
   const completedAt = new Date().toISOString();
   const evidence = runs.map((run) => evidenceForRun(run, request.generation, completedAt));

@@ -1,47 +1,31 @@
-import { NextResponse } from 'next/server';
-
-import { OrganizationIdSchema, PlatformModelCatalogSchema } from '@/src/platform/contracts';
-import { requestPlatform, safeRequestId } from '@/src/platform/request';
-import { currentSessionToken } from '@/src/platform/session';
+import { authenticateBff, bffError, bffRequestId, forwardPlatformResponse, parseOrganizationId } from '@/src/platform/bff';
+import { PlatformModelCatalogSchema } from '@/src/platform/contracts';
+import * as platformSdk from '@/src/platform/generated/sdk.gen';
+import { requestPlatform } from '@/src/platform/request';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ organizationId: string }> },
-): Promise<NextResponse> {
-  const requestId = safeRequestId(request.headers.get('x-request-id'));
+){
+  const requestId = bffRequestId(request);
   const { organizationId: rawOrganizationId } = await context.params;
-  const organizationId = OrganizationIdSchema.safeParse(rawOrganizationId);
+  const organizationId = parseOrganizationId(rawOrganizationId);
   if (!organizationId.success) {
-    return NextResponse.json(
-      { error: { code: 'NOT_FOUND', message: 'Organization was not found.' } },
-      { status: 404, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
+    return bffError(404, 'NOT_FOUND', 'Organization was not found.', requestId);
   }
 
-  const token = await currentSessionToken();
-  if (!token) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } },
-      { status: 401, headers: { 'cache-control': 'no-store', 'x-request-id': requestId } },
-    );
-  }
+  const authentication = await authenticateBff(requestId);
+  if (!authentication.success) return authentication.response;
 
   const response = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/models/catalog`,
-    token,
+    (client) => platformSdk.getModelCatalog({ client, path: { organizationId: organizationId.data } }),
+    authentication.token,
     requestId,
   );
   if (response.status === 200 && !PlatformModelCatalogSchema.safeParse(response.body).success) {
-    return NextResponse.json(
-      { error: { code: 'INVALID_PLATFORM_RESPONSE', message: 'The platform returned an unexpected response.' } },
-      { status: 502, headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId } },
-    );
+    return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected response.', response.requestId);
   }
-  return NextResponse.json(response.body, {
-    status: response.status,
-    headers: { 'cache-control': 'no-store', 'x-request-id': response.requestId },
-  });
+  return forwardPlatformResponse(response);
 }
-

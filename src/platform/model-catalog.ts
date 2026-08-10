@@ -6,6 +6,7 @@ import {
   type PlatformModelCatalog,
 } from './contracts';
 import { requestPlatform } from './request';
+import * as platformSdk from './generated/sdk.gen';
 import { currentSessionToken } from './session';
 
 export type OrganizationModelCatalogState =
@@ -25,7 +26,7 @@ export async function getOrganizationModelCatalog(
   if (!token) return { status: 'unauthenticated' };
 
   const response = await requestPlatform(
-    `/api/v1/organizations/${encodeURIComponent(organizationId.data)}/models/catalog`,
+    (client) => platformSdk.getModelCatalog({ client, path: { organizationId: organizationId.data } }),
     token,
   );
   if (response.status === 401) return { status: 'unauthenticated' };
@@ -41,4 +42,3 @@ export async function getOrganizationModelCatalog(
   }
   return { status: 'ready', catalog: parsed.data };
 }
-
