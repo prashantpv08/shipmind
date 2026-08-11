@@ -67,8 +67,18 @@ test.describe('governed experience applicability browser matrix', () => {
     await fixtureDatabase().close();
   });
 
-  test('renders deterministic applicable, not-applicable, and needs-decision states', async ({ context, page }) => {
+  test('renders the migration queue and deterministic applicable, not-applicable, and needs-decision states', async ({ context, page }) => {
     await authenticate(context);
+
+    await page.goto(`/account/organizations/${organizationId}/projects`);
+    const migrationQueue = page.getByRole('region', { name: 'P0 Business Context migration queue' });
+    await expect(migrationQueue).toBeVisible();
+    await expect(migrationQueue).toContainText('Pending7');
+    const undecidedProject = page.getByRole('listitem').filter({ hasText: applicabilityFixture.projects.needsDecision });
+    await expect(undecidedProject).toContainText('DECISION REQUIRED');
+    await expect(undecidedProject.getByRole('link', { name: 'Open exact review' })).toHaveAttribute('href', projectPath(applicabilityFixture.projects.needsDecision));
+    const explicitProject = page.getByRole('listitem').filter({ hasText: applicabilityFixture.projects.applicable });
+    await expect(explicitProject).toContainText('GENERATION REQUIRED');
 
     await page.goto(projectPath(applicabilityFixture.projects.applicable));
     await expect(page.getByRole('heading', { name: 'APPLICABLE', exact: true })).toBeVisible();

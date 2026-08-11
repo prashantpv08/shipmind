@@ -88,6 +88,19 @@ export default async function OrganizationProjectsPage({
                 <p>Your current organization role can view projects but cannot create them.</p>
               </div>
             )}
+            <section className="project-migration-panel" aria-labelledby="business-context-migration-heading">
+              <div>
+                <h3 id="business-context-migration-heading">P0 Business Context migration queue</h3>
+                <p>Each active project must pass its own exact applicability and Business Context review. Axiom never applies one bulk product decision to multiple projects.</p>
+              </div>
+              <dl>
+                <div><dt>Approved</dt><dd>{state.migrationSummary.complete}</dd></div>
+                <div><dt>Pending</dt><dd>{state.migrationSummary.pending}</dd></div>
+                <div><dt>Unavailable</dt><dd>{state.migrationSummary.unavailable}</dd></div>
+                <div><dt>Archived</dt><dd>{state.migrationSummary.archived}</dd></div>
+              </dl>
+              <small>Counts describe this page of organization-scoped projects. Open each pending project to inspect and review its immutable current-graph preview.</small>
+            </section>
             {state.projects.length === 0 ? (
               <p>No projects are available in this organization.</p>
             ) : (
@@ -102,6 +115,13 @@ export default async function OrganizationProjectsPage({
                       <div><dt>Status</dt><dd>{project.status.replaceAll('_', ' ')}</dd></div>
                       <div><dt>Graph</dt><dd>v{project.graphVersion}</dd></div>
                     </dl>
+                    <div className="project-migration-state" aria-label={`Business Context migration for ${project.name}`}>
+                      <span>Business Context</span>
+                      <b>{project.businessContextMigration.status.replaceAll('_', ' ')}</b>
+                      <small>{project.businessContextMigration.applicability === null ? 'Applicability unavailable' : `Applicability · ${project.businessContextMigration.applicability.replaceAll('_', ' ')}`}</small>
+                      <p>{project.businessContextMigration.message}</p>
+                      <Link className="account-text-link" href={`/account/organizations/${organizationId}/projects/${project.id}/business-context`}>{state.canReviewBusinessContext ? 'Open exact review' : 'Inspect exact review'}</Link>
+                    </div>
                     <div><Link className="account-text-link" href={`/account/organizations/${organizationId}/projects/${project.id}`}>Open project</Link> <Link className="account-text-link" href={`/account/organizations/${organizationId}/projects/${project.id}/backlog`}>Review backlog</Link></div>
                     {state.canManageLifecycle ? (
                       <ProjectLifecycleActions organizationId={organizationId} project={project} />
