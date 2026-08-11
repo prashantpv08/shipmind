@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "dev": "next dev",
-    "start": "next start",
+    "dev": "node init && next dev",
+    "start": "node init && next start",
     "lint": "eslint .",
     "architecture:check": "node --import tsx scripts/check-architecture-boundaries.ts",
     "contracts:sync": "node --import tsx scripts/sync-platform-openapi.ts",
@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:applicability": "node --import tsx scripts/run-applicability-e2e.ts",
-    "build": "next build --webpack",
+    "build": "node init && next build --webpack",
     "demo:reset": "node scripts/demo-reset.mjs",
     "sandbox:build": "tsc -p sandbox/notification-service/workspace/tsconfig.json --noEmit",
     "sandbox:test:unit": "vitest run --config sandbox/notification-service/workspace/vitest.config.ts sandbox/notification-service/workspace/tests/notification-service.unit.test.ts",
