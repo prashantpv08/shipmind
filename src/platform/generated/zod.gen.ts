@@ -1810,6 +1810,150 @@ export const zGenerateRequirementBaselineResponse = z.strictObject({
     replayed: z.boolean()
 });
 
+export const zResolveExperienceApplicabilityBody = z.strictObject({
+    decision: z.enum(['APPLICABLE', 'NOT_APPLICABLE']),
+    previewContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+    rationale: z.string().min(10).max(2000),
+    sourceGraphVersion: z.int().gt(0).lte(9007199254740991)
+});
+
+export const zResolveExperienceApplicabilityHeaders = z.strictObject({
+    'Idempotency-Key': z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/),
+    'If-Match': z.string().regex(/^"PROJ-[A-Za-z0-9_-]{1,123}:[1-9][0-9]*"$/)
+});
+
+export const zResolveExperienceApplicabilityPath = z.strictObject({
+    organizationId: z.string().regex(/^ORG-[A-Za-z0-9_-]{1,124}$/),
+    projectId: z.string().regex(/^PROJ-[A-Za-z0-9_-]{1,123}$/)
+});
+
+export const zResolveExperienceApplicabilityResponse = z.strictObject({
+    decision: z.strictObject({
+        decidedAt: z.iso.datetime().regex(/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$/),
+        decidedByUserId: z.string().min(1).max(160),
+        decision: z.enum(['APPLICABLE', 'NOT_APPLICABLE']),
+        graphVersion: z.int().gt(0).lte(9007199254740991),
+        id: z.string().regex(/^EAD-[A-Za-z0-9_-]{1,123}$/),
+        previousGraphVersion: z.int().gt(0).lte(9007199254740991),
+        projectId: z.string().regex(/^PROJ-[A-Za-z0-9_-]{1,123}$/),
+        rationale: z.string().min(10).max(2000),
+        sourcePreviewContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+        truthStatus: z.literal('HUMAN_CONFIRMED')
+    }),
+    preview: z.strictObject({
+        actors: z.array(z.strictObject({
+            id: z.string().regex(/^BC-(?:OUT|ACT|FLOW|MEASURE)-[A-F0-9]{16}$/),
+            kind: z.enum([
+                'OUTCOME',
+                'ACTOR',
+                'WORKFLOW',
+                'SUCCESS_MEASURE'
+            ]),
+            sourceEntityId: z.string().min(1).max(200),
+            sourceId: z.string().min(1).max(200).nullable(),
+            statement: z.string().min(1).max(5000),
+            truthStatus: z.enum(['SOURCE_GROUNDED', 'HUMAN_CONFIRMED'])
+        })).max(1000),
+        applicability: z.strictObject({
+            decisionRequired: z.boolean(),
+            rationale: z.string().min(1).max(2000),
+            sourceEntityIds: z.array(z.string().min(1).max(200)).max(1000),
+            status: z.enum([
+                'APPLICABLE',
+                'NOT_APPLICABLE',
+                'NEEDS_DECISION'
+            ])
+        }),
+        blockingGapIds: z.array(z.string().min(1).max(200)).max(1000),
+        compiledAt: z.iso.datetime().regex(/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$/),
+        compilerVersion: z.literal('business-context-compiler-v1'),
+        contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+        coverage: z.strictObject({
+            classifiedEntityCount: z.int().gte(0).lte(9007199254740991),
+            eligibleEntityCount: z.int().gte(0).lte(9007199254740991),
+            unclassifiedEntityIds: z.array(z.string().min(1).max(200)).max(1000)
+        }),
+        outcomes: z.array(z.strictObject({
+            id: z.string().regex(/^BC-(?:OUT|ACT|FLOW|MEASURE)-[A-F0-9]{16}$/),
+            kind: z.enum([
+                'OUTCOME',
+                'ACTOR',
+                'WORKFLOW',
+                'SUCCESS_MEASURE'
+            ]),
+            sourceEntityId: z.string().min(1).max(200),
+            sourceId: z.string().min(1).max(200).nullable(),
+            statement: z.string().min(1).max(5000),
+            truthStatus: z.enum(['SOURCE_GROUNDED', 'HUMAN_CONFIRMED'])
+        })).max(1000),
+        projectId: z.string().regex(/^PROJ-[A-Za-z0-9_-]{1,123}$/),
+        schemaVersion: z.literal('business-context-preview-v1'),
+        sourceGraphVersion: z.int().gt(0).lte(9007199254740991),
+        successMeasures: z.array(z.strictObject({
+            id: z.string().regex(/^BC-(?:OUT|ACT|FLOW|MEASURE)-[A-F0-9]{16}$/),
+            kind: z.enum([
+                'OUTCOME',
+                'ACTOR',
+                'WORKFLOW',
+                'SUCCESS_MEASURE'
+            ]),
+            sourceEntityId: z.string().min(1).max(200),
+            sourceId: z.string().min(1).max(200).nullable(),
+            statement: z.string().min(1).max(5000),
+            truthStatus: z.enum(['SOURCE_GROUNDED', 'HUMAN_CONFIRMED'])
+        })).max(1000),
+        unknowns: z.array(z.strictObject({
+            code: z.enum([
+                'UNKNOWN_BUSINESS_OUTCOME',
+                'UNKNOWN_ACTOR',
+                'UNKNOWN_OPERATING_WORKFLOW',
+                'UNKNOWN_SUCCESS_MEASURE',
+                'UNKNOWN_EXPERIENCE_APPLICABILITY'
+            ]),
+            question: z.string().min(1).max(1000),
+            whyItMatters: z.string().min(1).max(1000)
+        })).max(5),
+        workflows: z.array(z.strictObject({
+            id: z.string().regex(/^BC-(?:OUT|ACT|FLOW|MEASURE)-[A-F0-9]{16}$/),
+            kind: z.enum([
+                'OUTCOME',
+                'ACTOR',
+                'WORKFLOW',
+                'SUCCESS_MEASURE'
+            ]),
+            sourceEntityId: z.string().min(1).max(200),
+            sourceId: z.string().min(1).max(200).nullable(),
+            statement: z.string().min(1).max(5000),
+            truthStatus: z.enum(['SOURCE_GROUNDED', 'HUMAN_CONFIRMED'])
+        })).max(1000)
+    }),
+    project: z.strictObject({
+        archivedAt: z.iso.datetime().regex(/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$/).nullable().default(null),
+        createdAt: z.iso.datetime().regex(/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$/),
+        graphVersion: z.int().gte(0).lte(9007199254740991),
+        id: z.string().regex(/^PROJ-[A-Za-z0-9_-]{1,123}$/),
+        name: z.string().min(1).max(160),
+        rowVersion: z.int().gt(0).lte(9007199254740991),
+        status: z.enum([
+            'DRAFT',
+            'SOURCES_READY',
+            'ANALYZED',
+            'NEEDS_CLARIFICATION',
+            'DOCUMENTED',
+            'DOCUMENTS_APPROVED',
+            'DESIGN_READY',
+            'ARB_APPROVED',
+            'HLD_READY',
+            'PUBLISHED',
+            'BACKLOG_READY',
+            'ARCHIVED'
+        ]),
+        updatedAt: z.iso.datetime().regex(/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$/),
+        workspaceId: z.string().regex(/^WS-[A-Za-z0-9_-]{1,125}$/)
+    }),
+    replayed: z.boolean()
+});
+
 export const zGetCurrentBusinessContextPath = z.strictObject({
     organizationId: z.string().regex(/^ORG-[A-Za-z0-9_-]{1,124}$/),
     projectId: z.string().regex(/^PROJ-[A-Za-z0-9_-]{1,123}$/)

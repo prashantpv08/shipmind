@@ -65,6 +65,14 @@ Open `http://127.0.0.1:3000/account` and use the local-session action. The web r
 
 The root URL redirects to `/account`; it does not expose the migration prototype.
 
+With local Docker PostgreSQL running, the deterministic applicability browser matrix creates the exact disposable `axiom_test_applicability_e2e` database, applies the platform migrations, starts isolated local platform and web processes, and removes the database after the run:
+
+```bash
+pnpm test:e2e:applicability
+```
+
+The runner refuses non-loopback database administration and does not mutate the local `axiom` development database.
+
 ## Verification commands
 
 Web and migration workspace:

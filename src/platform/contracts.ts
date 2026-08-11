@@ -51,6 +51,8 @@ import {
   zListProjectsResponse,
   zListWorkspacesResponse,
   zQueueProjectAnalysisBody,
+  zResolveExperienceApplicabilityBody,
+  zResolveExperienceApplicabilityResponse,
   zReviewBusinessContextBody,
   zReviewBusinessContextResponse,
   zRevokeOrganizationInvitationHeaders,
@@ -133,6 +135,8 @@ export const PlatformReviewBusinessContextRequestSchema = zReviewBusinessContext
 });
 export const PlatformBusinessContextMutationResponseSchema = zGenerateBusinessContextResponse;
 export const PlatformBusinessContextReviewResponseSchema = zReviewBusinessContextResponse;
+export const PlatformResolveExperienceApplicabilityRequestSchema = zResolveExperienceApplicabilityBody;
+export const PlatformExperienceApplicabilityDecisionResponseSchema = zResolveExperienceApplicabilityResponse;
 
 export const PlatformSourceSchema = zUploadProjectSourceResponse;
 export const PlatformSourceListSchema = zListProjectSourcesResponse;

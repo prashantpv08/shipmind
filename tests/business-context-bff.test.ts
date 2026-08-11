@@ -5,6 +5,7 @@ vi.mock('../src/platform/session', () => ({ currentSessionToken: mocks.currentSe
 vi.mock('../src/platform/request', () => ({ requestPlatform: mocks.requestPlatform, safeRequestId: (value: string | null) => value ?? 'business-context-request-id' }));
 
 import { POST as generateBusinessContext } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/business-context/generations/route';
+import { POST as resolveExperienceApplicability } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/business-context/applicability-decisions/route';
 import { POST as reviewBusinessContext } from '../app/api/platform/organizations/[organizationId]/projects/[projectId]/business-context/reviews/route';
 
 const preview = {
@@ -57,6 +58,41 @@ describe('Business Context BFF', () => {
     const response = await reviewBusinessContext(mutationRequest(path, body, 'business-context-review-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
     expect(response.status).toBe(201);
     expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'business-context-request-id');
+  });
+
+  it('forwards an exact unresolved applicability decision and validates the resulting graph', async () => {
+    const unresolvedPreview = {
+      ...preview,
+      applicability: { status: 'NEEDS_DECISION', rationale: 'The graph is silent.', sourceEntityIds: [], decisionRequired: true },
+      unknowns: [{ code: 'UNKNOWN_EXPERIENCE_APPLICABILITY', question: 'Does this scope require a user-facing experience?', whyItMatters: 'The decision controls the Experience Baseline gate.' }],
+    } as const;
+    const resultingPreview = {
+      ...unresolvedPreview,
+      sourceGraphVersion: 3,
+      contentHash: 'b'.repeat(64),
+      applicability: { status: 'NOT_APPLICABLE', rationale: 'The current graph explicitly describes non-visual scope.', sourceEntityIds: ['DECISION-EXPERIENCE-APPLICABILITY-PROJ-ONE'], decisionRequired: false },
+      unknowns: [],
+    } as const;
+    const body = { sourceGraphVersion: 2, previewContentHash: unresolvedPreview.contentHash, decision: 'NOT_APPLICABLE', rationale: 'The approved scope is API-only and has no operator-facing workflow.' } as const;
+    mocks.requestPlatform.mockResolvedValue({ status: 201, requestId: 'business-context-003', etag: '"PROJ-ONE:5"', idempotencyReplayed: 'false', body: {
+      project: { ...project, graphVersion: 3, rowVersion: 5 },
+      decision: { id: 'EAD-DECISION-ONE', projectId: 'PROJ-ONE', previousGraphVersion: 2, graphVersion: 3, decision: body.decision, rationale: body.rationale, sourcePreviewContentHash: body.previewContentHash, truthStatus: 'HUMAN_CONFIRMED', decidedByUserId: 'USER-ONE', decidedAt: '2026-08-04T02:00:00.000Z' },
+      preview: resultingPreview,
+      replayed: false,
+    } });
+    const path = '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/business-context/applicability-decisions';
+    const response = await resolveExperienceApplicability(mutationRequest(path, body, 'business-context-decision-001'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
+    expect(response.status).toBe(201);
+    expect(response.headers.get('etag')).toBe('"PROJ-ONE:5"');
+    expect(mocks.requestPlatform).toHaveBeenCalledWith(expect.any(Function), 'A'.repeat(43), 'business-context-request-id');
+  });
+
+  it('rejects unresolved or under-explained applicability input before forwarding credentials', async () => {
+    const path = '/api/platform/organizations/ORG-ONE/projects/PROJ-ONE/business-context/applicability-decisions';
+    const response = await resolveExperienceApplicability(mutationRequest(path, { sourceGraphVersion: 2, previewContentHash: preview.contentHash, decision: 'NEEDS_DECISION', rationale: 'short' }, 'business-context-decision-002'), { params: Promise.resolve({ organizationId: 'ORG-ONE', projectId: 'PROJ-ONE' }) });
+    expect(response.status).toBe(400);
+    expect(mocks.currentSessionToken).not.toHaveBeenCalled();
+    expect(mocks.requestPlatform).not.toHaveBeenCalled();
   });
 
   it('rejects cross-origin mutation before reading credentials', async () => {

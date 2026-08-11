@@ -1750,6 +1750,113 @@ export type GenerateRequirementBaselineResponses = {
 
 export type GenerateRequirementBaselineResponse = GenerateRequirementBaselineResponses[keyof GenerateRequirementBaselineResponses];
 
+export type ResolveExperienceApplicabilityData = {
+    body: {
+        decision: 'APPLICABLE' | 'NOT_APPLICABLE';
+        previewContentHash: string;
+        rationale: string;
+        sourceGraphVersion: number;
+    };
+    headers: {
+        'Idempotency-Key': string;
+        'If-Match': string;
+    };
+    path: {
+        organizationId: string;
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{organizationId}/projects/{projectId}/business-context/applicability-decisions';
+};
+
+export type ResolveExperienceApplicabilityResponses = {
+    201: {
+        decision: {
+            decidedAt: string;
+            decidedByUserId: string;
+            decision: 'APPLICABLE' | 'NOT_APPLICABLE';
+            graphVersion: number;
+            id: string;
+            previousGraphVersion: number;
+            projectId: string;
+            rationale: string;
+            sourcePreviewContentHash: string;
+            truthStatus: 'HUMAN_CONFIRMED';
+        };
+        preview: {
+            actors: Array<{
+                id: string;
+                kind: 'OUTCOME' | 'ACTOR' | 'WORKFLOW' | 'SUCCESS_MEASURE';
+                sourceEntityId: string;
+                sourceId: string | null;
+                statement: string;
+                truthStatus: 'SOURCE_GROUNDED' | 'HUMAN_CONFIRMED';
+            }>;
+            applicability: {
+                decisionRequired: boolean;
+                rationale: string;
+                sourceEntityIds: Array<string>;
+                status: 'APPLICABLE' | 'NOT_APPLICABLE' | 'NEEDS_DECISION';
+            };
+            blockingGapIds: Array<string>;
+            compiledAt: string;
+            compilerVersion: 'business-context-compiler-v1';
+            contentHash: string;
+            coverage: {
+                classifiedEntityCount: number;
+                eligibleEntityCount: number;
+                unclassifiedEntityIds: Array<string>;
+            };
+            outcomes: Array<{
+                id: string;
+                kind: 'OUTCOME' | 'ACTOR' | 'WORKFLOW' | 'SUCCESS_MEASURE';
+                sourceEntityId: string;
+                sourceId: string | null;
+                statement: string;
+                truthStatus: 'SOURCE_GROUNDED' | 'HUMAN_CONFIRMED';
+            }>;
+            projectId: string;
+            schemaVersion: 'business-context-preview-v1';
+            sourceGraphVersion: number;
+            successMeasures: Array<{
+                id: string;
+                kind: 'OUTCOME' | 'ACTOR' | 'WORKFLOW' | 'SUCCESS_MEASURE';
+                sourceEntityId: string;
+                sourceId: string | null;
+                statement: string;
+                truthStatus: 'SOURCE_GROUNDED' | 'HUMAN_CONFIRMED';
+            }>;
+            unknowns: Array<{
+                code: 'UNKNOWN_BUSINESS_OUTCOME' | 'UNKNOWN_ACTOR' | 'UNKNOWN_OPERATING_WORKFLOW' | 'UNKNOWN_SUCCESS_MEASURE' | 'UNKNOWN_EXPERIENCE_APPLICABILITY';
+                question: string;
+                whyItMatters: string;
+            }>;
+            workflows: Array<{
+                id: string;
+                kind: 'OUTCOME' | 'ACTOR' | 'WORKFLOW' | 'SUCCESS_MEASURE';
+                sourceEntityId: string;
+                sourceId: string | null;
+                statement: string;
+                truthStatus: 'SOURCE_GROUNDED' | 'HUMAN_CONFIRMED';
+            }>;
+        };
+        project: {
+            archivedAt: string | null;
+            createdAt: string;
+            graphVersion: number;
+            id: string;
+            name: string;
+            rowVersion: number;
+            status: 'DRAFT' | 'SOURCES_READY' | 'ANALYZED' | 'NEEDS_CLARIFICATION' | 'DOCUMENTED' | 'DOCUMENTS_APPROVED' | 'DESIGN_READY' | 'ARB_APPROVED' | 'HLD_READY' | 'PUBLISHED' | 'BACKLOG_READY' | 'ARCHIVED';
+            updatedAt: string;
+            workspaceId: string;
+        };
+        replayed: boolean;
+    };
+};
+
+export type ResolveExperienceApplicabilityResponse = ResolveExperienceApplicabilityResponses[keyof ResolveExperienceApplicabilityResponses];
+
 export type GetCurrentBusinessContextData = {
     body?: never;
     path: {

@@ -25,8 +25,8 @@ describe('generated platform contract', () => {
       sourcePath: 'openapi/axiom-platform-v1.json',
       generator: { package: '@hey-api/openapi-ts', version: '0.99.0' },
     });
-    expect(provenance.sha256).toBe('3b47d144ddbacbbbc62f1bd63fbbc6788f9cac6365712754bb11b06c0917a24c');
-    expect(provenance.bytes).toBe(701_110);
+    expect(provenance.sha256).toBe('457999429f4a172bd1b0bbd4da70d2b64dd8aa5b75bcbd438c935ff5f67bb2fe');
+    expect(provenance.bytes).toBe(729_242);
     await expect(verifyVendoredProvenance()).resolves.toEqual([]);
   });
 

@@ -1,7 +1,9 @@
 import {
   PlatformBusinessContextMutationResponseSchema,
   PlatformBusinessContextReviewResponseSchema,
+  PlatformExperienceApplicabilityDecisionResponseSchema,
   PlatformGenerateBusinessContextRequestSchema,
+  PlatformResolveExperienceApplicabilityRequestSchema,
   PlatformReviewBusinessContextRequestSchema,
 } from './contracts';
 import {
@@ -17,7 +19,7 @@ import {
 import { requestPlatform } from './request';
 import * as platformSdk from './generated/sdk.gen';
 
-type BusinessContextAction = 'generate' | 'review';
+type BusinessContextAction = 'generate' | 'review' | 'resolve-applicability';
 type BusinessContextRouteContext = { params: Promise<{ organizationId: string; projectId: string }> };
 
 export async function handleBusinessContextMutation(request: Request, context: BusinessContextRouteContext, action: BusinessContextAction) {
@@ -30,7 +32,9 @@ export async function handleBusinessContextMutation(request: Request, context: B
   const rawBody = await request.json().catch(() => null);
   const body = action === 'generate'
     ? PlatformGenerateBusinessContextRequestSchema.safeParse(rawBody)
-    : PlatformReviewBusinessContextRequestSchema.safeParse(rawBody);
+    : action === 'review'
+      ? PlatformReviewBusinessContextRequestSchema.safeParse(rawBody)
+      : PlatformResolveExperienceApplicabilityRequestSchema.safeParse(rawBody);
   if (!organizationId.success || !projectId.success) return bffError(404, 'NOT_FOUND', 'Project was not found.', requestId);
   if (!idempotencyKey.success || !ifMatch.success || !body.success) return bffError(400, 'INVALID_REQUEST', 'Business Context request is invalid.', requestId);
   const authentication = await authenticateBff(requestId);
@@ -43,12 +47,22 @@ export async function handleBusinessContextMutation(request: Request, context: B
       authentication.token,
       requestId,
     )
-    : await requestPlatform(
-      (client) => platformSdk.reviewBusinessContext({ client, path, headers, body: PlatformReviewBusinessContextRequestSchema.parse(rawBody) }),
-      authentication.token,
-      requestId,
-    );
-  const responseSchema = action === 'generate' ? PlatformBusinessContextMutationResponseSchema : PlatformBusinessContextReviewResponseSchema;
+    : action === 'review'
+      ? await requestPlatform(
+        (client) => platformSdk.reviewBusinessContext({ client, path, headers, body: PlatformReviewBusinessContextRequestSchema.parse(rawBody) }),
+        authentication.token,
+        requestId,
+      )
+      : await requestPlatform(
+        (client) => platformSdk.resolveExperienceApplicability({ client, path, headers, body: PlatformResolveExperienceApplicabilityRequestSchema.parse(rawBody) }),
+        authentication.token,
+        requestId,
+      );
+  const responseSchema = action === 'generate'
+    ? PlatformBusinessContextMutationResponseSchema
+    : action === 'review'
+      ? PlatformBusinessContextReviewResponseSchema
+      : PlatformExperienceApplicabilityDecisionResponseSchema;
   if (response.status === 201 && !responseSchema.safeParse(response.body).success) {
     return bffError(502, 'INVALID_PLATFORM_RESPONSE', 'The platform returned an unexpected Business Context response.', response.requestId);
   }
