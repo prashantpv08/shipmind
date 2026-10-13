@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "node init && tsc --noEmit",
     "test:unit": "vitest run tests/notification-service.unit.test.ts",
     "test:api": "vitest run tests/notification-service.api.test.ts",
     "coverage": "vitest run tests --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=json-summary --coverage.reporter=text --coverage.reportsDirectory=coverage"
